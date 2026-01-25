@@ -22,6 +22,8 @@ import FeeManagement from '../screens/FeeManagement';
 import TransportManagement from '../screens/TransportManagement';
 import OfficeManagement from '../screens/OfficeManagement';
 import OfficeDashboard from '../screens/OfficeDashboard';
+import SportsManagement from '../screens/SportsManagement';
+import HostelManagement from '../screens/HostelManagement';
 
 const Stack = createStackNavigator();
 
@@ -53,8 +55,8 @@ const AppNavigator = () => {
                                 <Stack.Screen name="Fees" component={FeeManagement} />
                                 <Stack.Screen name="Transport" component={TransportManagement} />
                                 <Stack.Screen name="OfficeManagement" component={OfficeManagement} />
-                                <Stack.Screen name="Sports" component={GenericDashboard} />
-                                <Stack.Screen name="Hostel" component={GenericDashboard} />
+                                <Stack.Screen name="Sports" component={SportsManagement} />
+                                <Stack.Screen name="Hostel" component={HostelManagement} />
                                 <Stack.Screen name="ExamCell" component={GenericDashboard} />
                                 <Stack.Screen name="Placements" component={GenericDashboard} />
                                 <Stack.Screen name="Announcements" component={NoticeManagement} />
@@ -88,8 +90,8 @@ const AppNavigator = () => {
                                 <Stack.Screen name="DepartmentManagement" component={DepartmentManagement} />
                                 <Stack.Screen name="CourseManagement" component={CourseManagement} />
                                 <Stack.Screen name="HODManagement" component={HODManagement} />
-                                <Stack.Screen name="Sports" component={GenericDashboard} />
-                                <Stack.Screen name="Hostel" component={GenericDashboard} />
+                                <Stack.Screen name="Sports" component={SportsManagement} />
+                                <Stack.Screen name="Hostel" component={HostelManagement} />
                                 <Stack.Screen name="ExamCell" component={GenericDashboard} />
                                 <Stack.Screen name="Placements" component={GenericDashboard} />
                             </>

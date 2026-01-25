@@ -40,6 +40,20 @@ const UserSchema = new mongoose.Schema({
     mobileNo: String,
     branch: String,
     year: String,
+    residencyType: {
+        type: String,
+        enum: ['Day Scholar', 'Hosteller'],
+        default: 'Day Scholar'
+    },
+    parentContact: String,
+    community: String,
+    address: String,
+    bloodGroup: String,
+    admissionType: {
+        type: String,
+        enum: ['Counselling', 'Management'],
+        default: 'Counselling'
+    },
     isActive: {
         type: Boolean,
         default: true

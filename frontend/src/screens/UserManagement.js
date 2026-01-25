@@ -60,7 +60,14 @@ const UserManagement = ({ navigation, route }) => {
         dob: '',
         mobileNo: '',
         branch: '',
-        year: ''
+        year: '',
+        // New Fields
+        residencyType: 'Day Scholar',
+        parentContact: '',
+        community: '',
+        address: '',
+        bloodGroup: '',
+        admissionType: 'Counselling'
     });
 
     useEffect(() => {
@@ -127,7 +134,13 @@ const UserManagement = ({ navigation, route }) => {
                 dob: '',
                 mobileNo: '',
                 branch: '',
-                year: ''
+                year: '',
+                residencyType: 'Day Scholar',
+                parentContact: '',
+                community: '',
+                address: '',
+                bloodGroup: '',
+                admissionType: 'Counselling'
             });
         } catch (error) {
             console.error('Error creating user:', error);
@@ -476,6 +489,119 @@ const UserManagement = ({ navigation, route }) => {
                                 />
                             </View>
 
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Phone Number</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    value={newUser.mobileNo}
+                                    onChangeText={(text) => setNewUser({ ...newUser, mobileNo: text })}
+                                    placeholder="Student Mobile Number"
+                                    keyboardType="phone-pad"
+                                />
+                            </View>
+
+                            {newUser.role === 'Student' && (
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>Parent Number</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        value={newUser.parentContact}
+                                        onChangeText={(text) => setNewUser({ ...newUser, parentContact: text })}
+                                        placeholder="Parent Mobile Number"
+                                        keyboardType="phone-pad"
+                                    />
+                                </View>
+                            )}
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Date of Birth</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    value={newUser.dob}
+                                    onChangeText={(text) => setNewUser({ ...newUser, dob: text })}
+                                    placeholder="DD/MM/YYYY"
+                                />
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Address</Text>
+                                <TextInput
+                                    style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+                                    value={newUser.address}
+                                    onChangeText={(text) => setNewUser({ ...newUser, address: text })}
+                                    placeholder="Enter Permanent Address"
+                                    multiline
+                                    numberOfLines={3}
+                                />
+                            </View>
+
+                            <View style={{ flexDirection: 'row', gap: 10 }}>
+                                <View style={[styles.inputGroup, { flex: 1 }]}>
+                                    <Text style={styles.label}>Community</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        value={newUser.community}
+                                        onChangeText={(text) => setNewUser({ ...newUser, community: text })}
+                                        placeholder="e.g. BC, MBC"
+                                    />
+                                </View>
+                                <View style={[styles.inputGroup, { flex: 1 }]}>
+                                    <Text style={styles.label}>Blood Group</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        value={newUser.bloodGroup}
+                                        onChangeText={(text) => setNewUser({ ...newUser, bloodGroup: text })}
+                                        placeholder="e.g. O+"
+                                    />
+                                </View>
+                            </View>
+
+                            {newUser.role === 'Student' && (
+                                <>
+                                    <View style={styles.inputGroup}>
+                                        <Text style={styles.label}>Residency Type</Text>
+                                        <View style={{ flexDirection: 'row', gap: 10 }}>
+                                            {['Day Scholar', 'Hosteller'].map((type) => (
+                                                <TouchableOpacity
+                                                    key={type}
+                                                    style={[
+                                                        styles.selectionButton,
+                                                        newUser.residencyType === type && styles.selectionButtonActive
+                                                    ]}
+                                                    onPress={() => setNewUser({ ...newUser, residencyType: type })}
+                                                >
+                                                    <Text style={[
+                                                        styles.selectionButtonText,
+                                                        newUser.residencyType === type && styles.selectionButtonTextActive
+                                                    ]}>{type}</Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    </View>
+
+                                    <View style={styles.inputGroup}>
+                                        <Text style={styles.label}>Admission Type</Text>
+                                        <View style={{ flexDirection: 'row', gap: 10 }}>
+                                            {['Counselling', 'Management'].map((type) => (
+                                                <TouchableOpacity
+                                                    key={type}
+                                                    style={[
+                                                        styles.selectionButton,
+                                                        newUser.admissionType === type && styles.selectionButtonActive
+                                                    ]}
+                                                    onPress={() => setNewUser({ ...newUser, admissionType: type })}
+                                                >
+                                                    <Text style={[
+                                                        styles.selectionButtonText,
+                                                        newUser.admissionType === type && styles.selectionButtonTextActive
+                                                    ]}>{type}</Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    </View>
+                                </>
+                            )}
+
                             <TouchableOpacity style={styles.submitButton} onPress={handleAddUser}>
                                 <Text style={styles.submitButtonText}>Create User</Text>
                             </TouchableOpacity>
@@ -822,6 +948,27 @@ const styles = StyleSheet.create({
     editActions: {
         flexDirection: 'row',
         marginTop: 20,
+    },
+    selectionButton: {
+        flex: 1,
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+    },
+    selectionButtonActive: {
+        backgroundColor: '#eef2ff',
+        borderColor: '#4361ee',
+    },
+    selectionButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#64748b',
+    },
+    selectionButtonTextActive: {
+        color: '#4361ee',
     },
 });
 

@@ -34,6 +34,7 @@ import {
 } from 'lucide-react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
+import AnimateOnScroll from '../components/AnimateOnScroll';
 
 const AdminDashboard = ({ navigation }) => {
     const { user, logout } = useContext(AuthContext);
@@ -101,78 +102,85 @@ const AdminDashboard = ({ navigation }) => {
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" />
-            <LinearGradient
-                colors={['#4361ee', '#3f37c9']}
-                style={styles.headerContainer}
-            >
-                <View style={styles.headerTop}>
-                    <TouchableOpacity style={styles.menuButton} onPress={() => navigation.toggleDrawer?.()}>
-                        <Menu size={24} color="#fff" />
-                    </TouchableOpacity>
-                    <View style={styles.headerActions}>
-                        <TouchableOpacity style={styles.iconButton}>
-                            <Bell size={24} color="#fff" />
-                            <View style={styles.badge} />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.iconButton, { marginLeft: 12 }]} onPress={logout}>
-                            <LogOut size={24} color="#fff" />
-                        </TouchableOpacity>
-                    </View>
-                </View>
-                <View style={styles.headerContent}>
-                    <Text style={styles.username}>{user?.name || 'Administrator'}</Text>
-                    <Text style={styles.subtitle}>College Management Portal</Text>
-                </View>
-
-                <View style={styles.statsGrid}>
-                    {loading ? (
-                        <ActivityIndicator color="#fff" style={{ flex: 1 }} />
-                    ) : (
-                        stats.map((stat, index) => (
-                            <View key={index} style={styles.statBox}>
-                                <View style={styles.statHeader}>
-                                    {stat.icon}
-                                    <Text style={styles.statValue}>{stat.value}</Text>
-                                </View>
-                                <Text style={styles.statLabel}>{stat.label}</Text>
-                            </View>
-                        ))
-                    )}
-                </View>
-            </LinearGradient>
-
             <ScrollView
-                contentContainerStyle={styles.scrollContent}
+                style={{ flex: 1 }}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
                 }
             >
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Management</Text>
-
-                </View>
-
-                <View style={styles.gridContainer}>
-                    {gridItems.map(item => (
-                        <TouchableOpacity key={item.id} style={styles.gridItem} onPress={() => handleNavigation(item)} activeOpacity={0.7}>
-                            <View style={[styles.iconWrapper, { backgroundColor: item.bg }]}>{item.icon}</View>
-                            <Text style={styles.gridLabel}>{item.title}</Text>
+                <LinearGradient
+                    colors={['#4361ee', '#3f37c9']}
+                    style={styles.headerContainer}
+                >
+                    <View style={styles.headerTop}>
+                        <TouchableOpacity style={styles.menuButton} onPress={() => navigation.toggleDrawer?.()}>
+                            <Menu size={24} color="#fff" />
                         </TouchableOpacity>
-                    ))}
-                </View>
+                        <View style={styles.headerActions}>
+                            <TouchableOpacity style={styles.iconButton}>
+                                <Bell size={24} color="#fff" />
+                                <View style={styles.badge} />
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.iconButton, { marginLeft: 12 }]} onPress={logout}>
+                                <LogOut size={24} color="#fff" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                    <View style={styles.headerContent}>
+                        <Text style={styles.username}>{user?.name || 'Administrator'}</Text>
+                        <Text style={styles.subtitle}>College Management Portal</Text>
+                    </View>
 
-                <View style={styles.quickActionsSection}>
-                    <Text style={styles.sectionTitle}>Quick Actions</Text>
-                    <View style={styles.bottomRow}>
-                        <TouchableOpacity style={[styles.bottomCard, { backgroundColor: '#4361ee' }]} activeOpacity={0.9}>
-                            <View style={styles.bottomIconWrapper}><Bus size={22} color="#fff" /></View>
-                            <Text style={styles.bottomLabel}>Track Bus</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.bottomCard, { backgroundColor: '#f43f5e' }]} activeOpacity={0.9}>
-                            <View style={styles.bottomIconWrapper}><Utensils size={22} color="#fff" /></View>
-                            <Text style={styles.bottomLabel}>Food Menu</Text>
-                        </TouchableOpacity>
+                    <AnimateOnScroll delay={100}>
+                        <View style={styles.statsGrid}>
+                            {loading ? (
+                                <ActivityIndicator color="#fff" style={{ flex: 1 }} />
+                            ) : (
+                                stats.map((stat, index) => (
+                                    <View key={index} style={styles.statBox}>
+                                        <View style={styles.statHeader}>
+                                            {stat.icon}
+                                            <Text style={styles.statValue}>{stat.value}</Text>
+                                        </View>
+                                        <Text style={styles.statLabel}>{stat.label}</Text>
+                                    </View>
+                                ))
+                            )}
+                        </View>
+                    </AnimateOnScroll>
+                </LinearGradient>
+
+                <View style={styles.scrollContent}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Management</Text>
+                    </View>
+
+                    <View style={styles.gridContainer}>
+                        {gridItems.map((item, index) => (
+                            <AnimateOnScroll key={item.id} delay={index * 50} style={{ width: '31%' }}>
+                                <TouchableOpacity style={[styles.gridItem, { width: '100%' }]} onPress={() => handleNavigation(item)} activeOpacity={0.7}>
+                                    <View style={[styles.iconWrapper, { backgroundColor: item.bg }]}>{item.icon}</View>
+                                    <Text style={styles.gridLabel}>{item.title}</Text>
+                                </TouchableOpacity>
+                            </AnimateOnScroll>
+                        ))}
+                    </View>
+
+                    <View style={styles.quickActionsSection}>
+                        <Text style={styles.sectionTitle}>Quick Actions</Text>
+                        <AnimateOnScroll delay={200}>
+                            <View style={styles.bottomRow}>
+                                <TouchableOpacity style={[styles.bottomCard, { backgroundColor: '#4361ee' }]} activeOpacity={0.9}>
+                                    <View style={styles.bottomIconWrapper}><Bus size={22} color="#fff" /></View>
+                                    <Text style={styles.bottomLabel}>Track Bus</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={[styles.bottomCard, { backgroundColor: '#f43f5e' }]} activeOpacity={0.9}>
+                                    <View style={styles.bottomIconWrapper}><Utensils size={22} color="#fff" /></View>
+                                    <Text style={styles.bottomLabel}>Food Menu</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </AnimateOnScroll>
                     </View>
                 </View>
             </ScrollView>

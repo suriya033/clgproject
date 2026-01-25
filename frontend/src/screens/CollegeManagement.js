@@ -254,6 +254,85 @@ const CollegeManagement = ({ navigation }) => {
         );
     };
 
+    const renderListHeader = () => (
+        <>
+            <View style={styles.tabWrapper}>
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'Departments' && styles.activeTab]}
+                    onPress={() => setActiveTab('Departments')}
+                >
+                    <Building2 size={18} color={activeTab === 'Departments' ? '#4361ee' : '#64748b'} />
+                    <Text style={[styles.tabText, activeTab === 'Departments' && styles.activeTabText]}>Departments</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'Courses' && styles.activeTab]}
+                    onPress={() => setActiveTab('Courses')}
+                >
+                    <BookOpen size={18} color={activeTab === 'Courses' ? '#4361ee' : '#64748b'} />
+                    <Text style={[styles.tabText, activeTab === 'Courses' && styles.activeTabText]}>Courses</Text>
+                </TouchableOpacity>
+                {currentUser?.role === 'Admin' && (
+                    <TouchableOpacity
+                        style={[styles.tab, activeTab === 'Incharges' && styles.activeTab]}
+                        onPress={() => setActiveTab('Incharges')}
+                    >
+                        <Users size={18} color={activeTab === 'Incharges' ? '#4361ee' : '#64748b'} />
+                        <Text style={[styles.tabText, activeTab === 'Incharges' && styles.activeTabText]}>Incharges</Text>
+                    </TouchableOpacity>
+                )}
+            </View>
+
+            {(currentUser?.role === 'Office' || currentUser?.role === 'Admin') && (
+                <View style={styles.quickActions}>
+                    <Text style={styles.quickActionsTitle}>Quick Actions</Text>
+                    <View style={styles.actionRow}>
+                        {currentUser?.role === 'Admin' ? (
+                            <TouchableOpacity
+                                style={[styles.actionCard, { backgroundColor: '#4361ee' }]}
+                                onPress={() => navigation.navigate('UserManagement', { roleFilter: 'Office' })}
+                            >
+                                <Users size={20} color="#fff" />
+                                <Text style={styles.actionCardText}>Manage Incharges</Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity
+                                style={[styles.actionCard, { backgroundColor: '#f59e0b' }]}
+                                onPress={() => navigation.navigate('Fees')}
+                            >
+                                <Banknote size={20} color="#fff" />
+                                <Text style={styles.actionCardText}>Manage Fees</Text>
+                            </TouchableOpacity>
+                        )}
+                        <TouchableOpacity
+                            style={[styles.actionCard, { backgroundColor: '#10b981' }]}
+                            onPress={() => navigation.navigate('Announcements')}
+                        >
+                            <Megaphone size={20} color="#fff" />
+                            <Text style={styles.actionCardText}>Notices</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            )}
+
+            <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>{activeTab} List</Text>
+                <TouchableOpacity
+                    style={styles.addBtn}
+                    onPress={() => {
+                        if (activeTab === 'Incharges') {
+                            navigation.navigate('UserManagement', { roleFilter: 'Office' });
+                        } else {
+                            setModalVisible(true);
+                        }
+                    }}
+                >
+                    <Plus size={20} color="#fff" />
+                    <Text style={styles.addBtnText}>Add New</Text>
+                </TouchableOpacity>
+            </View>
+        </>
+    );
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" />
@@ -333,81 +412,6 @@ const CollegeManagement = ({ navigation }) => {
             </LinearGradient>
 
             <View style={styles.content}>
-                <View style={styles.tabWrapper}>
-                    <TouchableOpacity
-                        style={[styles.tab, activeTab === 'Departments' && styles.activeTab]}
-                        onPress={() => setActiveTab('Departments')}
-                    >
-                        <Building2 size={18} color={activeTab === 'Departments' ? '#4361ee' : '#64748b'} />
-                        <Text style={[styles.tabText, activeTab === 'Departments' && styles.activeTabText]}>Departments</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.tab, activeTab === 'Courses' && styles.activeTab]}
-                        onPress={() => setActiveTab('Courses')}
-                    >
-                        <BookOpen size={18} color={activeTab === 'Courses' ? '#4361ee' : '#64748b'} />
-                        <Text style={[styles.tabText, activeTab === 'Courses' && styles.activeTabText]}>Courses</Text>
-                    </TouchableOpacity>
-                    {currentUser?.role === 'Admin' && (
-                        <TouchableOpacity
-                            style={[styles.tab, activeTab === 'Incharges' && styles.activeTab]}
-                            onPress={() => setActiveTab('Incharges')}
-                        >
-                            <Users size={18} color={activeTab === 'Incharges' ? '#4361ee' : '#64748b'} />
-                            <Text style={[styles.tabText, activeTab === 'Incharges' && styles.activeTabText]}>Incharges</Text>
-                        </TouchableOpacity>
-                    )}
-                </View>
-
-                {(currentUser?.role === 'Office' || currentUser?.role === 'Admin') && (
-                    <View style={styles.quickActions}>
-                        <Text style={styles.quickActionsTitle}>Quick Actions</Text>
-                        <View style={styles.actionRow}>
-                            {currentUser?.role === 'Admin' ? (
-                                <TouchableOpacity
-                                    style={[styles.actionCard, { backgroundColor: '#4361ee' }]}
-                                    onPress={() => navigation.navigate('UserManagement', { roleFilter: 'Office' })}
-                                >
-                                    <Users size={20} color="#fff" />
-                                    <Text style={styles.actionCardText}>Manage Incharges</Text>
-                                </TouchableOpacity>
-                            ) : (
-                                <TouchableOpacity
-                                    style={[styles.actionCard, { backgroundColor: '#f59e0b' }]}
-                                    onPress={() => navigation.navigate('Fees')}
-                                >
-                                    <Banknote size={20} color="#fff" />
-                                    <Text style={styles.actionCardText}>Manage Fees</Text>
-                                </TouchableOpacity>
-                            )}
-                            <TouchableOpacity
-                                style={[styles.actionCard, { backgroundColor: '#10b981' }]}
-                                onPress={() => navigation.navigate('Announcements')}
-                            >
-                                <Megaphone size={20} color="#fff" />
-                                <Text style={styles.actionCardText}>Notices</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                )}
-
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>{activeTab} List</Text>
-                    <TouchableOpacity
-                        style={styles.addBtn}
-                        onPress={() => {
-                            if (activeTab === 'Incharges') {
-                                navigation.navigate('UserManagement', { roleFilter: 'Office' });
-                            } else {
-                                setModalVisible(true);
-                            }
-                        }}
-                    >
-                        <Plus size={20} color="#fff" />
-                        <Text style={styles.addBtnText}>Add New</Text>
-                    </TouchableOpacity>
-                </View>
-
                 {loading ? (
                     <View style={styles.loaderContainer}>
                         <ActivityIndicator size="large" color="#4361ee" />
@@ -419,6 +423,7 @@ const CollegeManagement = ({ navigation }) => {
                         keyExtractor={(item) => item._id}
                         renderItem={renderItem}
                         contentContainerStyle={styles.listContainer}
+                        ListHeaderComponent={renderListHeader}
                         showsVerticalScrollIndicator={false}
                         refreshControl={
                             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4361ee" />
