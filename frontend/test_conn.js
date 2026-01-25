@@ -12,8 +12,8 @@ const testUrl = async (url) => {
 
 const run = async () => {
     await testUrl('https://www.google.com');
-    await testUrl('http://localhost:5001');
-    await testUrl('http://10.18.126.226:5001');
+    await testUrl('http://localhost:5002');
+    await testUrl('http://10.18.126.88:5002');
 };
 
 run();

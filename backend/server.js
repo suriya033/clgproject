@@ -56,20 +56,25 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/college', require('./routes/college'));
 
-const PORT = process.env.PORT || 5001;
-console.log(`Attempting to start server on port ${PORT}...`);
-const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
+const PORT = process.env.PORT || 5002;
+const HOST = '0.0.0.0';
+
+console.log(`Attempting to start server on ${HOST}:${PORT}...`);
+
+const server = app.listen(PORT, HOST, () => {
+    console.log(`✅ Server running on port ${PORT}`);
+    console.log(`   - Local:   http://localhost:${PORT}`);
+    console.log(`   - Network: http://10.18.126.88:${PORT}`);
 });
 
 server.on('error', (e) => {
+    console.error('❌ Server Error:', e);
     if (e.code === 'EADDRINUSE') {
-        console.log('Address in use, retrying...');
-        setTimeout(() => {
-            server.close();
-            server.listen(PORT, '0.0.0.0');
-        }, 1000);
-    } else {
-        console.error('Server Error:', e);
+        console.log(`Port ${PORT} is already in use. Please free the port and try again.`);
+        process.exit(1);
     }
+});
+
+server.on('listening', () => {
+    console.log('✅ Server is now accepting connections');
 });
