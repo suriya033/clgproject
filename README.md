@@ -1,50 +1,43 @@
-# Welcome to your Expo app 👋
+# College Management Mobile Application
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A secure and scalable mobile application built with React Native (Expo) and Node.js.
 
-## Get started
+## Features
+- **Role-Based Access Control (RBAC)**: 11 distinct roles (Admin, Student, Staff, HOD, etc.)
+- **Secure Authentication**: JWT-based login system.
+- **Admin Module**: Full control over user accounts (Create, Read, Update, Delete).
+- **Premium UI**: Modern design with Lucide icons and smooth transitions.
 
-1. Install dependencies
+## Tech Stack
+- **Frontend**: React Native, Expo, React Navigation, Axios.
+- **Backend**: Node.js, Express, MongoDB (Mongoose), JWT, Bcrypt.
 
-   ```bash
-   npm install
-   ```
+## Getting Started
 
-2. Start the app
+### Backend
+1. Navigate to the backend folder: `cd backend`
+2. Install dependencies: `npm install`
+3. Start the server: `npm start`
+   - *Note: Ensure your IP is whitelisted in MongoDB Atlas if using the provided URI.*
 
-   ```bash
-   npx expo start
-   ```
+### Frontend
+1. Navigate to the frontend folder: `cd frontend`
+2. Install dependencies: `npm install`
+3. Start the app: `npx expo start`
 
-In the output, you'll find options to open the app in a
+## Default Admin Credentials
+- **User ID**: `admin`
+- **Password**: `admin123`
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Roles Supported
+- Admin
+- Student
+- Staff
+- HOD
+- Transport
+- Library
+- Hostel
+- Placement
+- Sports
+- Office / Accounts
+- Examination Cell
