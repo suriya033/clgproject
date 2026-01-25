@@ -1,8 +1,10 @@
 import React, { useContext, useState, useEffect } from 'react';
-import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, ScrollView, ActivityIndicator, StatusBar, Platform } from 'react-native';
+import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, ScrollView, ActivityIndicator, StatusBar, Platform, Image } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/api';
-import { LogOut, Users, FileText, CheckSquare, Bell, Calendar } from 'lucide-react-native';
+import { LogOut, Users, FileText, CheckSquare, Bell, Calendar, Megaphone } from 'lucide-react-native';
+
+import { LinearGradient } from 'expo-linear-gradient';
 
 const StaffDashboard = () => {
     const { user, logout } = useContext(AuthContext);
@@ -25,15 +27,18 @@ const StaffDashboard = () => {
     };
 
     const stats = [
-        { id: '1', title: 'Classes Today', value: '4', icon: <Calendar size={24} color="#4361ee" />, sub: 'Next: 10:00 AM' },
-        { id: '2', title: 'Total Students', value: '120', icon: <Users size={24} color="#f72585" />, sub: 'Across 3 sections' },
+        { id: '1', title: 'Classes Today', value: '4', icon: <Calendar size={24} color="#4361ee" />, sub: 'Next: 10:00 AM', bg: '#eef2ff' },
+        { id: '2', title: 'Total Students', value: '120', icon: <Users size={24} color="#f72585" />, sub: 'Across 3 sections', bg: '#fdf2f8' },
     ];
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#4361ee" />
+            <StatusBar barStyle="light-content" />
 
-            <View style={styles.headerContainer}>
+            <LinearGradient
+                colors={['#4361ee', '#3f37c9']}
+                style={styles.headerContainer}
+            >
                 <View style={styles.headerTop}>
                     <View>
                         <Text style={styles.welcomeText}>Staff Portal</Text>
@@ -46,15 +51,15 @@ const StaffDashboard = () => {
                 <View style={styles.headerStats}>
                     <View style={styles.headerStatItem}>
                         <Text style={styles.headerStatLabel}>Department</Text>
-                        <Text style={styles.headerStatValue}>Computer Science</Text>
+                        <Text style={styles.headerStatValue}>{user?.department || 'General'}</Text>
                     </View>
                     <View style={styles.headerStatDivider} />
                     <View style={styles.headerStatItem}>
-                        <Text style={styles.headerStatLabel}>Designation</Text>
-                        <Text style={styles.headerStatValue}>Asst. Professor</Text>
+                        <Text style={styles.headerStatLabel}>Role</Text>
+                        <Text style={styles.headerStatValue}>{user?.role || 'Staff'}</Text>
                     </View>
                 </View>
-            </View>
+            </LinearGradient>
 
             <ScrollView
                 contentContainerStyle={styles.content}
@@ -63,7 +68,7 @@ const StaffDashboard = () => {
                 <View style={styles.grid}>
                     {stats.map(stat => (
                         <View key={stat.id} style={styles.card}>
-                            <View style={styles.cardIconWrapper}>
+                            <View style={[styles.cardIconWrapper, { backgroundColor: stat.bg }]}>
                                 {stat.icon}
                             </View>
                             <Text style={styles.cardValue}>{String(stat.value)}</Text>
@@ -73,7 +78,13 @@ const StaffDashboard = () => {
                     ))}
                 </View>
 
-                <Text style={styles.sectionTitle}>Announcements</Text>
+                <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>Announcements</Text>
+                    <TouchableOpacity>
+                        <Text style={styles.seeAll}>View All</Text>
+                    </TouchableOpacity>
+                </View>
+
                 {loading ? (
                     <ActivityIndicator animating={true} color="#4361ee" style={{ marginVertical: 20 }} />
                 ) : (
@@ -84,12 +95,23 @@ const StaffDashboard = () => {
                                     <View style={styles.bellIconWrapper}>
                                         <Bell size={16} color="#4361ee" />
                                     </View>
-                                    <Text style={styles.announceTitle}>{item.title}</Text>
+                                    <View style={styles.announceHeaderText}>
+                                        <Text style={styles.announceTitle}>{item.title}</Text>
+                                        <Text style={styles.announceDate}>
+                                            {new Date(item.createdAt).toLocaleDateString()}
+                                        </Text>
+                                    </View>
                                 </View>
-                                <Text style={styles.announceContent}>{item.content}</Text>
+                                <Text style={styles.announceContent} numberOfLines={3}>{item.content}</Text>
+                                {item.attachmentUrl && item.attachmentType === 'image' && (
+                                    <Image source={{ uri: item.attachmentUrl }} style={styles.announceImage} />
+                                )}
                             </View>
                         )) : (
-                            <Text style={styles.noData}>No new announcements</Text>
+                            <View style={styles.noDataContainer}>
+                                <Megaphone size={40} color="#cbd5e1" />
+                                <Text style={styles.noData}>No new announcements</Text>
+                            </View>
                         )}
                     </View>
                 )}
@@ -132,17 +154,16 @@ const StaffDashboard = () => {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f8fafc' },
     headerContainer: {
-        backgroundColor: '#4361ee',
         paddingTop: (Platform?.OS === 'android') ? 40 : 20,
-        paddingBottom: 30,
+        paddingBottom: 35,
         paddingHorizontal: 24,
-        borderBottomLeftRadius: 32,
-        borderBottomRightRadius: 32,
-        elevation: 8,
+        borderBottomLeftRadius: 35,
+        borderBottomRightRadius: 35,
+        elevation: 10,
         shadowColor: '#4361ee',
-        shadowOffset: { width: 0, height: 4 },
+        shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.3,
-        shadowRadius: 12,
+        shadowRadius: 20,
     },
     headerTop: {
         flexDirection: 'row',
@@ -150,19 +171,21 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 24,
     },
-    welcomeText: { fontSize: 16, color: 'rgba(255,255,255,0.8)', fontWeight: '500' },
-    userName: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
+    welcomeText: { fontSize: 16, color: 'rgba(255,255,255,0.7)', fontWeight: '500' },
+    userName: { fontSize: 26, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
     logoutButton: {
         padding: 12,
         borderRadius: 16,
-        backgroundColor: 'rgba(255,255,255,0.2)',
+        backgroundColor: 'rgba(255,255,255,0.15)',
     },
     headerStats: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: 'rgba(255,255,255,0.1)',
         borderRadius: 20,
-        padding: 16,
+        padding: 18,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     headerStatItem: {
         flex: 1,
@@ -175,90 +198,99 @@ const styles = StyleSheet.create({
     },
     headerStatLabel: {
         fontSize: 12,
-        color: 'rgba(255,255,255,0.7)',
+        color: 'rgba(255,255,255,0.6)',
         marginBottom: 4,
+        fontWeight: '600',
     },
     headerStatValue: {
         fontSize: 16,
-        fontWeight: '700',
+        fontWeight: '800',
         color: '#fff',
     },
-    content: { padding: 24 },
-    grid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
+    content: { padding: 24, paddingBottom: 40 },
+    grid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 28 },
     card: {
         width: '47%',
-        padding: 20,
+        padding: 22,
         backgroundColor: '#fff',
-        borderRadius: 24,
+        borderRadius: 28,
         alignItems: 'center',
         elevation: 4,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
-        shadowRadius: 10,
+        shadowRadius: 12,
     },
     cardIconWrapper: {
-        width: 48,
-        height: 48,
-        borderRadius: 16,
-        backgroundColor: '#f8fafc',
+        width: 52,
+        height: 52,
+        borderRadius: 18,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 15,
     },
-    cardValue: { fontSize: 24, fontWeight: 'bold', color: '#1e293b' },
-    cardTitle: { fontSize: 14, color: '#64748b', marginTop: 4 },
-    cardSub: { fontSize: 11, color: '#64748b', marginTop: 2 },
-    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1e293b', marginBottom: 16, marginTop: 8 },
+    cardValue: { fontSize: 26, fontWeight: '900', color: '#1e293b' },
+    cardTitle: { fontSize: 14, color: '#64748b', marginTop: 6, fontWeight: '600' },
+    cardSub: { fontSize: 12, color: '#64748b', marginTop: 4, fontWeight: '500' },
+
+    sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
+    sectionTitle: { fontSize: 20, fontWeight: '800', color: '#1e293b' },
+    seeAll: { fontSize: 14, color: '#4361ee', fontWeight: '700' },
+
     announceContainer: {
         backgroundColor: '#fff',
-        borderRadius: 24,
+        borderRadius: 28,
         padding: 20,
-        marginBottom: 24,
-        elevation: 2,
+        marginBottom: 28,
+        elevation: 3,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
-        shadowRadius: 8,
+        shadowRadius: 12,
     },
-    announceItem: { marginBottom: 20, borderBottomWidth: 1, borderBottomColor: '#f1f5f9', paddingBottom: 16 },
-    announceHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+    announceItem: { marginBottom: 24, borderBottomWidth: 1, borderBottomColor: '#f1f5f9', paddingBottom: 20 },
+    announceHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
     bellIconWrapper: {
-        width: 32,
-        height: 32,
-        borderRadius: 10,
+        width: 36,
+        height: 36,
+        borderRadius: 12,
         backgroundColor: '#eef2ff',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
     },
-    announceTitle: { fontSize: 16, fontWeight: '700', color: '#1e293b' },
-    announceContent: { fontSize: 14, color: '#64748b', lineHeight: 20 },
-    noData: { textAlign: 'center', color: '#64748b', padding: 20 },
-    menuList: { gap: 12 },
+    announceHeaderText: { flex: 1 },
+    announceTitle: { fontSize: 17, fontWeight: '800', color: '#1e293b' },
+    announceDate: { fontSize: 12, color: '#94a3b8', marginTop: 2, fontWeight: '500' },
+    announceContent: { fontSize: 14, color: '#475569', lineHeight: 22 },
+    announceImage: { width: '100%', height: 150, borderRadius: 16, marginTop: 15 },
+    noDataContainer: { alignItems: 'center', padding: 30 },
+    noData: { textAlign: 'center', color: '#94a3b8', marginTop: 12, fontWeight: '500' },
+
+    menuList: { gap: 15 },
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#fff',
-        padding: 16,
-        borderRadius: 24,
-        elevation: 2,
+        padding: 20,
+        borderRadius: 28,
+        elevation: 3,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
-        shadowRadius: 8,
+        shadowRadius: 10,
     },
     menuIconWrapper: {
-        width: 52,
-        height: 52,
-        borderRadius: 16,
+        width: 56,
+        height: 56,
+        borderRadius: 18,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 16,
+        marginRight: 18,
     },
     menuContent: { flex: 1 },
-    menuText: { fontSize: 16, fontWeight: '700', color: '#334155' },
-    menuSub: { fontSize: 13, color: '#64748b', marginTop: 2 }
+    menuText: { fontSize: 17, fontWeight: '800', color: '#334155' },
+    menuSub: { fontSize: 13, color: '#64748b', marginTop: 4, fontWeight: '500' }
 });
 
 export default StaffDashboard;

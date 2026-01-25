@@ -13,6 +13,13 @@ const AnnouncementSchema = new mongoose.Schema({
         type: String,
         enum: ['All', 'Student', 'Staff', 'HOD']
     }],
+    attachmentUrl: {
+        type: String
+    },
+    attachmentType: {
+        type: String,
+        enum: ['image', 'pdf', 'document', 'other']
+    },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'

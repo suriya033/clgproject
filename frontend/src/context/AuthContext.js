@@ -35,14 +35,24 @@ export const AuthProvider = ({ children }) => {
             setUser(userData);
             return { success: true };
         } catch (error) {
-            console.error('Login Error:', error.message);
+            console.error('Login Error:', error);
+            let errorMessage = 'Login failed. Please check your network connection.';
+
             if (error.response) {
                 console.error('Response Data:', error.response.data);
                 console.error('Response Status:', error.response.status);
+                errorMessage = error.response.data.message || 'Server error occurred.';
+            } else if (error.request) {
+                console.error('No response received:', error.request);
+                errorMessage = 'Network error. Cannot reach server. Check if your phone is on the same Wi-Fi as the PC.';
+            } else {
+                console.error('Error Message:', error.message);
+                errorMessage = error.message;
             }
+
             return {
                 success: false,
-                message: error.response?.data?.message || 'Login failed. Check network connection.'
+                message: errorMessage
             };
         }
     };

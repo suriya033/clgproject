@@ -1,11 +1,18 @@
 import React, { useContext } from 'react';
 import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, ScrollView, StatusBar, Platform } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
-import { LogOut, Info, Bell, Settings } from 'lucide-react-native';
+import { LogOut, Info, Bell, Settings, Users, ArrowLeft } from 'lucide-react-native';
 
-const GenericDashboard = ({ route }) => {
+const GenericDashboard = ({ navigation, route }) => {
     const { user, logout } = useContext(AuthContext);
-    const roleName = user?.role || 'User';
+    const title = route?.params?.title || user?.role || 'User';
+
+    const handleManageUsers = () => {
+        let roleFilter = title;
+        if (title === 'Placements') roleFilter = 'Placement';
+        if (title === 'Exam Cell') roleFilter = 'ExamCell';
+        navigation.navigate('UserManagement', { roleFilter });
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -13,13 +20,27 @@ const GenericDashboard = ({ route }) => {
 
             <View style={styles.headerContainer}>
                 <View style={styles.headerTop}>
-                    <View>
-                        <Text style={styles.welcomeText}>{roleName} Portal</Text>
-                        <Text style={styles.userName}>{user?.name}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {user?.role === 'Admin' && (
+                            <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 15 }}>
+                                <ArrowLeft size={24} color="#fff" />
+                            </TouchableOpacity>
+                        )}
+                        <View>
+                            <Text style={styles.welcomeText}>{title} Portal</Text>
+                            <Text style={styles.userName}>{user?.name}</Text>
+                        </View>
                     </View>
-                    <TouchableOpacity onPress={logout} style={styles.logoutButton}>
-                        <LogOut size={22} color="#fff" />
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {user?.role === 'Admin' && (
+                            <TouchableOpacity onPress={handleManageUsers} style={[styles.logoutButton, { marginRight: 10 }]}>
+                                <Users size={22} color="#fff" />
+                            </TouchableOpacity>
+                        )}
+                        <TouchableOpacity onPress={logout} style={styles.logoutButton}>
+                            <LogOut size={22} color="#fff" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
 
@@ -34,19 +55,22 @@ const GenericDashboard = ({ route }) => {
                     <View style={styles.infoTextContainer}>
                         <Text style={styles.infoTitle}>Welcome!</Text>
                         <Text style={styles.infoText}>
-                            The {roleName} module is currently being optimized for your experience.
+                            The {title} module is currently being optimized for your experience.
                         </Text>
                     </View>
                 </View>
 
                 <Text style={styles.sectionTitle}>Quick Links</Text>
-                <TouchableOpacity style={styles.menuItem}>
+                <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => navigation.navigate('Announcements')}
+                >
                     <View style={[styles.menuIconWrapper, { backgroundColor: '#eef2ff' }]}>
                         <Bell size={24} color="#4361ee" />
                     </View>
                     <View style={styles.menuContent}>
-                        <Text style={styles.menuText}>Notifications</Text>
-                        <Text style={styles.menuSub}>View your recent alerts</Text>
+                        <Text style={styles.menuText}>Announcements</Text>
+                        <Text style={styles.menuSub}>View and manage notices</Text>
                     </View>
                 </TouchableOpacity>
 

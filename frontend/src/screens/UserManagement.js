@@ -90,7 +90,28 @@ const UserManagement = ({ navigation, route }) => {
         }
 
         try {
-            await api.post('/admin/users', newUser);
+            let userData = { ...newUser };
+
+            // If there's a photo, upload it first
+            if (newUser.photo && (newUser.photo.startsWith('file://') || newUser.photo.startsWith('content://'))) {
+                const formData = new FormData();
+                const filename = newUser.photo.split('/').pop();
+                const match = /\.(\w+)$/.exec(filename);
+                const type = match ? `image/${match[1]}` : `image`;
+
+                formData.append('photo', {
+                    uri: newUser.photo,
+                    name: filename,
+                    type
+                });
+
+                const uploadRes = await api.post('/admin/upload', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                userData.photo = uploadRes.data.url;
+            }
+
+            await api.post('/admin/users', userData);
             Alert.alert('Success', 'User created successfully');
             setModalVisible(false);
             fetchUsers();
@@ -190,8 +211,16 @@ const UserManagement = ({ navigation, route }) => {
                     )}
                 </View>
                 <View style={styles.userInfo}>
-                    <Text style={styles.userName}>{item.name}</Text>
-                    <Text style={styles.userRole}>{item.role} • {item.userId}</Text>
+                    <View style={styles.userNameRow}>
+                        <Text style={styles.userName}>{item.name}</Text>
+                        <View style={[styles.roleBadgeSmall, { backgroundColor: item.role === 'Student' ? '#eef2ff' : '#f0fdf4' }]}>
+                            <Text style={[styles.roleBadgeTextSmall, { color: item.role === 'Student' ? '#4361ee' : '#10b981' }]}>{item.role}</Text>
+                        </View>
+                    </View>
+                    <Text style={styles.userIdText}>ID: {item.userId}</Text>
+                    {item.department && (
+                        <Text style={styles.userDeptText}>{item.department}</Text>
+                    )}
                     <Text style={styles.userEmail}>{item.email}</Text>
                 </View>
                 <TouchableOpacity onPress={() => handleDeleteUser(item._id)} style={styles.deleteButton}>
@@ -568,6 +597,34 @@ const styles = StyleSheet.create({
     userEmail: {
         fontSize: 13,
         color: '#94a3b8',
+    },
+    userNameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 4,
+    },
+    roleBadgeSmall: {
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 8,
+    },
+    roleBadgeTextSmall: {
+        fontSize: 10,
+        fontWeight: '800',
+        textTransform: 'uppercase',
+    },
+    userIdText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#64748b',
+        marginBottom: 2,
+    },
+    userDeptText: {
+        fontSize: 13,
+        color: '#4361ee',
+        fontWeight: '600',
+        marginBottom: 2,
     },
     deleteButton: {
         padding: 8,

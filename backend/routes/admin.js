@@ -4,6 +4,12 @@ const auth = require('../middleware/auth');
 const User = require('../models/User');
 const multer = require('multer');
 const path = require('path');
+const Department = require('../models/Department');
+const Course = require('../models/Course');
+const LibraryItem = require('../models/LibraryItem');
+const Bus = require('../models/Bus');
+const Announcement = require('../models/Announcement');
+const Fee = require('../models/Fee');
 
 // Multer Config
 const storage = multer.diskStorage({
@@ -20,7 +26,7 @@ const upload = multer({ storage });
 // @route   POST api/admin/upload
 // @desc    Upload user photo
 // @access  Private (Admin only)
-router.post('/upload', auth(['Admin']), upload.single('photo'), (req, res) => {
+router.post('/upload', auth(['Admin', 'Office']), upload.single('photo'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: 'No file uploaded' });
     }
@@ -31,7 +37,7 @@ router.post('/upload', auth(['Admin']), upload.single('photo'), (req, res) => {
 // @route   POST api/admin/users
 // @desc    Create a new user
 // @access  Private (Admin only)
-router.post('/users', auth(['Admin']), async (req, res) => {
+router.post('/users', auth(['Admin', 'Office']), async (req, res) => {
     console.log('Creating user with data:', req.body);
     const { userId, password, name, email, role, department, contact, photo, dob, mobileNo, branch, year } = req.body;
 
@@ -70,7 +76,7 @@ router.post('/users', auth(['Admin']), async (req, res) => {
 // @route   GET api/admin/users
 // @desc    Get all users
 // @access  Private (Admin only)
-router.get('/users', auth(['Admin']), async (req, res) => {
+router.get('/users', auth(['Admin', 'Office']), async (req, res) => {
     try {
         const users = await User.find().select('-password');
         res.json(users);
@@ -83,7 +89,7 @@ router.get('/users', auth(['Admin']), async (req, res) => {
 // @route   PUT api/admin/users/:id
 // @desc    Update user
 // @access  Private (Admin only)
-router.put('/users/:id', auth(['Admin']), async (req, res) => {
+router.put('/users/:id', auth(['Admin', 'Office']), async (req, res) => {
     try {
         const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true }).select('-password');
         res.json(user);
@@ -96,7 +102,7 @@ router.put('/users/:id', auth(['Admin']), async (req, res) => {
 // @route   DELETE api/admin/users/:id
 // @desc    Delete user
 // @access  Private (Admin only)
-router.delete('/users/:id', auth(['Admin']), async (req, res) => {
+router.delete('/users/:id', auth(['Admin', 'Office']), async (req, res) => {
     try {
         await User.findByIdAndDelete(req.params.id);
         res.json({ message: 'User deleted' });
@@ -108,8 +114,8 @@ router.delete('/users/:id', auth(['Admin']), async (req, res) => {
 
 // @route   GET api/admin/library
 // @desc    Get all library items
-// @access  Private (Admin only)
-router.get('/library', auth(['Admin']), async (req, res) => {
+// @access  Private (Admin/Library only)
+router.get('/library', auth(['Admin', 'Library', 'Office']), async (req, res) => {
     try {
         const items = await require('../models/LibraryItem').find().sort({ addedAt: -1 });
         res.json(items);
@@ -121,8 +127,8 @@ router.get('/library', auth(['Admin']), async (req, res) => {
 
 // @route   POST api/admin/library
 // @desc    Add a library item
-// @access  Private (Admin only)
-router.post('/library', auth(['Admin']), async (req, res) => {
+// @access  Private (Admin/Library only)
+router.post('/library', auth(['Admin', 'Library', 'Office']), async (req, res) => {
     try {
         const newItem = new (require('../models/LibraryItem'))(req.body);
         const item = await newItem.save();
@@ -135,11 +141,43 @@ router.post('/library', auth(['Admin']), async (req, res) => {
 
 // @route   DELETE api/admin/library/:id
 // @desc    Delete a library item
-// @access  Private (Admin only)
-router.delete('/library/:id', auth(['Admin']), async (req, res) => {
+// @access  Private (Admin/Library only)
+router.delete('/library/:id', auth(['Admin', 'Library', 'Office']), async (req, res) => {
     try {
         await require('../models/LibraryItem').findByIdAndDelete(req.params.id);
         res.json({ message: 'Item deleted' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
+// @route   GET api/admin/stats
+// @desc    Get dashboard stats
+// @access  Private (Admin/Office only)
+router.get('/stats', auth(['Admin', 'Office']), async (req, res) => {
+    try {
+        const studentCount = await User.countDocuments({ role: 'Student' });
+        const staffCount = await User.countDocuments({
+            role: { $in: ['Staff', 'HOD', 'Transport', 'Library', 'Hostel', 'Placement', 'Sports', 'Office', 'ExamCell'] }
+        });
+        const deptCount = await Department.countDocuments();
+        const courseCount = await Course.countDocuments();
+        const libraryCount = await LibraryItem.countDocuments();
+        const busCount = await Bus.countDocuments();
+        const noticeCount = await Announcement.countDocuments();
+        const pendingFees = await Fee.countDocuments({ status: 'Pending' });
+
+        res.json({
+            students: studentCount,
+            staff: staffCount,
+            departments: deptCount,
+            courses: courseCount,
+            libraryItems: libraryCount,
+            buses: busCount,
+            notices: noticeCount,
+            pendingFees: pendingFees
+        });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server error');

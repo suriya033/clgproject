@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
     StyleSheet,
     Text,
@@ -14,10 +14,12 @@ import {
     Platform,
     ScrollView
 } from 'react-native';
-import { ArrowLeft, Search, Plus, Trash2, X, BookOpen, Library } from 'lucide-react-native';
+import { ArrowLeft, Search, Plus, Trash2, X, BookOpen, Library, Users, LogOut } from 'lucide-react-native';
+import { AuthContext } from '../context/AuthContext';
 import api from '../api/api';
 
 const LibraryManagement = ({ navigation }) => {
+    const { user: currentUser, logout } = useContext(AuthContext);
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
@@ -122,11 +124,32 @@ const LibraryManagement = ({ navigation }) => {
 
             <View style={styles.header}>
                 <View style={styles.headerTop}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <ArrowLeft size={24} color="#fff" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Library Management</Text>
-                    <View style={{ width: 40 }} />
+                    {currentUser?.role === 'Admin' ? (
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                            <ArrowLeft size={24} color="#fff" />
+                        </TouchableOpacity>
+                    ) : (
+                        <View style={{ width: 40 }} />
+                    )}
+                    <Text style={styles.headerTitle}>Library Portal</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {currentUser?.role === 'Admin' && (
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('UserManagement', { roleFilter: 'Library' })}
+                                style={[styles.backButton, { marginRight: 10 }]}
+                            >
+                                <Users size={22} color="#fff" />
+                            </TouchableOpacity>
+                        )}
+                        {currentUser?.role === 'Library' && (
+                            <TouchableOpacity
+                                onPress={logout}
+                                style={[styles.backButton, { marginRight: 10 }]}
+                            >
+                                <LogOut size={22} color="#fff" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 </View>
 
                 <View style={styles.searchContainer}>
