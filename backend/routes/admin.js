@@ -10,6 +10,7 @@ const LibraryItem = require('../models/LibraryItem');
 const Bus = require('../models/Bus');
 const Announcement = require('../models/Announcement');
 const Fee = require('../models/Fee');
+const IssuedBook = require('../models/IssuedBook');
 
 // Multer Config
 const storage = multer.diskStorage({
@@ -146,6 +147,84 @@ router.delete('/library/:id', auth(['Admin', 'Library', 'Office']), async (req, 
     try {
         await require('../models/LibraryItem').findByIdAndDelete(req.params.id);
         res.json({ message: 'Item deleted' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
+// @route   POST api/admin/library/issue
+// @desc    Issue a book to a student
+// @access  Private (Admin/Library only)
+router.post('/library/issue', auth(['Admin', 'Library', 'Office']), async (req, res) => {
+    const { bookId, studentId, dueDate } = req.body;
+    try {
+        const book = await LibraryItem.findById(bookId);
+        if (!book) return res.status(404).json({ message: 'Book not found' });
+
+        if (book.quantity < 1) return res.status(400).json({ message: 'Book out of stock' });
+
+        const student = await User.findOne({ userId: studentId, role: 'Student' });
+        if (!student) return res.status(404).json({ message: 'Student not found' });
+
+        const issuedBook = new IssuedBook({
+            book: bookId,
+            studentId: studentId,
+            studentName: student.name,
+            bookTitle: book.title,
+            dueDate: dueDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // Default 14 days
+        });
+
+        await issuedBook.save();
+
+        // Decrement quantity
+        book.quantity -= 1;
+        await book.save();
+
+        res.json(issuedBook);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
+// @route   POST api/admin/library/return/:id
+// @desc    Return a book
+// @access  Private (Admin/Library only)
+router.post('/library/return/:id', auth(['Admin', 'Library', 'Office']), async (req, res) => {
+    try {
+        const issuedBook = await IssuedBook.findById(req.params.id);
+        if (!issuedBook) return res.status(404).json({ message: 'Issued record not found' });
+
+        if (issuedBook.status === 'Returned') {
+            return res.status(400).json({ message: 'Book already returned' });
+        }
+
+        issuedBook.status = 'Returned';
+        issuedBook.returnDate = Date.now();
+        await issuedBook.save();
+
+        // Increment quantity
+        const book = await LibraryItem.findById(issuedBook.book);
+        if (book) {
+            book.quantity += 1;
+            await book.save();
+        }
+
+        res.json(issuedBook);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
+// @route   GET api/admin/library/issued
+// @desc    Get all issued books
+// @access  Private (Admin/Library only)
+router.get('/library/issued', auth(['Admin', 'Library', 'Office']), async (req, res) => {
+    try {
+        const issuedBooks = await IssuedBook.find({ status: 'Issued' }).sort({ issueDate: -1 });
+        res.json(issuedBooks);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server error');

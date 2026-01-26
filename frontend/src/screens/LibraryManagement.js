@@ -14,7 +14,7 @@ import {
     Platform,
     ScrollView
 } from 'react-native';
-import { ArrowLeft, Search, Plus, Trash2, X, BookOpen, Library, Users, LogOut } from 'lucide-react-native';
+import { ArrowLeft, Search, Plus, Trash2, X, BookOpen, Library, Users, LogOut, RotateCcw, Calendar, CheckCircle } from 'lucide-react-native';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/api';
 
@@ -32,9 +32,19 @@ const LibraryManagement = ({ navigation }) => {
         isbn: ''
     });
 
+    const [activeTab, setActiveTab] = useState('books'); // 'books' or 'issued'
+    const [issuedBooks, setIssuedBooks] = useState([]);
+    const [issueModalVisible, setIssueModalVisible] = useState(false);
+    const [selectedBookForIssue, setSelectedBookForIssue] = useState(null);
+    const [studentIdToIssue, setStudentIdToIssue] = useState('');
+
     useEffect(() => {
-        fetchItems();
-    }, []);
+        if (activeTab === 'books') {
+            fetchItems();
+        } else {
+            fetchIssuedBooks();
+        }
+    }, [activeTab]);
 
     const fetchItems = async () => {
         try {
@@ -46,6 +56,69 @@ const LibraryManagement = ({ navigation }) => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const fetchIssuedBooks = async () => {
+        try {
+            setLoading(true);
+            const response = await api.get('/admin/library/issued');
+            setIssuedBooks(response.data);
+        } catch (error) {
+            console.error('Error fetching issued books:', error);
+            Alert.alert('Error', 'Failed to fetch issued books');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleIssueBook = async () => {
+        if (!studentIdToIssue) {
+            Alert.alert('Error', 'Please enter Student ID');
+            return;
+        }
+
+        try {
+            await api.post('/admin/library/issue', {
+                bookId: selectedBookForIssue._id,
+                studentId: studentIdToIssue
+            });
+            Alert.alert('Success', 'Book issued successfully');
+            setIssueModalVisible(false);
+            setStudentIdToIssue('');
+            setSelectedBookForIssue(null);
+            fetchItems(); // Refresh books to update quantity
+        } catch (error) {
+            console.error('Error issuing book:', error);
+            Alert.alert('Error', error.response?.data?.message || 'Failed to issue book');
+        }
+    };
+
+    const handleReturnBook = async (id) => {
+        Alert.alert(
+            'Confirm Return',
+            'Mark this book as returned?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Confirm',
+                    onPress: async () => {
+                        try {
+                            await api.post(`/admin/library/return/${id}`);
+                            fetchIssuedBooks();
+                            Alert.alert('Success', 'Book returned successfully');
+                        } catch (error) {
+                            console.error('Error returning book:', error);
+                            Alert.alert('Error', 'Failed to return book');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const openIssueModal = (item) => {
+        setSelectedBookForIssue(item);
+        setIssueModalVisible(true);
     };
 
     const handleAddItem = async () => {
@@ -106,8 +179,35 @@ const LibraryManagement = ({ navigation }) => {
                     <Text style={styles.itemSubtitle}>{item.author} • {item.category}</Text>
                     <Text style={styles.itemMeta}>Qty: {item.quantity} {item.isbn ? `• ISBN: ${item.isbn}` : ''}</Text>
                 </View>
-                <TouchableOpacity onPress={() => handleDeleteItem(item._id)} style={styles.deleteButton}>
-                    <Trash2 size={20} color="#ef4444" />
+                <View style={styles.actionButtons}>
+                    {item.quantity > 0 && (
+                        <TouchableOpacity onPress={() => openIssueModal(item)} style={[styles.actionButton, { backgroundColor: '#e0f2fe', marginRight: 8 }]}>
+                            <CheckCircle size={20} color="#0ea5e9" />
+                        </TouchableOpacity>
+                    )}
+                    <TouchableOpacity onPress={() => handleDeleteItem(item._id)} style={[styles.actionButton, { backgroundColor: '#fee2e2' }]}>
+                        <Trash2 size={20} color="#ef4444" />
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </View>
+    );
+
+    const renderIssuedItem = ({ item }) => (
+        <View style={styles.card}>
+            <View style={styles.cardContent}>
+                <View style={[styles.iconContainer, { backgroundColor: '#fff7ed' }]}>
+                    <Users size={24} color="#f97316" />
+                </View>
+                <View style={styles.itemInfo}>
+                    <Text style={styles.itemTitle}>{item.bookTitle}</Text>
+                    <Text style={styles.itemSubtitle}>Student: {item.studentName} ({item.studentId})</Text>
+                    <Text style={styles.itemMeta}>
+                        Due: {new Date(item.dueDate).toLocaleDateString()}
+                    </Text>
+                </View>
+                <TouchableOpacity onPress={() => handleReturnBook(item._id)} style={[styles.actionButton, { backgroundColor: '#dcfce7' }]}>
+                    <RotateCcw size={20} color="#22c55e" />
                 </TouchableOpacity>
             </View>
         </View>
@@ -152,17 +252,37 @@ const LibraryManagement = ({ navigation }) => {
                     </View>
                 </View>
 
-                <View style={styles.searchContainer}>
-                    <Search size={20} color="#94a3b8" style={styles.searchIcon} />
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder="Search books, authors..."
-                        placeholderTextColor="#94a3b8"
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                    />
-                </View>
             </View>
+
+            <View style={styles.tabContainer}>
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'books' && styles.activeTab]}
+                    onPress={() => setActiveTab('books')}
+                >
+                    <Text style={[styles.tabText, activeTab === 'books' && styles.activeTabText]}>All Books</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'issued' && styles.activeTab]}
+                    onPress={() => setActiveTab('issued')}
+                >
+                    <Text style={[styles.tabText, activeTab === 'issued' && styles.activeTabText]}>Issued Books</Text>
+                </TouchableOpacity>
+            </View>
+
+            {activeTab === 'books' && (
+                <View style={styles.searchWrapper}>
+                    <View style={styles.searchContainer}>
+                        <Search size={20} color="#94a3b8" style={styles.searchIcon} />
+                        <TextInput
+                            style={styles.searchInput}
+                            placeholder="Search books, authors..."
+                            placeholderTextColor="#94a3b8"
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                        />
+                    </View>
+                </View>
+            )}
 
             {loading ? (
                 <View style={styles.loadingContainer}>
@@ -170,8 +290,8 @@ const LibraryManagement = ({ navigation }) => {
                 </View>
             ) : (
                 <FlatList
-                    data={filteredItems}
-                    renderItem={renderItem}
+                    data={activeTab === 'books' ? filteredItems : issuedBooks}
+                    renderItem={activeTab === 'books' ? renderItem : renderIssuedItem}
                     keyExtractor={item => item._id}
                     contentContainerStyle={styles.listContent}
                     showsVerticalScrollIndicator={false}
@@ -183,13 +303,15 @@ const LibraryManagement = ({ navigation }) => {
                 />
             )}
 
-            <TouchableOpacity
-                style={styles.fab}
-                onPress={() => setModalVisible(true)}
-                activeOpacity={0.9}
-            >
-                <Plus size={24} color="#fff" />
-            </TouchableOpacity>
+            {activeTab === 'books' && (
+                <TouchableOpacity
+                    style={styles.fab}
+                    onPress={() => setModalVisible(true)}
+                    activeOpacity={0.9}
+                >
+                    <Plus size={24} color="#fff" />
+                </TouchableOpacity>
+            )}
 
             <Modal
                 animationType="slide"
@@ -255,7 +377,7 @@ const LibraryManagement = ({ navigation }) => {
                                             style={styles.input}
                                             value={newItem.isbn}
                                             onChangeText={(text) => setNewItem({ ...newItem, isbn: text })}
-                                            placeholder="Optional"
+                                            placeholder="ISBN / Unique Book No"
                                         />
                                     </View>
                                 </View>
@@ -265,6 +387,46 @@ const LibraryManagement = ({ navigation }) => {
                                 </TouchableOpacity>
                             </View>
                         </ScrollView>
+                    </View>
+                </View>
+            </Modal>
+
+            <Modal
+                animationType="fade"
+                transparent={true}
+                visible={issueModalVisible}
+                onRequestClose={() => setIssueModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Issue Book</Text>
+                            <TouchableOpacity onPress={() => setIssueModalVisible(false)}>
+                                <X size={24} color="#64748b" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={styles.bookTitlePreview}>
+                            {selectedBookForIssue?.title}
+                        </Text>
+                        <Text style={styles.bookAuthorPreview}>
+                            by {selectedBookForIssue?.author}
+                        </Text>
+
+                        <View style={[styles.inputGroup, { marginTop: 20 }]}>
+                            <Text style={styles.label}>Student ID *</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={studentIdToIssue}
+                                onChangeText={setStudentIdToIssue}
+                                placeholder="Enter Student ID"
+                                autoCapitalize="none"
+                            />
+                        </View>
+
+                        <TouchableOpacity style={styles.submitButton} onPress={handleIssueBook}>
+                            <Text style={styles.submitButtonText}>Confirm Issue</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
@@ -377,6 +539,53 @@ const styles = StyleSheet.create({
         padding: 8,
         borderRadius: 12,
         backgroundColor: '#fee2e2',
+    },
+    actionButtons: {
+        flexDirection: 'row',
+    },
+    actionButton: {
+        padding: 8,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    tabContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: 20,
+        marginBottom: 10,
+        marginTop: 10,
+    },
+    tab: {
+        flex: 1,
+        paddingVertical: 12,
+        alignItems: 'center',
+        borderBottomWidth: 2,
+        borderBottomColor: 'transparent',
+    },
+    activeTab: {
+        borderBottomColor: '#4361ee',
+    },
+    tabText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#94a3b8',
+    },
+    activeTabText: {
+        color: '#4361ee',
+    },
+    searchWrapper: {
+        paddingHorizontal: 20,
+        marginBottom: 10,
+    },
+    bookTitlePreview: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#1e293b',
+        marginBottom: 4,
+    },
+    bookAuthorPreview: {
+        fontSize: 14,
+        color: '#64748b',
     },
     fab: {
         position: 'absolute',
