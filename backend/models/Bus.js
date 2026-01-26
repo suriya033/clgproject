@@ -12,6 +12,10 @@ const BusSchema = new mongoose.Schema({
     },
     driverName: String,
     driverContact: String,
+    driverId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
     capacity: Number,
     stops: [{
         name: String,

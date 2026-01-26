@@ -240,6 +240,7 @@ router.get('/stats', auth(['Admin', 'Office']), async (req, res) => {
         const staffCount = await User.countDocuments({
             role: { $in: ['Staff', 'HOD', 'Transport', 'Library', 'Hostel', 'Placement', 'Sports', 'Office', 'ExamCell'] }
         });
+        const driverCount = await User.countDocuments({ role: 'Driver' });
         const deptCount = await Department.countDocuments();
         const courseCount = await Course.countDocuments();
         const libraryCount = await LibraryItem.countDocuments();
@@ -250,6 +251,7 @@ router.get('/stats', auth(['Admin', 'Office']), async (req, res) => {
         res.json({
             students: studentCount,
             staff: staffCount,
+            drivers: driverCount,
             departments: deptCount,
             courses: courseCount,
             libraryItems: libraryCount,
