@@ -172,7 +172,7 @@ router.post('/library/issue', auth(['Admin', 'Library', 'Office']), async (req, 
             studentId: studentId,
             studentName: student.name,
             bookTitle: book.title,
-            dueDate: dueDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // Default 14 days
+            dueDate: dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // Default 30 days (1 month)
         });
 
         await issuedBook.save();
@@ -192,6 +192,7 @@ router.post('/library/issue', auth(['Admin', 'Library', 'Office']), async (req, 
 // @desc    Return a book
 // @access  Private (Admin/Library only)
 router.post('/library/return/:id', auth(['Admin', 'Library', 'Office']), async (req, res) => {
+    console.log('Return request for ID:', req.params.id);
     try {
         const issuedBook = await IssuedBook.findById(req.params.id);
         if (!issuedBook) return res.status(404).json({ message: 'Issued record not found' });
@@ -225,6 +226,35 @@ router.get('/library/issued', auth(['Admin', 'Library', 'Office']), async (req, 
     try {
         const issuedBooks = await IssuedBook.find({ status: 'Issued' }).sort({ issueDate: -1 });
         res.json(issuedBooks);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
+// @route   GET api/admin/library/students
+// @desc    Get all students for selection
+// @access  Private (Admin/Library only)
+router.get('/library/students', auth(['Admin', 'Library', 'Office']), async (req, res) => {
+    console.log('Fetching students list...');
+    try {
+        const students = await User.find({ role: 'Student' })
+            .select('userId name department year')
+            .sort({ name: 1 });
+        res.json(students);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
+// @route   GET api/admin/library/returned
+// @desc    Get all returned books history
+// @access  Private (Admin/Library only)
+router.get('/library/returned', auth(['Admin', 'Library', 'Office']), async (req, res) => {
+    try {
+        const returnedBooks = await IssuedBook.find({ status: 'Returned' }).sort({ returnDate: -1 });
+        res.json(returnedBooks);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server error');

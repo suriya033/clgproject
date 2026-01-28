@@ -9,7 +9,8 @@ import {
     StatusBar,
     Platform,
     ActivityIndicator,
-    RefreshControl
+    RefreshControl,
+    Image
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/api';
@@ -110,7 +111,7 @@ const AdminDashboard = ({ navigation }) => {
                 }
             >
                 <LinearGradient
-                    colors={['#4361ee', '#3f37c9']}
+                    colors={['#800000', '#5a0000']}
                     style={styles.headerContainer}
                 >
                     <View style={styles.headerTop}>
@@ -128,7 +129,21 @@ const AdminDashboard = ({ navigation }) => {
                         </View>
                     </View>
                     <View style={styles.headerContent}>
-                        <Text style={styles.username}>{user?.name || 'Administrator'}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                            <Image
+                                source={require('../../assets/logo.png')}
+                                style={{
+                                    width: 70,
+                                    height: 70,
+                                    marginRight: 15,
+                                    borderRadius: 35,
+                                    borderWidth: 2,
+                                    borderColor: '#fff',
+                                    resizeMode: 'cover'
+                                }}
+                            />
+                            <Text style={styles.username}>{user?.name || 'Administrator'}</Text>
+                        </View>
                         <Text style={styles.subtitle}>College Management Portal</Text>
                     </View>
 
@@ -171,7 +186,7 @@ const AdminDashboard = ({ navigation }) => {
                         <Text style={styles.sectionTitle}>Quick Actions</Text>
                         <AnimateOnScroll delay={200}>
                             <View style={styles.bottomRow}>
-                                <TouchableOpacity style={[styles.bottomCard, { backgroundColor: '#4361ee' }]} activeOpacity={0.9}>
+                                <TouchableOpacity style={[styles.bottomCard, { backgroundColor: '#800000' }]} activeOpacity={0.9}>
                                     <View style={styles.bottomIconWrapper}><Bus size={22} color="#fff" /></View>
                                     <Text style={styles.bottomLabel}>Track Bus</Text>
                                 </TouchableOpacity>
@@ -197,7 +212,7 @@ const styles = StyleSheet.create({
         borderBottomLeftRadius: 40,
         borderBottomRightRadius: 40,
         elevation: 15,
-        shadowColor: '#2563eb',
+        shadowColor: '#800000',
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.4,
         shadowRadius: 25,
@@ -206,7 +221,7 @@ const styles = StyleSheet.create({
     menuButton: { padding: 10, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
     headerActions: { flexDirection: 'row', alignItems: 'center' },
     iconButton: { padding: 10, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)', position: 'relative', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-    badge: { position: 'absolute', top: 10, right: 10, width: 10, height: 10, borderRadius: 5, backgroundColor: '#ef4444', borderWidth: 2, borderColor: '#4361ee' },
+    badge: { position: 'absolute', top: 10, right: 10, width: 10, height: 10, borderRadius: 5, backgroundColor: '#ef4444', borderWidth: 2, borderColor: '#800000' },
     headerContent: { marginBottom: 25 },
     welcomeText: { fontSize: 16, color: 'rgba(255,255,255,0.8)', fontWeight: '600' },
     username: { fontSize: 32, color: '#fff', fontWeight: '800', letterSpacing: -0.5, marginBottom: 4 },
@@ -281,7 +296,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         elevation: 8,
-        shadowColor: '#4361ee',
+        shadowColor: '#800000',
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.2,
         shadowRadius: 20,

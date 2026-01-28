@@ -12,7 +12,8 @@ import {
     SafeAreaView,
     StatusBar,
     Platform,
-    ScrollView
+    ScrollView,
+    Image
 } from 'react-native';
 import { ArrowLeft, Search, Plus, Trash2, X, BookOpen, Library, Users, LogOut, RotateCcw, Calendar, CheckCircle } from 'lucide-react-native';
 import { AuthContext } from '../context/AuthContext';
@@ -32,19 +33,45 @@ const LibraryManagement = ({ navigation }) => {
         isbn: ''
     });
 
-    const [activeTab, setActiveTab] = useState('books'); // 'books' or 'issued'
+    const [activeTab, setActiveTab] = useState('books'); // 'books', 'issued', 'returned'
     const [issuedBooks, setIssuedBooks] = useState([]);
+    const [returnedBooks, setReturnedBooks] = useState([]);
     const [issueModalVisible, setIssueModalVisible] = useState(false);
     const [selectedBookForIssue, setSelectedBookForIssue] = useState(null);
     const [studentIdToIssue, setStudentIdToIssue] = useState('');
 
+    // Connection State
+    const [isConnected, setIsConnected] = useState(true);
+
+    // Student Search State
+    const [students, setStudents] = useState([]);
+    const [filteredStudents, setFilteredStudents] = useState([]);
+    const [studentSearchQuery, setStudentSearchQuery] = useState('');
+    const [showStudentDropdown, setShowStudentDropdown] = useState(false);
+
     useEffect(() => {
+        checkConnection();
+        fetchStudents();
         if (activeTab === 'books') {
             fetchItems();
-        } else {
+        } else if (activeTab === 'issued') {
             fetchIssuedBooks();
+        } else if (activeTab === 'returned') {
+            fetchReturnedBooks();
         }
     }, [activeTab]);
+
+    const checkConnection = async () => {
+        try {
+            // Try to fetch users or any light endpoint
+            await api.get('/admin/stats');
+            setIsConnected(true);
+        } catch (error) {
+            console.error('Connection check failed:', error);
+            setIsConnected(false);
+            Alert.alert('Connection Error', 'Cannot reach the server. Please check if your phone is on the same Wi-Fi as your PC.');
+        }
+    };
 
     const fetchItems = async () => {
         try {
@@ -58,6 +85,19 @@ const LibraryManagement = ({ navigation }) => {
         }
     };
 
+    const fetchStudents = async () => {
+        try {
+            const response = await api.get('/admin/library/students');
+            console.log('Fetched students:', response.data.length);
+            setStudents(response.data);
+            setFilteredStudents(response.data);
+        } catch (error) {
+            console.error('Error fetching students:', error);
+            const errorMessage = error.response?.data?.message || error.message || 'Failed to load students list';
+            Alert.alert('Error loading students', errorMessage + '\n\n' + 'Check if backend is running.');
+        }
+    };
+
     const fetchIssuedBooks = async () => {
         try {
             setLoading(true);
@@ -66,6 +106,19 @@ const LibraryManagement = ({ navigation }) => {
         } catch (error) {
             console.error('Error fetching issued books:', error);
             Alert.alert('Error', 'Failed to fetch issued books');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchReturnedBooks = async () => {
+        try {
+            setLoading(true);
+            const response = await api.get('/admin/library/returned');
+            setReturnedBooks(response.data);
+        } catch (error) {
+            console.error('Error fetching returned books:', error);
+            Alert.alert('Error', 'Failed to fetch returned books');
         } finally {
             setLoading(false);
         }
@@ -103,12 +156,13 @@ const LibraryManagement = ({ navigation }) => {
                     text: 'Confirm',
                     onPress: async () => {
                         try {
+                            console.log('Returning book with ID:', id);
                             await api.post(`/admin/library/return/${id}`);
-                            fetchIssuedBooks();
+                            await fetchIssuedBooks(); // Wait for fetch
                             Alert.alert('Success', 'Book returned successfully');
                         } catch (error) {
                             console.error('Error returning book:', error);
-                            Alert.alert('Error', 'Failed to return book');
+                            Alert.alert('Error', error.response?.data?.message || 'Failed to return book');
                         }
                     }
                 }
@@ -171,8 +225,8 @@ const LibraryManagement = ({ navigation }) => {
     const renderItem = ({ item }) => (
         <View style={styles.card}>
             <View style={styles.cardContent}>
-                <View style={styles.iconContainer}>
-                    <BookOpen size={24} color="#4361ee" />
+                <View style={[styles.iconContainer, { backgroundColor: '#fff1f2' }]}>
+                    <BookOpen size={24} color="#800000" />
                 </View>
                 <View style={styles.itemInfo}>
                     <Text style={styles.itemTitle}>{item.title}</Text>
@@ -181,8 +235,8 @@ const LibraryManagement = ({ navigation }) => {
                 </View>
                 <View style={styles.actionButtons}>
                     {item.quantity > 0 && (
-                        <TouchableOpacity onPress={() => openIssueModal(item)} style={[styles.actionButton, { backgroundColor: '#e0f2fe', marginRight: 8 }]}>
-                            <CheckCircle size={20} color="#0ea5e9" />
+                        <TouchableOpacity onPress={() => openIssueModal(item)} style={[styles.actionButton, { backgroundColor: '#fee2e2', marginRight: 8 }]}>
+                            <CheckCircle size={20} color="#dc2626" />
                         </TouchableOpacity>
                     )}
                     <TouchableOpacity onPress={() => handleDeleteItem(item._id)} style={[styles.actionButton, { backgroundColor: '#fee2e2' }]}>
@@ -196,8 +250,8 @@ const LibraryManagement = ({ navigation }) => {
     const renderIssuedItem = ({ item }) => (
         <View style={styles.card}>
             <View style={styles.cardContent}>
-                <View style={[styles.iconContainer, { backgroundColor: '#fff7ed' }]}>
-                    <Users size={24} color="#f97316" />
+                <View style={[styles.iconContainer, { backgroundColor: '#fff1f2' }]}>
+                    <Users size={24} color="#800000" />
                 </View>
                 <View style={styles.itemInfo}>
                     <Text style={styles.itemTitle}>{item.bookTitle}</Text>
@@ -213,14 +267,51 @@ const LibraryManagement = ({ navigation }) => {
         </View>
     );
 
-    const filteredItems = items.filter(item =>
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.author.toLowerCase().includes(searchQuery.toLowerCase())
+    const renderReturnedItem = ({ item }) => (
+        <View style={styles.card}>
+            <View style={styles.cardContent}>
+                <View style={[styles.iconContainer, { backgroundColor: '#f0fdf4' }]}>
+                    <BookOpen size={24} color="#166534" />
+                </View>
+                <View style={styles.itemInfo}>
+                    <Text style={styles.itemTitle}>{item.bookTitle}</Text>
+                    <Text style={styles.itemSubtitle}>Returned by: {item.studentName}</Text>
+                    <Text style={[styles.itemMeta, { color: '#16a34a' }]}>
+                        Returned on: {new Date(item.returnDate).toLocaleDateString()}
+                    </Text>
+                </View>
+                <View style={[styles.actionButton, { backgroundColor: '#dcfce7' }]}>
+                    <CheckCircle size={20} color="#22c55e" />
+                </View>
+            </View>
+        </View>
     );
+
+    const getFilteredData = () => {
+        const query = searchQuery.toLowerCase();
+        if (activeTab === 'books') {
+            return items.filter(item =>
+                item.title.toLowerCase().includes(query) ||
+                item.author.toLowerCase().includes(query)
+            );
+        } else if (activeTab === 'issued') {
+            return issuedBooks.filter(item =>
+                item.bookTitle.toLowerCase().includes(query) ||
+                item.studentName.toLowerCase().includes(query) ||
+                item.studentId.includes(query)
+            );
+        } else {
+            return returnedBooks.filter(item =>
+                item.bookTitle.toLowerCase().includes(query) ||
+                item.studentName.toLowerCase().includes(query) ||
+                item.studentId.includes(query)
+            );
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#4361ee" />
+            <StatusBar barStyle="light-content" backgroundColor="#800000" />
 
             <View style={styles.header}>
                 <View style={styles.headerTop}>
@@ -231,7 +322,21 @@ const LibraryManagement = ({ navigation }) => {
                     ) : (
                         <View style={{ width: 40 }} />
                     )}
-                    <Text style={styles.headerTitle}>Library Portal</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Image
+                            source={require('../../assets/logo.png')}
+                            style={{
+                                width: 50,
+                                height: 50,
+                                marginRight: 12,
+                                borderRadius: 25,
+                                borderWidth: 2,
+                                borderColor: '#fff',
+                                resizeMode: 'cover'
+                            }}
+                        />
+                        <Text style={styles.headerTitle}>Library Portal</Text>
+                    </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         {currentUser?.role === 'Admin' && (
                             <TouchableOpacity
@@ -251,8 +356,13 @@ const LibraryManagement = ({ navigation }) => {
                         )}
                     </View>
                 </View>
-
             </View>
+
+            {!isConnected && (
+                <View style={{ backgroundColor: '#ef4444', padding: 10, alignItems: 'center' }}>
+                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>Offline - Server Unreachable</Text>
+                </View>
+            )}
 
             <View style={styles.tabContainer}>
                 <TouchableOpacity
@@ -265,33 +375,45 @@ const LibraryManagement = ({ navigation }) => {
                     style={[styles.tab, activeTab === 'issued' && styles.activeTab]}
                     onPress={() => setActiveTab('issued')}
                 >
-                    <Text style={[styles.tabText, activeTab === 'issued' && styles.activeTabText]}>Issued Books</Text>
+                    <Text style={[styles.tabText, activeTab === 'issued' && styles.activeTabText]}>Issued</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'returned' && styles.activeTab]}
+                    onPress={() => setActiveTab('returned')}
+                >
+                    <Text style={[styles.tabText, activeTab === 'returned' && styles.activeTabText]}>Returned</Text>
                 </TouchableOpacity>
             </View>
 
-            {activeTab === 'books' && (
-                <View style={styles.searchWrapper}>
-                    <View style={styles.searchContainer}>
-                        <Search size={20} color="#94a3b8" style={styles.searchIcon} />
-                        <TextInput
-                            style={styles.searchInput}
-                            placeholder="Search books, authors..."
-                            placeholderTextColor="#94a3b8"
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                        />
-                    </View>
+            <View style={styles.searchWrapper}>
+                <View style={styles.searchContainer}>
+                    <Search size={20} color="#94a3b8" style={styles.searchIcon} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder={
+                            activeTab === 'books' ? "Search books, authors..." :
+                                activeTab === 'issued' ? "Search issued books, students..." :
+                                    "Search returned books..."
+                        }
+                        placeholderTextColor="#94a3b8"
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                    />
                 </View>
-            )}
+            </View>
 
             {loading ? (
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#4361ee" />
+                    <ActivityIndicator size="large" color="#800000" />
                 </View>
             ) : (
                 <FlatList
-                    data={activeTab === 'books' ? filteredItems : issuedBooks}
-                    renderItem={activeTab === 'books' ? renderItem : renderIssuedItem}
+                    data={getFilteredData()}
+                    renderItem={
+                        activeTab === 'books' ? renderItem :
+                            activeTab === 'issued' ? renderIssuedItem :
+                                renderReturnedItem
+                    }
                     keyExtractor={item => item._id}
                     contentContainerStyle={styles.listContent}
                     showsVerticalScrollIndicator={false}
@@ -413,18 +535,66 @@ const LibraryManagement = ({ navigation }) => {
                             by {selectedBookForIssue?.author}
                         </Text>
 
-                        <View style={[styles.inputGroup, { marginTop: 20 }]}>
-                            <Text style={styles.label}>Student ID *</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={studentIdToIssue}
-                                onChangeText={setStudentIdToIssue}
-                                placeholder="Enter Student ID"
-                                autoCapitalize="none"
-                            />
+
+
+                        <View style={[styles.inputGroup, { marginTop: 20, zIndex: 5000, elevation: 5000 }]}>
+                            <Text style={styles.label}>Select Student *</Text>
+                            <View style={styles.autocompleteContainer}>
+                                <TextInput
+                                    style={styles.input}
+                                    value={studentSearchQuery}
+                                    onChangeText={(text) => {
+                                        setStudentSearchQuery(text);
+                                        setShowStudentDropdown(true);
+                                        setStudentIdToIssue(''); // Reset ID on type
+                                        const query = text.toLowerCase();
+                                        setFilteredStudents(
+                                            students.filter(s =>
+                                                s.name.toLowerCase().includes(query) ||
+                                                s.userId.toLowerCase().includes(query)
+                                            )
+                                        );
+                                    }}
+                                    onFocus={() => setShowStudentDropdown(true)}
+                                    placeholder="Search Student by Name or ID"
+                                    autoCapitalize="none"
+                                />
+                                {showStudentDropdown && (
+                                    <View style={styles.dropdownList}>
+                                        <FlatList
+                                            data={filteredStudents}
+                                            keyExtractor={item => item.userId}
+                                            nestedScrollEnabled={true}
+                                            style={{ maxHeight: 200 }}
+                                            renderItem={({ item }) => (
+                                                <TouchableOpacity
+                                                    style={styles.dropdownItem}
+                                                    onPress={() => {
+                                                        setStudentIdToIssue(item.userId);
+                                                        setStudentSearchQuery(`${item.name} (${item.userId})`);
+                                                        setShowStudentDropdown(false);
+                                                    }}
+                                                >
+                                                    <Text style={styles.dropdownItemText}>{item.name}</Text>
+                                                    <Text style={styles.dropdownItemSubText}>{item.userId} • {item.department}</Text>
+                                                </TouchableOpacity>
+                                            )}
+                                            ListEmptyComponent={
+                                                <View style={{ padding: 12 }}>
+                                                    <Text style={{ color: '#94a3b8' }}>No students found</Text>
+                                                </View>
+                                            }
+                                        />
+                                    </View>
+                                )}
+                            </View>
                         </View>
 
-                        <TouchableOpacity style={styles.submitButton} onPress={handleIssueBook}>
+                        <TouchableOpacity
+                            style={[styles.submitButton, { opacity: studentIdToIssue ? 1 : 0.6 }]}
+                            onPress={handleIssueBook}
+                            disabled={!studentIdToIssue}
+                        >
                             <Text style={styles.submitButtonText}>Confirm Issue</Text>
                         </TouchableOpacity>
                     </View>
@@ -437,17 +607,17 @@ const LibraryManagement = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8fafc',
+        backgroundColor: '#ffffff',
     },
     header: {
-        backgroundColor: '#4361ee',
+        backgroundColor: '#800000',
         paddingTop: (Platform?.OS === 'android') ? 40 : 20,
         paddingBottom: 24,
         paddingHorizontal: 20,
         borderBottomLeftRadius: 32,
         borderBottomRightRadius: 32,
         elevation: 8,
-        shadowColor: '#4361ee',
+        shadowColor: '#800000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 12,
@@ -512,7 +682,7 @@ const styles = StyleSheet.create({
         width: 48,
         height: 48,
         borderRadius: 16,
-        backgroundColor: '#eef2ff',
+        backgroundColor: '#fff1f2',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 16,
@@ -563,7 +733,7 @@ const styles = StyleSheet.create({
         borderBottomColor: 'transparent',
     },
     activeTab: {
-        borderBottomColor: '#4361ee',
+        borderBottomColor: '#800000',
     },
     tabText: {
         fontSize: 16,
@@ -571,7 +741,7 @@ const styles = StyleSheet.create({
         color: '#94a3b8',
     },
     activeTabText: {
-        color: '#4361ee',
+        color: '#800000',
     },
     searchWrapper: {
         paddingHorizontal: 20,
@@ -594,11 +764,11 @@ const styles = StyleSheet.create({
         width: 56,
         height: 56,
         borderRadius: 28,
-        backgroundColor: '#4361ee',
+        backgroundColor: '#800000',
         justifyContent: 'center',
         alignItems: 'center',
         elevation: 8,
-        shadowColor: '#4361ee',
+        shadowColor: '#800000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 12,
@@ -652,13 +822,13 @@ const styles = StyleSheet.create({
         borderColor: '#e2e8f0',
     },
     submitButton: {
-        backgroundColor: '#4361ee',
+        backgroundColor: '#800000',
         borderRadius: 16,
         paddingVertical: 16,
         alignItems: 'center',
         marginTop: 12,
         elevation: 4,
-        shadowColor: '#4361ee',
+        shadowColor: '#800000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 8,
@@ -675,6 +845,42 @@ const styles = StyleSheet.create({
     emptyText: {
         fontSize: 16,
         color: '#94a3b8',
+    },
+    autocompleteContainer: {
+        position: 'relative',
+        zIndex: 1000,
+    },
+    dropdownList: {
+        position: 'absolute',
+        bottom: 65, // Render ABOVE the input
+        left: 0,
+        right: 0,
+        backgroundColor: '#ffffff',
+        borderRadius: 16,
+        elevation: 5001,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 }, // Shadow upwards
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        maxHeight: 200,
+        zIndex: 6000,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+    },
+    dropdownItem: {
+        padding: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f1f5f9',
+    },
+    dropdownItemText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#1e293b',
+    },
+    dropdownItemSubText: {
+        fontSize: 12,
+        color: '#64748b',
+        marginTop: 2,
     },
 });
 

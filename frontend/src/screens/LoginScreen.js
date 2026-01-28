@@ -47,7 +47,10 @@ const LoginScreen = () => {
                 <View style={styles.inner}>
                     <View style={styles.header}>
                         <View style={styles.logoContainer}>
-                            <Text style={styles.logoText}>{"CM"}</Text>
+                            <Image
+                                source={require('../../assets/logo.png')}
+                                style={styles.logoImage}
+                            />
                         </View>
                         <Text style={styles.title}>RED'S UNIVERSITY</Text>
                         <Text style={styles.subtitle}>Smart College Management System</Text>
@@ -134,23 +137,26 @@ const styles = StyleSheet.create({
         marginBottom: 40,
     },
     logoContainer: {
-        width: 70,
-        height: 70,
-        borderRadius: 22,
-        backgroundColor: '#4361ee',
+        width: 150,
+        height: 150,
+        borderRadius: 75,
+        backgroundColor: '#fff',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 16,
-        elevation: 8,
-        shadowColor: '#4361ee',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
+        marginBottom: 24,
+        elevation: 10,
+        shadowColor: '#800000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 16,
+        borderWidth: 4,
+        borderColor: '#800000'
     },
-    logoText: {
-        color: '#fff',
-        fontSize: 28,
-        fontWeight: 'bold',
+    logoImage: {
+        width: 150,
+        height: 150,
+        borderRadius: 75,
+        resizeMode: 'cover'
     },
     title: {
         fontSize: 32,
@@ -215,7 +221,7 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     loginButton: {
-        backgroundColor: '#4361ee',
+        backgroundColor: '#800000',
         borderRadius: 16,
         height: 56,
         flexDirection: 'row',
@@ -223,7 +229,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: 8,
         elevation: 4,
-        shadowColor: '#4361ee',
+        shadowColor: '#800000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -243,7 +249,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
     contactAdmin: {
-        color: '#4361ee',
+        color: '#800000',
         fontSize: 14,
         fontWeight: '700',
         marginTop: 4,
