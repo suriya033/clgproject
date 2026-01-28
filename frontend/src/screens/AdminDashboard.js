@@ -74,9 +74,9 @@ const AdminDashboard = ({ navigation }) => {
     };
 
     const gridItems = [
-        { id: '1', title: 'Notice', icon: <Megaphone size={24} color="#4361ee" />, route: 'Announcements', bg: '#eef2ff' },
+        { id: '1', title: 'Notice', icon: <Megaphone size={24} color="#800000" />, route: 'Announcements', bg: '#ffe4e6' },
         { id: '2', title: 'Fee', icon: <Banknote size={24} color="#f59e0b" />, route: 'Fees', bg: '#fffbeb' },
-        { id: '4', title: 'Student', icon: <GraduationCap size={24} color="#6366f1" />, route: 'StudentManagement', bg: '#eef2ff' },
+        { id: '4', title: 'Student', icon: <GraduationCap size={24} color="#6366f1" />, route: 'StudentManagement', bg: '#ffe4e6' },
         { id: '5', title: 'Staff', icon: <Users size={24} color="#ec4899" />, route: 'StaffManagement', bg: '#fdf2f8' },
         { id: '6', title: 'HOD', icon: <UserCog size={24} color="#8b5cf6" />, route: 'HODManagement', bg: '#f5f3ff' },
         { id: '7', title: 'Library', icon: <Library size={24} color="#f43f5e" />, route: 'LibraryManagement', bg: '#fff1f2' },
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     scrollContent: { paddingHorizontal: 20, paddingBottom: 40, paddingTop: 25 },
     sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
     sectionTitle: { fontSize: 22, fontWeight: '800', color: '#0f172a', letterSpacing: -0.5 },
-    seeAll: { fontSize: 14, color: '#4361ee', fontWeight: '700' },
+    seeAll: { fontSize: 14, color: '#800000', fontWeight: '700' },
 
     gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
     gridItem: {

@@ -278,7 +278,7 @@ const HostelManagement = ({ navigation }) => {
     return (
         <SafeAreaView style={styles.container}>
             <LinearGradient
-                colors={['#06b6d4', '#0891b2']}
+                colors={['#5a0000', '#800000']}
                 style={styles.headerGradient}
             >
                 <View style={styles.headerTop}>
@@ -303,7 +303,7 @@ const HostelManagement = ({ navigation }) => {
                                 onPress={() => setActiveTab(tab.id)}
                             >
                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                    {React.cloneElement(tab.icon, { color: activeTab === tab.id ? '#0891b2' : 'rgba(255,255,255,0.8)' })}
+                                    {React.cloneElement(tab.icon, { color: activeTab === tab.id ? '#800000' : 'rgba(255,255,255,0.8)' })}
                                     <Text style={[styles.tabText, activeTab === tab.id && styles.activeTabText]}>{tab.label}</Text>
                                 </View>
                             </TouchableOpacity>
@@ -376,7 +376,7 @@ const HostelManagement = ({ navigation }) => {
                                         <View key={student._id} style={styles.chip}>
                                             <Text style={styles.chipText}>{student.name}</Text>
                                             <TouchableOpacity onPress={() => toggleStudentSelection(student)}>
-                                                <X size={14} color="#0891b2" />
+                                                <X size={14} color="#800000" />
                                             </TouchableOpacity>
                                         </View>
                                     ))}
@@ -401,7 +401,7 @@ const HostelManagement = ({ navigation }) => {
                                 {isDropdownVisible && (
                                     <View style={styles.dropdownList}>
                                         {loadingStudents ? (
-                                            <ActivityIndicator color="#0891b2" style={{ padding: 20 }} />
+                                            <ActivityIndicator color="#800000" style={{ padding: 20 }} />
                                         ) : filteredStudents.length === 0 ? (
                                             <Text style={styles.noResultText}>No students found</Text>
                                         ) : (
@@ -417,7 +417,7 @@ const HostelManagement = ({ navigation }) => {
                                                             <Text style={[styles.dropdownName, isSelected && styles.selectedText]}>{student.name}</Text>
                                                             <Text style={[styles.dropdownId, isSelected && styles.selectedTextSub]}>{student.userId}</Text>
                                                         </View>
-                                                        {isSelected && <Check size={18} color="#0891b2" />}
+                                                        {isSelected && <Check size={18} color="#800000" />}
                                                     </TouchableOpacity>
                                                 );
                                             })
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
         fontSize: 13,
     },
     activeTabText: {
-        color: '#0891b2',
+        color: '#800000',
     },
     scrollContent: {
         padding: 20,
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
         color: '#1e293b',
     },
     addButton: {
-        backgroundColor: '#0891b2',
+        backgroundColor: '#800000',
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 16,
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
     datesRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
     dateText: { fontSize: 12, color: '#64748b', marginLeft: 4 },
     attendanceBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-    assignedStudentText: { fontSize: 11, color: '#0891b2', marginRight: 8, marginTop: 4, fontWeight: '500' },
+    assignedStudentText: { fontSize: 11, color: '#800000', marginRight: 8, marginTop: 4, fontWeight: '500' },
 
     // Modal
     modalOverlay: {
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
         color: '#1e293b',
     },
     submitButton: {
-        backgroundColor: '#06b6d4',
+        backgroundColor: '#5a0000',
         padding: 16,
         borderRadius: 16,
         alignItems: 'center',
@@ -609,15 +609,15 @@ const styles = StyleSheet.create({
     searchInput: { flex: 1, marginLeft: 8, fontSize: 15, color: '#1e293b' },
     dropdownList: { marginTop: 6, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0', maxHeight: 200, padding: 0 },
     dropdownItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-    dropdownItemSelected: { backgroundColor: '#ecfeff' },
+    dropdownItemSelected: { backgroundColor: '#ffe4e6' },
     dropdownName: { fontSize: 14, fontWeight: '600', color: '#1e293b' },
     dropdownId: { fontSize: 12, color: '#64748b' },
-    selectedText: { color: '#0891b2' },
-    selectedTextSub: { color: '#06b6d4' },
+    selectedText: { color: '#800000' },
+    selectedTextSub: { color: '#5a0000' },
     noResultText: { padding: 16, textAlign: 'center', color: '#94a3b8' },
     chipsContainer: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10 },
-    chip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ecfeff', borderRadius: 20, paddingVertical: 6, paddingHorizontal: 10, marginRight: 8, marginBottom: 8, borderWidth: 1, borderColor: '#cffafe' },
-    chipText: { fontSize: 12, color: '#0891b2', fontWeight: '600', marginRight: 6 },
+    chip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffe4e6', borderRadius: 20, paddingVertical: 6, paddingHorizontal: 10, marginRight: 8, marginBottom: 8, borderWidth: 1, borderColor: '#cffafe' },
+    chipText: { fontSize: 12, color: '#800000', fontWeight: '600', marginRight: 6 },
 });
 
 export default HostelManagement;

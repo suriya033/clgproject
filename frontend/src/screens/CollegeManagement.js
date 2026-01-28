@@ -208,9 +208,9 @@ const CollegeManagement = ({ navigation }) => {
                 activeOpacity={0.7}
             >
                 <View style={styles.cardHeader}>
-                    <View style={[styles.iconContainer, { backgroundColor: activeTab === 'Departments' ? '#eef2ff' : '#f0fdf4' }]}>
+                    <View style={[styles.iconContainer, { backgroundColor: activeTab === 'Departments' ? '#ffe4e6' : '#f0fdf4' }]}>
                         {activeTab === 'Departments' ?
-                            <Building2 size={24} color="#4361ee" /> :
+                            <Building2 size={24} color="#800000" /> :
                             <BookOpen size={24} color="#10b981" />
                         }
                     </View>
@@ -261,14 +261,14 @@ const CollegeManagement = ({ navigation }) => {
                     style={[styles.tab, activeTab === 'Departments' && styles.activeTab]}
                     onPress={() => setActiveTab('Departments')}
                 >
-                    <Building2 size={18} color={activeTab === 'Departments' ? '#4361ee' : '#64748b'} />
+                    <Building2 size={18} color={activeTab === 'Departments' ? '#800000' : '#64748b'} />
                     <Text style={[styles.tabText, activeTab === 'Departments' && styles.activeTabText]}>Departments</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={[styles.tab, activeTab === 'Courses' && styles.activeTab]}
                     onPress={() => setActiveTab('Courses')}
                 >
-                    <BookOpen size={18} color={activeTab === 'Courses' ? '#4361ee' : '#64748b'} />
+                    <BookOpen size={18} color={activeTab === 'Courses' ? '#800000' : '#64748b'} />
                     <Text style={[styles.tabText, activeTab === 'Courses' && styles.activeTabText]}>Courses</Text>
                 </TouchableOpacity>
                 {currentUser?.role === 'Admin' && (
@@ -276,7 +276,7 @@ const CollegeManagement = ({ navigation }) => {
                         style={[styles.tab, activeTab === 'Incharges' && styles.activeTab]}
                         onPress={() => setActiveTab('Incharges')}
                     >
-                        <Users size={18} color={activeTab === 'Incharges' ? '#4361ee' : '#64748b'} />
+                        <Users size={18} color={activeTab === 'Incharges' ? '#800000' : '#64748b'} />
                         <Text style={[styles.tabText, activeTab === 'Incharges' && styles.activeTabText]}>Incharges</Text>
                     </TouchableOpacity>
                 )}
@@ -288,7 +288,7 @@ const CollegeManagement = ({ navigation }) => {
                     <View style={styles.actionRow}>
                         {currentUser?.role === 'Admin' ? (
                             <TouchableOpacity
-                                style={[styles.actionCard, { backgroundColor: '#4361ee' }]}
+                                style={[styles.actionCard, { backgroundColor: '#800000' }]}
                                 onPress={() => navigation.navigate('UserManagement', { roleFilter: 'Office' })}
                             >
                                 <Users size={20} color="#fff" />
@@ -338,7 +338,7 @@ const CollegeManagement = ({ navigation }) => {
             <StatusBar barStyle="light-content" />
 
             <LinearGradient
-                colors={['#4361ee', '#3f37c9']}
+                colors={['#800000', '#5a0000']}
                 style={styles.header}
             >
                 <View style={styles.headerTop}>
@@ -380,8 +380,8 @@ const CollegeManagement = ({ navigation }) => {
 
                 <View style={styles.statsRow}>
                     <View style={[styles.statCard, currentUser?.role === 'Admin' && { flex: 0.31 }]}>
-                        <View style={[styles.statIconCircle, { backgroundColor: '#eef2ff' }]}>
-                            <Building2 size={16} color="#4361ee" />
+                        <View style={[styles.statIconCircle, { backgroundColor: '#ffe4e6' }]}>
+                            <Building2 size={16} color="#800000" />
                         </View>
                         <View>
                             <Text style={styles.statValue}>{departments.length}</Text>
@@ -414,7 +414,7 @@ const CollegeManagement = ({ navigation }) => {
             <View style={styles.content}>
                 {loading ? (
                     <View style={styles.loaderContainer}>
-                        <ActivityIndicator size="large" color="#4361ee" />
+                        <ActivityIndicator size="large" color="#800000" />
                         <Text style={styles.loaderText}>Loading data...</Text>
                     </View>
                 ) : (
@@ -426,7 +426,7 @@ const CollegeManagement = ({ navigation }) => {
                         ListHeaderComponent={renderListHeader}
                         showsVerticalScrollIndicator={false}
                         refreshControl={
-                            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4361ee" />
+                            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#800000" />
                         }
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
         gap: 8
     },
     activeTab: {
-        backgroundColor: '#eef2ff',
+        backgroundColor: '#ffe4e6',
     },
     tabText: {
         fontSize: 15,
@@ -650,7 +650,7 @@ const styles = StyleSheet.create({
         color: '#64748b'
     },
     activeTabText: {
-        color: '#4361ee'
+        color: '#800000'
     },
     quickActions: {
         marginBottom: 25
@@ -698,13 +698,13 @@ const styles = StyleSheet.create({
     addBtn: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#4361ee',
+        backgroundColor: '#800000',
         paddingVertical: 10,
         paddingHorizontal: 16,
         borderRadius: 14,
         gap: 6,
         elevation: 4,
-        shadowColor: '#4361ee',
+        shadowColor: '#800000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8
@@ -888,8 +888,8 @@ const styles = StyleSheet.create({
         borderColor: 'transparent'
     },
     deptOptionActive: {
-        backgroundColor: '#eef2ff',
-        borderColor: '#4361ee'
+        backgroundColor: '#ffe4e6',
+        borderColor: '#800000'
     },
     deptOptionText: {
         fontSize: 14,
@@ -897,16 +897,16 @@ const styles = StyleSheet.create({
         color: '#64748b'
     },
     deptOptionTextActive: {
-        color: '#4361ee'
+        color: '#800000'
     },
     submitBtn: {
-        backgroundColor: '#4361ee',
+        backgroundColor: '#800000',
         borderRadius: 18,
         padding: 20,
         alignItems: 'center',
         marginTop: 10,
         elevation: 8,
-        shadowColor: '#4361ee',
+        shadowColor: '#800000',
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.3,
         shadowRadius: 15

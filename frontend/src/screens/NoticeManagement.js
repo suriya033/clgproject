@@ -189,7 +189,7 @@ const NoticeManagement = ({ navigation }) => {
 
     const getIconForType = (type) => {
         switch (type) {
-            case 'image': return <ImageIcon size={20} color="#4361ee" />;
+            case 'image': return <ImageIcon size={20} color="#800000" />;
             case 'pdf': return <FileText size={20} color="#ef4444" />;
             case 'document': return <FileIcon size={20} color="#10b981" />;
             default: return <FileIcon size={20} color="#64748b" />;
@@ -201,8 +201,8 @@ const NoticeManagement = ({ navigation }) => {
             <View style={styles.cardHeader}>
                 <View style={styles.roleBadges}>
                     {notice.targetRoles.map(role => (
-                        <View key={role} style={[styles.roleBadge, { backgroundColor: role === 'All' ? '#eef2ff' : '#f0fdf4' }]}>
-                            <Text style={[styles.roleBadgeText, { color: role === 'All' ? '#4361ee' : '#10b981' }]}>{role}</Text>
+                        <View key={role} style={[styles.roleBadge, { backgroundColor: role === 'All' ? '#ffe4e6' : '#f0fdf4' }]}>
+                            <Text style={[styles.roleBadgeText, { color: role === 'All' ? '#800000' : '#10b981' }]}>{role}</Text>
                         </View>
                     ))}
                 </View>
@@ -261,7 +261,7 @@ const NoticeManagement = ({ navigation }) => {
     return (
         <SafeAreaView style={styles.container}>
             <LinearGradient
-                colors={['#4361ee', '#3f37c9']}
+                colors={['#800000', '#5a0000']}
                 style={styles.headerGradient}
             >
                 <View style={styles.headerTop}>
@@ -296,14 +296,14 @@ const NoticeManagement = ({ navigation }) => {
 
             {loading && !refreshing ? (
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#4361ee" />
+                    <ActivityIndicator size="large" color="#800000" />
                     <Text style={styles.loadingText}>Fetching latest updates...</Text>
                 </View>
             ) : (
                 <ScrollView
                     contentContainerStyle={styles.scrollContent}
                     refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4361ee" />
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#800000" />
                     }
                 >
                     {filteredNotices.length === 0 ? (
@@ -404,7 +404,7 @@ const NoticeManagement = ({ navigation }) => {
                                     ) : (
                                         <View style={styles.pickerPlaceholder}>
                                             <View style={styles.plusIconWrapper}>
-                                                <Plus size={18} color="#4361ee" />
+                                                <Plus size={18} color="#800000" />
                                             </View>
                                             <Text style={styles.pickerText}>Add Image, PDF, or Document</Text>
                                         </View>
@@ -654,11 +654,11 @@ const styles = StyleSheet.create({
         borderColor: 'transparent'
     },
     roleOptionActive: {
-        backgroundColor: '#eef2ff',
-        borderColor: '#4361ee'
+        backgroundColor: '#ffe4e6',
+        borderColor: '#800000'
     },
     roleOptionText: { fontSize: 14, fontWeight: '700', color: '#64748b' },
-    roleOptionTextActive: { color: '#4361ee' },
+    roleOptionTextActive: { color: '#800000' },
     filePicker: {
         backgroundColor: '#f8fafc',
         borderRadius: 15,
@@ -679,12 +679,12 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#eef2ff',
+        backgroundColor: '#ffe4e6',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 10
     },
-    pickerText: { fontSize: 14, color: '#4361ee', fontWeight: '700' },
+    pickerText: { fontSize: 14, color: '#800000', fontWeight: '700' },
     selectedFile: { flexDirection: 'row', alignItems: 'center', width: '100%' },
     successIconWrapper: {
         width: 28,
@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
     fileName: { flex: 1, fontSize: 15, color: '#1e293b', fontWeight: '700' },
     removeFile: { padding: 5 },
     submitButton: {
-        backgroundColor: '#4361ee',
+        backgroundColor: '#800000',
         borderRadius: 18,
         padding: 20,
         flexDirection: 'row',
@@ -706,7 +706,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: 10,
         elevation: 8,
-        shadowColor: '#4361ee',
+        shadowColor: '#800000',
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.3,
         shadowRadius: 15,

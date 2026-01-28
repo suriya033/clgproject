@@ -226,8 +226,8 @@ const UserManagement = ({ navigation, route }) => {
                 <View style={styles.userInfo}>
                     <View style={styles.userNameRow}>
                         <Text style={styles.userName}>{item.name}</Text>
-                        <View style={[styles.roleBadgeSmall, { backgroundColor: item.role === 'Student' ? '#eef2ff' : '#f0fdf4' }]}>
-                            <Text style={[styles.roleBadgeTextSmall, { color: item.role === 'Student' ? '#4361ee' : '#10b981' }]}>{item.role}</Text>
+                        <View style={[styles.roleBadgeSmall, { backgroundColor: item.role === 'Student' ? '#ffe4e6' : '#f0fdf4' }]}>
+                            <Text style={[styles.roleBadgeTextSmall, { color: item.role === 'Student' ? '#800000' : '#10b981' }]}>{item.role}</Text>
                         </View>
                     </View>
                     <Text style={styles.userIdText}>ID: {item.userId}</Text>
@@ -250,7 +250,7 @@ const UserManagement = ({ navigation, route }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#4361ee" />
+            <StatusBar barStyle="light-content" backgroundColor="#800000" />
 
             <View style={styles.header}>
                 <View style={styles.headerTop}>
@@ -275,7 +275,7 @@ const UserManagement = ({ navigation, route }) => {
 
             {loading ? (
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#4361ee" />
+                    <ActivityIndicator size="large" color="#800000" />
                 </View>
             ) : (
                 <FlatList
@@ -313,7 +313,7 @@ const UserManagement = ({ navigation, route }) => {
                             <View style={styles.headerActions}>
                                 {!isEditing && (
                                     <TouchableOpacity onPress={handleEditToggle} style={styles.editButton}>
-                                        <Edit2 size={20} color="#4361ee" />
+                                        <Edit2 size={20} color="#800000" />
                                     </TouchableOpacity>
                                 )}
                                 <TouchableOpacity onPress={() => { setDetailModalVisible(false); setIsEditing(false); }}>
@@ -620,14 +620,14 @@ const styles = StyleSheet.create({
         backgroundColor: '#f8fafc',
     },
     header: {
-        backgroundColor: '#4361ee',
+        backgroundColor: '#800000',
         paddingTop: (Platform?.OS === 'android') ? 40 : 20,
         paddingBottom: 24,
         paddingHorizontal: 20,
         borderBottomLeftRadius: 32,
         borderBottomRightRadius: 32,
         elevation: 8,
-        shadowColor: '#4361ee',
+        shadowColor: '#800000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 12,
@@ -704,7 +704,7 @@ const styles = StyleSheet.create({
     avatarText: {
         fontSize: 24,
         fontWeight: '700',
-        color: '#4361ee',
+        color: '#800000',
     },
     userInfo: {
         flex: 1,
@@ -748,7 +748,7 @@ const styles = StyleSheet.create({
     },
     userDeptText: {
         fontSize: 13,
-        color: '#4361ee',
+        color: '#800000',
         fontWeight: '600',
         marginBottom: 2,
     },
@@ -764,11 +764,11 @@ const styles = StyleSheet.create({
         width: 56,
         height: 56,
         borderRadius: 28,
-        backgroundColor: '#4361ee',
+        backgroundColor: '#800000',
         justifyContent: 'center',
         alignItems: 'center',
         elevation: 8,
-        shadowColor: '#4361ee',
+        shadowColor: '#800000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 12,
@@ -847,13 +847,13 @@ const styles = StyleSheet.create({
         borderColor: '#e2e8f0',
     },
     submitButton: {
-        backgroundColor: '#4361ee',
+        backgroundColor: '#800000',
         borderRadius: 16,
         paddingVertical: 16,
         alignItems: 'center',
         marginTop: 12,
         elevation: 4,
-        shadowColor: '#4361ee',
+        shadowColor: '#800000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 8,
@@ -886,7 +886,7 @@ const styles = StyleSheet.create({
     detailAvatarText: {
         fontSize: 40,
         fontWeight: '700',
-        color: '#4361ee',
+        color: '#800000',
     },
     detailName: {
         fontSize: 24,
@@ -895,13 +895,13 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     roleBadge: {
-        backgroundColor: '#eef2ff',
+        backgroundColor: '#ffe4e6',
         paddingHorizontal: 12,
         paddingVertical: 4,
         borderRadius: 12,
     },
     roleBadgeText: {
-        color: '#4361ee',
+        color: '#800000',
         fontWeight: '700',
         fontSize: 12,
     },
@@ -936,7 +936,7 @@ const styles = StyleSheet.create({
     editButton: {
         marginRight: 16,
         padding: 8,
-        backgroundColor: '#eef2ff',
+        backgroundColor: '#ffe4e6',
         borderRadius: 12,
     },
     editInput: {
@@ -959,8 +959,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
     },
     selectionButtonActive: {
-        backgroundColor: '#eef2ff',
-        borderColor: '#4361ee',
+        backgroundColor: '#ffe4e6',
+        borderColor: '#800000',
     },
     selectionButtonText: {
         fontSize: 14,
@@ -968,7 +968,7 @@ const styles = StyleSheet.create({
         color: '#64748b',
     },
     selectionButtonTextActive: {
-        color: '#4361ee',
+        color: '#800000',
     },
 });
 

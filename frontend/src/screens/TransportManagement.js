@@ -242,7 +242,7 @@ const TransportManagement = ({ navigation }) => {
         <View style={styles.busCard}>
             <View style={styles.cardHeader}>
                 <View style={styles.busBadge}>
-                    <Bus size={16} color="#4361ee" />
+                    <Bus size={16} color="#800000" />
                     <Text style={styles.busNumberText}>{item.busNumber}</Text>
                 </View>
                 <TouchableOpacity onPress={() => handleDelete(item._id)} style={styles.deleteButton}>
@@ -288,7 +288,7 @@ const TransportManagement = ({ navigation }) => {
         <View style={styles.busCard}>
             <View style={styles.cardHeader}>
                 <View style={styles.busBadge}>
-                    <User size={16} color="#4361ee" />
+                    <User size={16} color="#800000" />
                     <Text style={styles.busNumberText}>{item.name}</Text>
                 </View>
                 <TouchableOpacity onPress={() => handleDeleteDriver(item._id)} style={styles.deleteButton}>
@@ -318,7 +318,7 @@ const TransportManagement = ({ navigation }) => {
     return (
         <SafeAreaView style={styles.container}>
             <LinearGradient
-                colors={['#4361ee', '#3f37c9']}
+                colors={['#800000', '#5a0000']}
                 style={styles.headerGradient}
             >
                 <View style={styles.headerTop}>
@@ -386,7 +386,7 @@ const TransportManagement = ({ navigation }) => {
             {
                 loading && !refreshing ? (
                     <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color="#4361ee" />
+                        <ActivityIndicator size="large" color="#800000" />
                     </View>
                 ) : (
                     <FlatList
@@ -395,7 +395,7 @@ const TransportManagement = ({ navigation }) => {
                         keyExtractor={item => item._id}
                         contentContainerStyle={styles.listContent}
                         refreshControl={
-                            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4361ee" />
+                            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#800000" />
                         }
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
@@ -676,7 +676,7 @@ const styles = StyleSheet.create({
         color: 'rgba(255,255,255,0.8)',
     },
     activeTabText: {
-        color: '#4361ee',
+        color: '#800000',
     },
     searchContainer: {
         flexDirection: 'row',
@@ -714,7 +714,7 @@ const styles = StyleSheet.create({
     busBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#eef2ff',
+        backgroundColor: '#ffe4e6',
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 10,
@@ -722,7 +722,7 @@ const styles = StyleSheet.create({
     busNumberText: {
         fontSize: 14,
         fontWeight: '800',
-        color: '#4361ee',
+        color: '#800000',
         marginLeft: 8,
     },
     deleteButton: {
@@ -783,7 +783,7 @@ const styles = StyleSheet.create({
         marginLeft: 6,
     },
     trackButton: {
-        backgroundColor: '#4361ee',
+        backgroundColor: '#800000',
         paddingHorizontal: 16,
         paddingVertical: 8,
         borderRadius: 10,
@@ -836,7 +836,7 @@ const styles = StyleSheet.create({
         borderColor: '#e2e8f0'
     },
     submitButton: {
-        backgroundColor: '#4361ee',
+        backgroundColor: '#800000',
         borderRadius: 18,
         padding: 20,
         flexDirection: 'row',
@@ -844,7 +844,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: 10,
         elevation: 8,
-        shadowColor: '#4361ee',
+        shadowColor: '#800000',
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.3,
         shadowRadius: 15,
@@ -862,8 +862,8 @@ const styles = StyleSheet.create({
         borderColor: '#e2e8f0',
     },
     selectedDriverChip: {
-        backgroundColor: '#4361ee',
-        borderColor: '#4361ee',
+        backgroundColor: '#800000',
+        borderColor: '#800000',
     },
     driverChipText: {
         fontSize: 14,

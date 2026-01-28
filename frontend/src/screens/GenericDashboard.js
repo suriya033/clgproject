@@ -16,7 +16,7 @@ const GenericDashboard = ({ navigation, route }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#4361ee" />
+            <StatusBar barStyle="light-content" backgroundColor="#800000" />
 
             <View style={styles.headerContainer}>
                 <View style={styles.headerTop}>
@@ -50,7 +50,7 @@ const GenericDashboard = ({ navigation, route }) => {
             >
                 <View style={styles.infoBox}>
                     <View style={styles.infoIconWrapper}>
-                        <Info size={24} color="#4361ee" />
+                        <Info size={24} color="#800000" />
                     </View>
                     <View style={styles.infoTextContainer}>
                         <Text style={styles.infoTitle}>Welcome!</Text>
@@ -65,8 +65,8 @@ const GenericDashboard = ({ navigation, route }) => {
                     style={styles.menuItem}
                     onPress={() => navigation.navigate('Announcements')}
                 >
-                    <View style={[styles.menuIconWrapper, { backgroundColor: '#eef2ff' }]}>
-                        <Bell size={24} color="#4361ee" />
+                    <View style={[styles.menuIconWrapper, { backgroundColor: '#ffe4e6' }]}>
+                        <Bell size={24} color="#800000" />
                     </View>
                     <View style={styles.menuContent}>
                         <Text style={styles.menuText}>Announcements</Text>
@@ -91,14 +91,14 @@ const GenericDashboard = ({ navigation, route }) => {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f8fafc' },
     headerContainer: {
-        backgroundColor: '#4361ee',
+        backgroundColor: '#800000',
         paddingTop: Platform.select({ android: 40, ios: 20, default: 20 }),
         paddingBottom: 30,
         paddingHorizontal: 24,
         borderBottomLeftRadius: 32,
         borderBottomRightRadius: 32,
         elevation: 8,
-        shadowColor: '#4361ee',
+        shadowColor: '#800000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 12,
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
         width: 48,
         height: 48,
         borderRadius: 16,
-        backgroundColor: '#eef2ff',
+        backgroundColor: '#ffe4e6',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 16,

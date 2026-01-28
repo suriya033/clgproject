@@ -147,7 +147,7 @@ const SportsManagement = ({ navigation }) => {
     const renderEventCard = (event) => (
         <View key={event.id} style={styles.card}>
             <View style={styles.cardIconWrapper}>
-                <Calendar size={24} color="#4361ee" />
+                <Calendar size={24} color="#800000" />
             </View>
             <View style={styles.cardContent}>
                 <Text style={styles.cardTitle}>{event.title}</Text>
@@ -185,7 +185,7 @@ const SportsManagement = ({ navigation }) => {
     return (
         <SafeAreaView style={styles.container}>
             <LinearGradient
-                colors={['#d946ef', '#c026d3']}
+                colors={['#5a0000', '#800000']}
                 style={styles.headerGradient}
             >
                 <View style={styles.headerTop}>
@@ -319,7 +319,7 @@ const SportsManagement = ({ navigation }) => {
                                                 <View key={student._id} style={styles.chip}>
                                                     <Text style={styles.chipText}>{student.name}</Text>
                                                     <TouchableOpacity onPress={() => toggleStudentSelection(student)}>
-                                                        <X size={14} color="#c026d3" />
+                                                        <X size={14} color="#800000" />
                                                     </TouchableOpacity>
                                                 </View>
                                             ))}
@@ -344,7 +344,7 @@ const SportsManagement = ({ navigation }) => {
                                         {isDropdownVisible && (
                                             <View style={styles.dropdownList}>
                                                 {loadingStudents ? (
-                                                    <ActivityIndicator color="#c026d3" style={{ padding: 20 }} />
+                                                    <ActivityIndicator color="#800000" style={{ padding: 20 }} />
                                                 ) : filteredStudents.length === 0 ? (
                                                     <Text style={styles.noResultText}>No students found</Text>
                                                 ) : (
@@ -360,7 +360,7 @@ const SportsManagement = ({ navigation }) => {
                                                                     <Text style={[styles.dropdownName, isSelected && styles.selectedText]}>{student.name}</Text>
                                                                     <Text style={[styles.dropdownId, isSelected && styles.selectedTextSub]}>{student.userId}</Text>
                                                                 </View>
-                                                                {isSelected && <Check size={18} color="#c026d3" />}
+                                                                {isSelected && <Check size={18} color="#800000" />}
                                                             </TouchableOpacity>
                                                         );
                                                     })
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     activeTabText: {
-        color: '#c026d3',
+        color: '#800000',
     },
     scrollContent: {
         padding: 20,
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
         color: '#1e293b',
     },
     addButton: {
-        backgroundColor: '#c026d3',
+        backgroundColor: '#800000',
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 16,
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 16,
-        backgroundColor: '#eef2ff',
+        backgroundColor: '#ffe4e6',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 16,
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
     },
     submitButton: {
-        backgroundColor: '#c026d3',
+        backgroundColor: '#800000',
         padding: 16,
         borderRadius: 16,
         alignItems: 'center',
@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
         borderBottomColor: '#f1f5f9',
     },
     dropdownItemSelected: {
-        backgroundColor: '#fdf4ff',
+        backgroundColor: '#ffe4e6',
     },
     dropdownName: {
         fontSize: 14,
@@ -614,10 +614,10 @@ const styles = StyleSheet.create({
         color: '#64748b',
     },
     selectedText: {
-        color: '#c026d3',
+        color: '#800000',
     },
     selectedTextSub: {
-        color: '#d946ef',
+        color: '#5a0000',
     },
     noResultText: {
         padding: 16,
@@ -632,7 +632,7 @@ const styles = StyleSheet.create({
     chip: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fdf4ff',
+        backgroundColor: '#ffe4e6',
         borderRadius: 20,
         paddingVertical: 6,
         paddingHorizontal: 10,
@@ -643,7 +643,7 @@ const styles = StyleSheet.create({
     },
     chipText: {
         fontSize: 12,
-        color: '#c026d3',
+        color: '#800000',
         fontWeight: '600',
         marginRight: 6,
     },

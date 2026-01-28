@@ -76,7 +76,7 @@ const DriverDashboard = () => {
     if (loading && !refreshing) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#4361ee" />
+                <ActivityIndicator size="large" color="#800000" />
             </View>
         );
     }
@@ -87,12 +87,12 @@ const DriverDashboard = () => {
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4361ee" />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#800000" />
                 }
             >
                 {/* Header Section */}
                 <LinearGradient
-                    colors={['#4361ee', '#3f37c9']}
+                    colors={['#800000', '#5a0000']}
                     style={styles.header}
                 >
                     <View style={styles.headerTop}>
@@ -138,7 +138,7 @@ const DriverDashboard = () => {
                         <View style={styles.busCard}>
                             <View style={styles.busCardHeader}>
                                 <View style={styles.busIconContainer}>
-                                    <Bus size={32} color="#4361ee" />
+                                    <Bus size={32} color="#800000" />
                                 </View>
                                 <View style={styles.busInfo}>
                                     <Text style={styles.busNumber}>{assignedBus.busNumber}</Text>
@@ -178,8 +178,8 @@ const DriverDashboard = () => {
                     <Text style={styles.sectionTitle}>Quick Actions</Text>
                     <View style={styles.actionGrid}>
                         <TouchableOpacity style={styles.actionCard}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#eef2ff' }]}>
-                                <Navigation size={24} color="#4361ee" />
+                            <View style={[styles.actionIcon, { backgroundColor: '#ffe4e6' }]}>
+                                <Navigation size={24} color="#800000" />
                             </View>
                             <Text style={styles.actionLabel}>Start Trip</Text>
                         </TouchableOpacity>
@@ -201,7 +201,7 @@ const DriverDashboard = () => {
                     <TouchableOpacity style={styles.supportCard}>
                         <View style={styles.supportInfo}>
                             <View style={styles.supportIcon}>
-                                <Phone size={20} color="#4361ee" />
+                                <Phone size={20} color="#800000" />
                             </View>
                             <View>
                                 <Text style={styles.supportTitle}>Transport Office</Text>
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 20,
-        backgroundColor: '#eef2ff',
+        backgroundColor: '#ffe4e6',
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
         width: 45,
         height: 45,
         borderRadius: 15,
-        backgroundColor: '#4361ee',
+        backgroundColor: '#800000',
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 12,
-        backgroundColor: '#eef2ff',
+        backgroundColor: '#ffe4e6',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 15,

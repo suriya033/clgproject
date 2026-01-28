@@ -27,7 +27,7 @@ const StaffDashboard = () => {
     };
 
     const stats = [
-        { id: '1', title: 'Classes Today', value: '4', icon: <Calendar size={24} color="#4361ee" />, sub: 'Next: 10:00 AM', bg: '#eef2ff' },
+        { id: '1', title: 'Classes Today', value: '4', icon: <Calendar size={24} color="#800000" />, sub: 'Next: 10:00 AM', bg: '#ffe4e6' },
         { id: '2', title: 'Total Students', value: '120', icon: <Users size={24} color="#f72585" />, sub: 'Across 3 sections', bg: '#fdf2f8' },
     ];
 
@@ -36,7 +36,7 @@ const StaffDashboard = () => {
             <StatusBar barStyle="light-content" />
 
             <LinearGradient
-                colors={['#4361ee', '#3f37c9']}
+                colors={['#800000', '#5a0000']}
                 style={styles.headerContainer}
             >
                 <View style={styles.headerTop}>
@@ -86,14 +86,14 @@ const StaffDashboard = () => {
                 </View>
 
                 {loading ? (
-                    <ActivityIndicator animating={true} color="#4361ee" style={{ marginVertical: 20 }} />
+                    <ActivityIndicator animating={true} color="#800000" style={{ marginVertical: 20 }} />
                 ) : (
                     <View style={styles.announceContainer}>
                         {announcements && announcements.length > 0 ? announcements.map(item => (
                             <View key={item._id} style={styles.announceItem}>
                                 <View style={styles.announceHeader}>
                                     <View style={styles.bellIconWrapper}>
-                                        <Bell size={16} color="#4361ee" />
+                                        <Bell size={16} color="#800000" />
                                     </View>
                                     <View style={styles.announceHeaderText}>
                                         <Text style={styles.announceTitle}>{item.title}</Text>
@@ -119,8 +119,8 @@ const StaffDashboard = () => {
                 <Text style={styles.sectionTitle}>Management</Text>
                 <View style={styles.menuList}>
                     <TouchableOpacity style={styles.menuItem}>
-                        <View style={[styles.menuIconWrapper, { backgroundColor: '#eef2ff' }]}>
-                            <Users size={24} color="#4361ee" />
+                        <View style={[styles.menuIconWrapper, { backgroundColor: '#ffe4e6' }]}>
+                            <Users size={24} color="#800000" />
                         </View>
                         <View style={styles.menuContent}>
                             <Text style={styles.menuText}>Mark Attendance</Text>
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
         borderBottomLeftRadius: 35,
         borderBottomRightRadius: 35,
         elevation: 10,
-        shadowColor: '#4361ee',
+        shadowColor: '#800000',
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.3,
         shadowRadius: 20,
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
 
     sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
     sectionTitle: { fontSize: 20, fontWeight: '800', color: '#1e293b' },
-    seeAll: { fontSize: 14, color: '#4361ee', fontWeight: '700' },
+    seeAll: { fontSize: 14, color: '#800000', fontWeight: '700' },
 
     announceContainer: {
         backgroundColor: '#fff',
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 12,
-        backgroundColor: '#eef2ff',
+        backgroundColor: '#ffe4e6',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,

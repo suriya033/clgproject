@@ -74,9 +74,9 @@ const OfficeDashboard = ({ navigation }) => {
     };
 
     const gridItems = [
-        { id: '1', title: 'Notice', icon: <Megaphone size={24} color="#4361ee" />, route: 'Announcements', bg: '#eef2ff' },
+        { id: '1', title: 'Notice', icon: <Megaphone size={24} color="#800000" />, route: 'Announcements', bg: '#ffe4e6' },
         { id: '2', title: 'Fee', icon: <Banknote size={24} color="#f59e0b" />, route: 'Fees', bg: '#fffbeb' },
-        { id: '3', title: 'Student', icon: <GraduationCap size={24} color="#6366f1" />, route: 'StudentManagement', bg: '#eef2ff' },
+        { id: '3', title: 'Student', icon: <GraduationCap size={24} color="#6366f1" />, route: 'StudentManagement', bg: '#ffe4e6' },
         { id: '4', title: 'Staff', icon: <Users size={24} color="#ec4899" />, route: 'StaffManagement', bg: '#fdf2f8' },
         { id: '5', title: 'HOD', icon: <UserCog size={24} color="#8b5cf6" />, route: 'HODManagement', bg: '#f5f3ff' },
         { id: '6', title: 'Library', icon: <Library size={24} color="#f43f5e" />, route: 'LibraryManagement', bg: '#fff1f2' },
@@ -97,7 +97,7 @@ const OfficeDashboard = ({ navigation }) => {
         <View style={styles.container}>
             <StatusBar barStyle="light-content" />
             <LinearGradient
-                colors={['#1e3a8a', '#1e40af']}
+                colors={['#800000', '#5a0000']}
                 style={styles.headerContainer}
             >
                 <View style={styles.headerTop}>
@@ -123,28 +123,28 @@ const OfficeDashboard = ({ navigation }) => {
                 <View style={styles.floatingStatsContainer}>
                     <View style={[styles.statBox, styles.statBorder]}>
                         <View style={styles.statIconWrapper}>
-                            <Users size={20} color="#2563eb" />
+                            <Users size={20} color="#800000" />
                         </View>
                         <Text style={styles.statValue}>{statsData.students}</Text>
                         <Text style={styles.statLabel}>Students</Text>
                     </View>
                     <View style={[styles.statBox, styles.statBorder]}>
                         <View style={styles.statIconWrapper}>
-                            <Users size={20} color="#2563eb" />
+                            <Users size={20} color="#800000" />
                         </View>
                         <Text style={styles.statValue}>{statsData.staff}</Text>
                         <Text style={styles.statLabel}>Staff</Text>
                     </View>
                     <View style={[styles.statBox, styles.statBorder]}>
                         <View style={styles.statIconWrapper}>
-                            <Building size={20} color="#2563eb" />
+                            <Building size={20} color="#800000" />
                         </View>
                         <Text style={styles.statValue}>{statsData.departments}</Text>
                         <Text style={styles.statLabel}>Depts</Text>
                     </View>
                     <View style={styles.statBox}>
                         <View style={styles.statIconWrapper}>
-                            <Banknote size={20} color="#2563eb" />
+                            <Banknote size={20} color="#800000" />
                         </View>
                         <Text style={styles.statValue}>{statsData.pendingFees}</Text>
                         <Text style={styles.statLabel}>Fees</Text>
@@ -176,7 +176,7 @@ const OfficeDashboard = ({ navigation }) => {
                     <Text style={styles.sectionTitle}>Quick Actions</Text>
                     <View style={styles.bottomRow}>
                         <TouchableOpacity
-                            style={[styles.bottomCard, { backgroundColor: '#2563eb' }]}
+                            style={[styles.bottomCard, { backgroundColor: '#800000' }]}
                             activeOpacity={0.9}
                             onPress={() => navigation.navigate('Fees')}
                         >
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         backgroundColor: '#ef4444',
         borderWidth: 2,
-        borderColor: '#1e40af',
+        borderColor: '#5a0000',
     },
     headerContent: {
         marginBottom: 20,
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 10,
-        backgroundColor: '#eef2ff',
+        backgroundColor: '#ffe4e6',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 8,

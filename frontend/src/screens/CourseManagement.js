@@ -149,7 +149,7 @@ const CourseManagement = ({ navigation }) => {
         <View key={course._id} style={styles.courseCard}>
             <View style={styles.cardHeader}>
                 <View style={styles.codeBadge}>
-                    <Hash size={12} color="#4361ee" />
+                    <Hash size={12} color="#800000" />
                     <Text style={styles.codeText}>{course.code}</Text>
                 </View>
                 <TouchableOpacity onPress={() => handleDelete(course._id)} style={styles.deleteButton}>
@@ -190,7 +190,7 @@ const CourseManagement = ({ navigation }) => {
     return (
         <SafeAreaView style={styles.container}>
             <LinearGradient
-                colors={['#4361ee', '#3f37c9']}
+                colors={['#800000', '#5a0000']}
                 style={styles.headerGradient}
             >
                 <View style={styles.headerTop}>
@@ -220,13 +220,13 @@ const CourseManagement = ({ navigation }) => {
 
             {loading && !refreshing ? (
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#4361ee" />
+                    <ActivityIndicator size="large" color="#800000" />
                 </View>
             ) : (
                 <ScrollView
                     contentContainerStyle={styles.scrollContent}
                     refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4361ee" />
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#800000" />
                     }
                 >
                     {filteredCourses.length === 0 ? (
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
     codeBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#eef2ff',
+        backgroundColor: '#ffe4e6',
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 8,
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     codeText: {
         fontSize: 12,
         fontWeight: '800',
-        color: '#4361ee',
+        color: '#800000',
         marginLeft: 4,
     },
     deleteButton: {
@@ -524,13 +524,13 @@ const styles = StyleSheet.create({
         borderColor: 'transparent'
     },
     optionActive: {
-        backgroundColor: '#eef2ff',
-        borderColor: '#4361ee'
+        backgroundColor: '#ffe4e6',
+        borderColor: '#800000'
     },
     optionText: { fontSize: 14, fontWeight: '700', color: '#64748b' },
-    optionTextActive: { color: '#4361ee' },
+    optionTextActive: { color: '#800000' },
     submitButton: {
-        backgroundColor: '#4361ee',
+        backgroundColor: '#800000',
         borderRadius: 18,
         padding: 20,
         flexDirection: 'row',
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: 10,
         elevation: 8,
-        shadowColor: '#4361ee',
+        shadowColor: '#800000',
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.3,
         shadowRadius: 15,
