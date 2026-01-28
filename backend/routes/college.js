@@ -43,6 +43,7 @@ router.get('/departments', auth(), async (req, res) => {
     }
 });
 
+
 router.delete('/departments/:id', auth(['Admin', 'Office']), async (req, res) => {
     try {
         await Department.findByIdAndDelete(req.params.id);
@@ -51,6 +52,16 @@ router.delete('/departments/:id', auth(['Admin', 'Office']), async (req, res) =>
         res.status(500).json({ message: err.message });
     }
 });
+
+router.put('/departments/:id', auth(['Admin', 'Office']), async (req, res) => {
+    try {
+        const dept = await Department.findByIdAndUpdate(req.params.id, req.body, { new: true }).populate('hod', 'name');
+        res.json(dept);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 
 // --- Course Routes ---
 router.post('/courses', auth(['Admin', 'Office']), async (req, res) => {
