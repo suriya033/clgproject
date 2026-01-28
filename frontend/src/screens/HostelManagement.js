@@ -29,7 +29,8 @@ import {
     Search,
     CheckCircle2,
     AlertCircle,
-    Check
+    Check,
+    Edit2
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../context/AuthContext';
@@ -41,6 +42,7 @@ const HostelManagement = ({ navigation }) => {
     const { user } = useContext(AuthContext);
     const [activeTab, setActiveTab] = useState('Rooms');
     const [modalVisible, setModalVisible] = useState(false);
+    const [editId, setEditId] = useState(null);
 
     // Mock Data
     const [rooms, setRooms] = useState([
@@ -107,6 +109,21 @@ const HostelManagement = ({ navigation }) => {
         { id: 'Returns', label: 'Returns', icon: <LogIn size={18} /> },
     ];
 
+    const handleEdit = (room) => {
+        setEditId(room.id);
+        setRoomNumber(room.number);
+        setRoomCapacity(room.capacity.toString());
+        setRoomType(room.type);
+        setSelectedStudents(room.students || []);
+        setModalVisible(true);
+    };
+
+    const openAddModal = () => {
+        setEditId(null);
+        resetForm();
+        setModalVisible(true);
+    };
+
     const handleAddRoom = () => {
         if (!roomNumber || !roomCapacity) {
             Alert.alert('Error', 'Please fill all fields');
@@ -119,17 +136,30 @@ const HostelManagement = ({ navigation }) => {
             return;
         }
 
-        const newRoom = {
-            id: Date.now(),
-            number: roomNumber,
-            type: roomType,
-            capacity: capacity,
-            occupied: selectedStudents.length,
-            status: selectedStudents.length >= capacity ? 'Full' : 'Available',
-            students: selectedStudents
-        };
-        setRooms([...rooms, newRoom]);
+        if (editId) {
+            setRooms(rooms.map(room => room.id === editId ? {
+                ...room,
+                number: roomNumber,
+                type: roomType,
+                capacity: capacity,
+                occupied: selectedStudents.length,
+                status: selectedStudents.length >= capacity ? 'Full' : 'Available',
+                students: selectedStudents
+            } : room));
+        } else {
+            const newRoom = {
+                id: Date.now(),
+                number: roomNumber,
+                type: roomType,
+                capacity: capacity,
+                occupied: selectedStudents.length,
+                status: selectedStudents.length >= capacity ? 'Full' : 'Available',
+                students: selectedStudents
+            };
+            setRooms([...rooms, newRoom]);
+        }
         setModalVisible(false);
+        setEditId(null);
         resetForm();
     };
 
@@ -189,6 +219,9 @@ const HostelManagement = ({ navigation }) => {
                     <View style={[styles.statusBadge, { backgroundColor: item.status === 'Full' ? '#fee2e2' : '#dcfce7' }]}>
                         <Text style={[styles.statusText, { color: item.status === 'Full' ? '#ef4444' : '#16a34a' }]}>{item.status}</Text>
                     </View>
+                    <TouchableOpacity onPress={() => handleEdit(item)} style={{ padding: 6, backgroundColor: '#f0f9ff', borderRadius: 6, marginLeft: 8 }}>
+                        <Edit2 size={16} color="#0284c7" />
+                    </TouchableOpacity>
                 </View>
             </View>
         </View>
@@ -318,7 +351,7 @@ const HostelManagement = ({ navigation }) => {
                     {activeTab === 'Rooms' && (
                         <TouchableOpacity
                             style={styles.addButton}
-                            onPress={() => setModalVisible(true)}
+                            onPress={openAddModal}
                         >
                             <Plus size={20} color="#fff" />
                             <Text style={styles.addButtonText}>Add Room</Text>
@@ -339,7 +372,7 @@ const HostelManagement = ({ navigation }) => {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Add New Room</Text>
+                            <Text style={styles.modalTitle}>{editId ? 'Edit Room' : 'Add New Room'}</Text>
                             <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
                                 <X size={20} color="#64748b" />
                             </TouchableOpacity>
@@ -427,7 +460,7 @@ const HostelManagement = ({ navigation }) => {
                             </View>
 
                             <TouchableOpacity style={styles.submitButton} onPress={handleAddRoom}>
-                                <Text style={styles.submitButtonText}>Create Room & Assign</Text>
+                                <Text style={styles.submitButtonText}>{editId ? 'Update Room' : 'Create Room & Assign'}</Text>
                             </TouchableOpacity>
                             <View style={{ height: 20 }} />
                         </ScrollView>

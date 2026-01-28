@@ -32,7 +32,8 @@ import {
     Calendar,
     User,
     Download,
-    Eye
+    Eye,
+    Edit2
 } from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -50,6 +51,7 @@ const NoticeManagement = ({ navigation }) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [editId, setEditId] = useState(null);
 
     // Form State
     const [title, setTitle] = useState('');
@@ -109,6 +111,22 @@ const NoticeManagement = ({ navigation }) => {
         }
     };
 
+    const handleEdit = (notice) => {
+        setEditId(notice._id);
+        setTitle(notice.title);
+        setContent(notice.content);
+        setTargetRoles(notice.targetRoles || ['All']);
+        // Attachment editing is complex, skipping for now unless re-uploaded
+        setAttachment(null);
+        setModalVisible(true);
+    };
+
+    const openCreateModal = () => {
+        setEditId(null);
+        resetForm();
+        setModalVisible(true);
+    };
+
     const toggleRole = (role) => {
         if (role === 'All') {
             setTargetRoles(['All']);
@@ -145,14 +163,24 @@ const NoticeManagement = ({ navigation }) => {
                 });
             }
 
-            await college.createAnnouncement(formData);
-            Alert.alert('Success', 'Notice posted successfully');
+            if (editId) {
+                // Use direct api call for PUT since college.createAnnouncement is likely POST only
+                await api.put(`/college/announcements/${editId}`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                Alert.alert('Success', 'Notice updated successfully');
+            } else {
+                await college.createAnnouncement(formData);
+                Alert.alert('Success', 'Notice posted successfully');
+            }
+
             setModalVisible(false);
+            setEditId(null);
             resetForm();
             fetchNotices();
         } catch (error) {
-            console.error('Post notice error:', error);
-            Alert.alert('Error', 'Failed to post notice');
+            console.error('Post/Update notice error:', error);
+            Alert.alert('Error', `Failed to ${editId ? 'update' : 'post'} notice`);
         } finally {
             setSubmitting(false);
         }
@@ -207,9 +235,14 @@ const NoticeManagement = ({ navigation }) => {
                     ))}
                 </View>
                 {(user?.role === 'Admin' || user?.id === notice.createdBy?._id || (user?.role === 'Office' && notice.createdBy?._id === user?.id)) && (
-                    <TouchableOpacity onPress={() => handleDelete(notice._id)} style={styles.deleteButton}>
-                        <Trash2 size={18} color="#ef4444" />
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row' }}>
+                        <TouchableOpacity onPress={() => handleEdit(notice)} style={[styles.deleteButton, { backgroundColor: '#f0f9ff', marginRight: 8 }]}>
+                            <Edit2 size={18} color="#0284c7" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => handleDelete(notice._id)} style={styles.deleteButton}>
+                            <Trash2 size={18} color="#ef4444" />
+                        </TouchableOpacity>
+                    </View>
                 )}
             </View>
 
@@ -271,7 +304,7 @@ const NoticeManagement = ({ navigation }) => {
                     <Text style={styles.headerTitle}>Notice Board</Text>
                     <TouchableOpacity
                         style={styles.iconButton}
-                        onPress={() => setModalVisible(true)}
+                        onPress={openCreateModal}
                     >
                         <Plus size={24} color="#fff" />
                     </TouchableOpacity>
@@ -333,8 +366,8 @@ const NoticeManagement = ({ navigation }) => {
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <View>
-                                <Text style={styles.modalTitle}>Create Notice</Text>
-                                <Text style={styles.modalSubtitle}>Share important updates</Text>
+                                <Text style={styles.modalTitle}>{editId ? 'Edit Notice' : 'Create Notice'}</Text>
+                                <Text style={styles.modalSubtitle}>{editId ? 'Update details' : 'Share important updates'}</Text>
                             </View>
                             <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
                                 <X size={20} color="#64748b" />
@@ -421,7 +454,7 @@ const NoticeManagement = ({ navigation }) => {
                                     <ActivityIndicator color="#fff" />
                                 ) : (
                                     <>
-                                        <Text style={styles.submitButtonText}>Publish Notice</Text>
+                                        <Text style={styles.submitButtonText}>{editId ? 'Update Notice' : 'Publish Notice'}</Text>
                                         <Send size={18} color="#fff" style={{ marginLeft: 8 }} />
                                     </>
                                 )}

@@ -24,7 +24,8 @@ import {
     MapPin,
     Clock,
     Search,
-    Check
+    Check,
+    Edit2
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../context/AuthContext';
@@ -37,7 +38,9 @@ const SportsManagement = ({ navigation }) => {
     const [activeTab, setActiveTab] = useState('Events'); // 'Events' or 'Teams'
     const [modalVisible, setModalVisible] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+
     const [loadingStudents, setLoadingStudents] = useState(false);
+    const [editId, setEditId] = useState(null);
 
     // Data
     const [events, setEvents] = useState([
@@ -86,35 +89,65 @@ const SportsManagement = ({ navigation }) => {
         }
     };
 
+    const handleEdit = (item) => {
+        setEditId(item.id);
+        if (activeTab === 'Events') {
+            setEventName(item.title);
+            setEventDate(item.date);
+            setEventTime(item.time);
+            setEventVenue(item.venue);
+        } else {
+            setTeamName(item.name);
+            setTeamCaptain(item.captain);
+            setSelectedStudents(item.playerList || []);
+        }
+        setModalVisible(true);
+    };
+
+    const openCreateModal = () => {
+        setEditId(null);
+        resetForm();
+        setModalVisible(true);
+    };
+
     const handleSubmit = () => {
         if (activeTab === 'Events') {
             if (!eventName || !eventDate || !eventVenue) {
                 Alert.alert('Error', 'Please fill in all required fields');
                 return;
             }
-            const newEvent = {
-                id: Date.now(),
-                title: eventName,
-                date: eventDate,
-                time: eventTime,
-                venue: eventVenue
-            };
-            setEvents([...events, newEvent]);
+            if (editId) {
+                setEvents(events.map(e => e.id === editId ? { ...e, title: eventName, date: eventDate, time: eventTime, venue: eventVenue } : e));
+            } else {
+                const newEvent = {
+                    id: Date.now(),
+                    title: eventName,
+                    date: eventDate,
+                    time: eventTime,
+                    venue: eventVenue
+                };
+                setEvents([...events, newEvent]);
+            }
         } else {
             if (!teamName || !teamCaptain) {
                 Alert.alert('Error', 'Please fill in all required fields');
                 return;
             }
-            const newTeam = {
-                id: Date.now(),
-                name: teamName,
-                captain: teamCaptain,
-                members: selectedStudents.length,
-                playerList: selectedStudents
-            };
-            setTeams([...teams, newTeam]);
+            if (editId) {
+                setTeams(teams.map(t => t.id === editId ? { ...t, name: teamName, captain: teamCaptain, members: selectedStudents.length, playerList: selectedStudents } : t));
+            } else {
+                const newTeam = {
+                    id: Date.now(),
+                    name: teamName,
+                    captain: teamCaptain,
+                    members: selectedStudents.length,
+                    playerList: selectedStudents
+                };
+                setTeams([...teams, newTeam]);
+            }
         }
         setModalVisible(false);
+        setEditId(null);
         resetForm();
     };
 
@@ -160,6 +193,9 @@ const SportsManagement = ({ navigation }) => {
                     <Text style={styles.cardText}>{event.venue}</Text>
                 </View>
             </View>
+            <TouchableOpacity onPress={() => handleEdit(event)} style={{ padding: 8, backgroundColor: '#f0f9ff', borderRadius: 8 }}>
+                <Edit2 size={16} color="#0284c7" />
+            </TouchableOpacity>
         </View>
     );
 
@@ -179,6 +215,9 @@ const SportsManagement = ({ navigation }) => {
                     <Text style={styles.cardText}>{team.members} Members</Text>
                 </View>
             </View>
+            <TouchableOpacity onPress={() => handleEdit(team)} style={{ padding: 8, backgroundColor: '#f0f9ff', borderRadius: 8 }}>
+                <Edit2 size={16} color="#0284c7" />
+            </TouchableOpacity>
         </View>
     );
 
@@ -218,7 +257,7 @@ const SportsManagement = ({ navigation }) => {
                     <Text style={styles.sectionTitle}>{activeTab} List</Text>
                     <TouchableOpacity
                         style={styles.addButton}
-                        onPress={() => setModalVisible(true)}
+                        onPress={openCreateModal}
                     >
                         <Plus size={20} color="#fff" />
                         <Text style={styles.addButtonText}>Add {activeTab === 'Events' ? 'Event' : 'Team'}</Text>
@@ -241,7 +280,7 @@ const SportsManagement = ({ navigation }) => {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Add {activeTab === 'Events' ? 'New Event' : 'New Team'}</Text>
+                            <Text style={styles.modalTitle}>{editId ? 'Edit' : 'Add'} {activeTab === 'Events' ? (editId ? 'Event' : 'New Event') : (editId ? 'Team' : 'New Team')}</Text>
                             <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
                                 <X size={20} color="#64748b" />
                             </TouchableOpacity>
@@ -372,7 +411,7 @@ const SportsManagement = ({ navigation }) => {
                             )}
 
                             <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-                                <Text style={styles.submitButtonText}>Create {activeTab === 'Events' ? 'Event' : 'Team'}</Text>
+                                <Text style={styles.submitButtonText}>{editId ? 'Update' : 'Create'} {activeTab === 'Events' ? 'Event' : 'Team'}</Text>
                             </TouchableOpacity>
                             <View style={{ height: 40 }} />
                         </ScrollView>

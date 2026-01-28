@@ -140,6 +140,19 @@ router.post('/library', auth(['Admin', 'Library', 'Office']), async (req, res) =
     }
 });
 
+// @route   PUT api/admin/library/:id
+// @desc    Update a library item
+// @access  Private (Admin/Library only)
+router.put('/library/:id', auth(['Admin', 'Library', 'Office']), async (req, res) => {
+    try {
+        const item = await require('../models/LibraryItem').findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(item);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
 // @route   DELETE api/admin/library/:id
 // @desc    Delete a library item
 // @access  Private (Admin/Library only)

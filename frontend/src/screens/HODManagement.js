@@ -9,7 +9,6 @@ import {
     TextInput,
     ActivityIndicator,
     Alert,
-    ScrollView,
     SafeAreaView,
     StatusBar,
     RefreshControl
@@ -17,7 +16,6 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import api from '../api/api';
 import {
-    Users,
     ArrowLeft,
     Search,
     Building2,
@@ -25,6 +23,7 @@ import {
     X,
     UserCog,
     ChevronRight,
+    Plus,
     Search as SearchIcon
 } from 'lucide-react-native';
 import { AuthContext } from '../context/AuthContext';
@@ -42,6 +41,7 @@ const HODManagement = ({ navigation }) => {
     const [selectedDept, setSelectedDept] = useState(null);
     const [selectedStaff, setSelectedStaff] = useState(null);
     const [staffSearchQuery, setStaffSearchQuery] = useState('');
+    const [deptSearchQuery, setDeptSearchQuery] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
@@ -99,16 +99,22 @@ const HODManagement = ({ navigation }) => {
         }
     };
 
-    const openAssignModal = (dept) => {
+    const openAssignModal = (dept = null) => {
         setSelectedDept(dept);
         setSelectedStaff(null);
         setStaffSearchQuery('');
+        setDeptSearchQuery('');
         setModalVisible(true);
     };
 
     const filteredFilteredDepartments = departments.filter(dept =>
         dept.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         dept.code.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const modalFilteredDepartments = departments.filter(dept =>
+        dept.name.toLowerCase().includes(deptSearchQuery.toLowerCase()) ||
+        dept.code.toLowerCase().includes(deptSearchQuery.toLowerCase())
     );
 
     const filteredStaff = staff.filter(s =>
@@ -168,7 +174,12 @@ const HODManagement = ({ navigation }) => {
                         <ArrowLeft size={24} color="#fff" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>HOD Management</Text>
-                    <View style={{ width: 40 }} />
+                    <TouchableOpacity
+                        onPress={() => openAssignModal(null)}
+                        style={styles.backButton}
+                    >
+                        <Plus size={24} color="#fff" />
+                    </TouchableOpacity>
                 </View>
 
                 <View style={styles.searchBar}>
@@ -215,9 +226,13 @@ const HODManagement = ({ navigation }) => {
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <View>
-                                <Text style={styles.modalTitle}>Assign HOD</Text>
+                                <Text style={styles.modalTitle}>
+                                    {selectedDept ? 'Assign HOD' : 'Select Department'}
+                                </Text>
                                 <Text style={styles.modalSubtitle}>
-                                    Select a teacher for {selectedDept?.name}
+                                    {selectedDept
+                                        ? `Select a teacher for ${selectedDept.name}`
+                                        : 'Choose a department to assign HOD'}
                                 </Text>
                             </View>
                             <TouchableOpacity
@@ -228,61 +243,99 @@ const HODManagement = ({ navigation }) => {
                             </TouchableOpacity>
                         </View>
 
-                        <View style={styles.modalSearch}>
-                            <SearchIcon size={20} color="#94a3b8" />
-                            <TextInput
-                                style={styles.modalSearchInput}
-                                placeholder="Search teachers..."
-                                value={staffSearchQuery}
-                                onChangeText={setStaffSearchQuery}
-                            />
-                        </View>
-
-                        <FlatList
-                            data={filteredStaff}
-                            keyExtractor={item => item._id}
-                            style={styles.staffList}
-                            renderItem={({ item }) => (
-                                <TouchableOpacity
-                                    style={[
-                                        styles.staffItem,
-                                        selectedStaff?._id === item._id && styles.selectedStaffItem
-                                    ]}
-                                    onPress={() => setSelectedStaff(item)}
-                                >
-                                    <View style={styles.staffInfo}>
-                                        <Text style={[
-                                            styles.staffName,
-                                            selectedStaff?._id === item._id && styles.selectedStaffText
-                                        ]}>{item.name}</Text>
-                                        <Text style={[
-                                            styles.staffDept,
-                                            selectedStaff?._id === item._id && styles.selectedStaffSubText
-                                        ]}>{item.department || 'No Dept'} • {item.userId}</Text>
-                                    </View>
-                                    {selectedStaff?._id === item._id && (
-                                        <CheckCircle2 size={20} color="#800000" />
+                        {!selectedDept ? (
+                            <>
+                                <View style={styles.modalSearch}>
+                                    <SearchIcon size={20} color="#94a3b8" />
+                                    <TextInput
+                                        style={styles.modalSearchInput}
+                                        placeholder="Search departments..."
+                                        value={deptSearchQuery}
+                                        onChangeText={setDeptSearchQuery}
+                                    />
+                                </View>
+                                <FlatList
+                                    data={modalFilteredDepartments}
+                                    keyExtractor={item => item._id}
+                                    style={styles.staffList}
+                                    renderItem={({ item }) => (
+                                        <TouchableOpacity
+                                            style={styles.staffItem}
+                                            onPress={() => setSelectedDept(item)}
+                                        >
+                                            <View style={styles.staffInfo}>
+                                                <Text style={styles.staffName}>{item.name}</Text>
+                                                <Text style={styles.staffDept}>
+                                                    {item.hod ? `Current HOD: ${item.hod.name}` : 'No HOD Assigned'}
+                                                </Text>
+                                            </View>
+                                            <ChevronRight size={20} color="#94a3b8" />
+                                        </TouchableOpacity>
                                     )}
-                                </TouchableOpacity>
-                            )}
-                            ListEmptyComponent={
-                                <Text style={styles.noResultText}>No teachers found</Text>
-                            }
-                        />
+                                    ListEmptyComponent={
+                                        <Text style={styles.noResultText}>No departments found</Text>
+                                    }
+                                />
+                            </>
+                        ) : (
+                            <>
+                                <View style={styles.modalSearch}>
+                                    <SearchIcon size={20} color="#94a3b8" />
+                                    <TextInput
+                                        style={styles.modalSearchInput}
+                                        placeholder="Search teachers..."
+                                        value={staffSearchQuery}
+                                        onChangeText={setStaffSearchQuery}
+                                    />
+                                </View>
 
-                        <View style={styles.modalFooter}>
-                            <TouchableOpacity
-                                style={[styles.submitButton, (!selectedStaff || submitting) && styles.disabledButton]}
-                                onPress={handleAssignHOD}
-                                disabled={!selectedStaff || submitting}
-                            >
-                                {submitting ? (
-                                    <ActivityIndicator color="#fff" />
-                                ) : (
-                                    <Text style={styles.submitButtonText}>Confirm Assignment</Text>
-                                )}
-                            </TouchableOpacity>
-                        </View>
+                                <FlatList
+                                    data={filteredStaff}
+                                    keyExtractor={item => item._id}
+                                    style={styles.staffList}
+                                    renderItem={({ item }) => (
+                                        <TouchableOpacity
+                                            style={[
+                                                styles.staffItem,
+                                                selectedStaff?._id === item._id && styles.selectedStaffItem
+                                            ]}
+                                            onPress={() => setSelectedStaff(item)}
+                                        >
+                                            <View style={styles.staffInfo}>
+                                                <Text style={[
+                                                    styles.staffName,
+                                                    selectedStaff?._id === item._id && styles.selectedStaffText
+                                                ]}>{item.name}</Text>
+                                                <Text style={[
+                                                    styles.staffDept,
+                                                    selectedStaff?._id === item._id && styles.selectedStaffSubText
+                                                ]}>{item.department || 'No Dept'} • {item.userId}</Text>
+                                            </View>
+                                            {selectedStaff?._id === item._id && (
+                                                <CheckCircle2 size={20} color="#800000" />
+                                            )}
+                                        </TouchableOpacity>
+                                    )}
+                                    ListEmptyComponent={
+                                        <Text style={styles.noResultText}>No teachers found</Text>
+                                    }
+                                />
+
+                                <View style={styles.modalFooter}>
+                                    <TouchableOpacity
+                                        style={[styles.submitButton, (!selectedStaff || submitting) && styles.disabledButton]}
+                                        onPress={handleAssignHOD}
+                                        disabled={!selectedStaff || submitting}
+                                    >
+                                        {submitting ? (
+                                            <ActivityIndicator color="#fff" />
+                                        ) : (
+                                            <Text style={styles.submitButtonText}>Confirm Assignment</Text>
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
+                            </>
+                        )}
                     </View>
                 </View>
             </Modal>

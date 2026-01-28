@@ -15,7 +15,7 @@ import {
     ScrollView,
     Image
 } from 'react-native';
-import { ArrowLeft, Search, Plus, Trash2, X, BookOpen, Library, Users, LogOut, RotateCcw, Calendar, CheckCircle } from 'lucide-react-native';
+import { ArrowLeft, Search, Plus, Trash2, X, BookOpen, Library, Users, LogOut, RotateCcw, Calendar, CheckCircle, Edit2 } from 'lucide-react-native';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/api';
 
@@ -38,7 +38,9 @@ const LibraryManagement = ({ navigation }) => {
     const [returnedBooks, setReturnedBooks] = useState([]);
     const [issueModalVisible, setIssueModalVisible] = useState(false);
     const [selectedBookForIssue, setSelectedBookForIssue] = useState(null);
+
     const [studentIdToIssue, setStudentIdToIssue] = useState('');
+    const [editId, setEditId] = useState(null);
 
     // Connection State
     const [isConnected, setIsConnected] = useState(true);
@@ -175,6 +177,30 @@ const LibraryManagement = ({ navigation }) => {
         setIssueModalVisible(true);
     };
 
+    const handleEdit = (item) => {
+        setEditId(item._id);
+        setNewItem({
+            title: item.title,
+            author: item.author,
+            category: item.category,
+            quantity: item.quantity.toString(),
+            isbn: item.isbn || ''
+        });
+        setModalVisible(true);
+    };
+
+    const openAddModal = () => {
+        setEditId(null);
+        setNewItem({
+            title: '',
+            author: '',
+            category: '',
+            quantity: '1',
+            isbn: ''
+        });
+        setModalVisible(true);
+    };
+
     const handleAddItem = async () => {
         if (!newItem.title || !newItem.author || !newItem.category) {
             Alert.alert('Error', 'Please fill in required fields (Title, Author, Category)');
@@ -182,8 +208,14 @@ const LibraryManagement = ({ navigation }) => {
         }
 
         try {
-            await api.post('/admin/library', newItem);
-            Alert.alert('Success', 'Item added successfully');
+            if (editId) {
+                await api.put(`/admin/library/${editId}`, newItem);
+                Alert.alert('Success', 'Item updated successfully');
+            } else {
+                await api.post('/admin/library', newItem);
+                Alert.alert('Success', 'Item added successfully');
+            }
+
             setModalVisible(false);
             fetchItems();
             setNewItem({
@@ -193,9 +225,10 @@ const LibraryManagement = ({ navigation }) => {
                 quantity: '1',
                 isbn: ''
             });
+            setEditId(null);
         } catch (error) {
-            console.error('Error adding item:', error);
-            Alert.alert('Error', 'Failed to add item');
+            console.error('Error adding/updating item:', error);
+            Alert.alert('Error', `Failed to ${editId ? 'update' : 'add'} item`);
         }
     };
 
@@ -239,6 +272,9 @@ const LibraryManagement = ({ navigation }) => {
                             <CheckCircle size={20} color="#dc2626" />
                         </TouchableOpacity>
                     )}
+                    <TouchableOpacity onPress={() => handleEdit(item)} style={[styles.actionButton, { backgroundColor: '#f0f9ff' }]}>
+                        <Edit2 size={20} color="#0284c7" />
+                    </TouchableOpacity>
                     <TouchableOpacity onPress={() => handleDeleteItem(item._id)} style={[styles.actionButton, { backgroundColor: '#fee2e2' }]}>
                         <Trash2 size={20} color="#ef4444" />
                     </TouchableOpacity>
@@ -428,7 +464,7 @@ const LibraryManagement = ({ navigation }) => {
             {activeTab === 'books' && (
                 <TouchableOpacity
                     style={styles.fab}
-                    onPress={() => setModalVisible(true)}
+                    onPress={openAddModal}
                     activeOpacity={0.9}
                 >
                     <Plus size={24} color="#fff" />
@@ -444,7 +480,7 @@ const LibraryManagement = ({ navigation }) => {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Add New Item</Text>
+                            <Text style={styles.modalTitle}>{editId ? 'Edit Item' : 'Add New Item'}</Text>
                             <TouchableOpacity onPress={() => setModalVisible(false)}>
                                 <X size={24} color="#64748b" />
                             </TouchableOpacity>
@@ -505,7 +541,7 @@ const LibraryManagement = ({ navigation }) => {
                                 </View>
 
                                 <TouchableOpacity style={styles.submitButton} onPress={handleAddItem}>
-                                    <Text style={styles.submitButtonText}>Add Item</Text>
+                                    <Text style={styles.submitButtonText}>{editId ? 'Update Item' : 'Add Item'}</Text>
                                 </TouchableOpacity>
                             </View>
                         </ScrollView>

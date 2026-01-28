@@ -28,7 +28,9 @@ import {
     Users,
     Clock,
     LogOut,
-    UserPlus
+
+    UserPlus,
+    Edit2
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../context/AuthContext';
@@ -44,6 +46,7 @@ const TransportManagement = ({ navigation }) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [editId, setEditId] = useState(null);
 
     // Form State
     const [busNumber, setBusNumber] = useState('');
@@ -117,6 +120,23 @@ const TransportManagement = ({ navigation }) => {
         }
     };
 
+    const handleEdit = (bus) => {
+        setEditId(bus._id);
+        setBusNumber(bus.busNumber);
+        setRoute(bus.route);
+        setDriverName(bus.driverName || bus.driverId?.name || '');
+        setDriverContact(bus.driverContact || bus.driverId?.mobileNo || '');
+        setSelectedDriverId(bus.driverId?._id || '');
+        setCapacity(bus.capacity ? bus.capacity.toString() : '');
+        setModalVisible(true);
+    };
+
+    const openCreateModal = () => {
+        setEditId(null);
+        resetForm();
+        setModalVisible(true);
+    };
+
     const handleSubmit = async () => {
         if (!busNumber || !route) {
             Alert.alert('Error', 'Please fill in required fields (Bus Number, Route)');
@@ -134,14 +154,21 @@ const TransportManagement = ({ navigation }) => {
                 capacity: parseInt(capacity) || 0
             };
 
-            await api.post('/college/buses', data);
-            Alert.alert('Success', 'Bus record created');
+            if (editId) {
+                await api.put(`/college/buses/${editId}`, data);
+                Alert.alert('Success', 'Bus record updated');
+            } else {
+                await api.post('/college/buses', data);
+                Alert.alert('Success', 'Bus record created');
+            }
+
             setModalVisible(false);
             resetForm();
+            setEditId(null);
             fetchBuses();
         } catch (error) {
-            console.error('Create bus error:', error);
-            Alert.alert('Error', 'Failed to create bus record');
+            console.error('Create/Update bus error:', error);
+            Alert.alert('Error', `Failed to ${editId ? 'update' : 'create'} bus record`);
         } finally {
             setSubmitting(false);
         }
@@ -245,9 +272,14 @@ const TransportManagement = ({ navigation }) => {
                     <Bus size={16} color="#800000" />
                     <Text style={styles.busNumberText}>{item.busNumber}</Text>
                 </View>
-                <TouchableOpacity onPress={() => handleDelete(item._id)} style={styles.deleteButton}>
-                    <Trash2 size={18} color="#ef4444" />
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row' }}>
+                    <TouchableOpacity onPress={() => handleEdit(item)} style={[styles.deleteButton, { backgroundColor: '#f0f9ff', marginRight: 8 }]}>
+                        <Edit2 size={18} color="#0284c7" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDelete(item._id)} style={styles.deleteButton}>
+                        <Trash2 size={18} color="#ef4444" />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <View style={styles.routeSection}>
@@ -349,7 +381,7 @@ const TransportManagement = ({ navigation }) => {
                         )}
                         <TouchableOpacity
                             style={styles.iconButton}
-                            onPress={() => activeTab === 'buses' ? setModalVisible(true) : setDriverModalVisible(true)}
+                            onPress={() => activeTab === 'buses' ? openCreateModal() : setDriverModalVisible(true)}
                         >
                             <Plus size={24} color="#fff" />
                         </TouchableOpacity>
@@ -419,8 +451,8 @@ const TransportManagement = ({ navigation }) => {
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <View>
-                                <Text style={styles.modalTitle}>Add Bus</Text>
-                                <Text style={styles.modalSubtitle}>Register a new transport vehicle</Text>
+                                <Text style={styles.modalTitle}>{editId ? 'Edit Bus' : 'Add Bus'}</Text>
+                                <Text style={styles.modalSubtitle}>{editId ? 'Update details' : 'Register a new transport vehicle'}</Text>
                             </View>
                             <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
                                 <X size={20} color="#64748b" />
@@ -518,7 +550,7 @@ const TransportManagement = ({ navigation }) => {
                                     <ActivityIndicator color="#fff" />
                                 ) : (
                                     <>
-                                        <Text style={styles.submitButtonText}>Register Bus</Text>
+                                        <Text style={styles.submitButtonText}>{editId ? 'Update Bus' : 'Register Bus'}</Text>
                                         <Send size={18} color="#fff" style={{ marginLeft: 8 }} />
                                     </>
                                 )}

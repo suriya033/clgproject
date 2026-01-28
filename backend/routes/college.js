@@ -92,6 +92,15 @@ router.delete('/courses/:id', auth(['Admin', 'Office']), async (req, res) => {
     }
 });
 
+router.put('/courses/:id', auth(['Admin', 'Office']), async (req, res) => {
+    try {
+        const course = await Course.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(course);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 // --- Announcement Routes ---
 router.post('/announcements', auth(['Admin', 'HOD', 'Office']), upload.single('attachment'), async (req, res) => {
     try {
@@ -129,6 +138,40 @@ router.post('/announcements', auth(['Admin', 'HOD', 'Office']), upload.single('a
         res.json(announcement);
     } catch (err) {
         console.error('Announcement Error:', err);
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.put('/announcements/:id', auth(['Admin', 'HOD', 'Office']), upload.single('attachment'), async (req, res) => {
+    try {
+        const { title, content, targetRoles } = req.body;
+        let updateData = { title, content };
+
+        if (targetRoles) {
+            let roles = targetRoles;
+            if (typeof targetRoles === 'string') {
+                roles = JSON.parse(targetRoles);
+            }
+            updateData.targetRoles = roles;
+        }
+
+        if (req.file) {
+            updateData.attachmentUrl = `${req.protocol}://${req.get('host')}/uploads/announcements/${req.file.filename}`;
+            const ext = path.extname(req.file.originalname).toLowerCase();
+            if (['.jpg', '.jpeg', '.png', '.gif'].includes(ext)) {
+                updateData.attachmentType = 'image';
+            } else if (ext === '.pdf') {
+                updateData.attachmentType = 'pdf';
+            } else if (['.doc', '.docx'].includes(ext)) {
+                updateData.attachmentType = 'document';
+            } else {
+                updateData.attachmentType = 'other';
+            }
+        }
+
+        const announcement = await Announcement.findByIdAndUpdate(req.params.id, updateData, { new: true });
+        res.json(announcement);
+    } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
@@ -220,6 +263,15 @@ router.get('/buses', auth(), async (req, res) => {
     try {
         const buses = await Bus.find().populate('driverId', 'name email mobileNo');
         res.json(buses);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.put('/buses/:id', auth(['Admin', 'Transport', 'Office']), async (req, res) => {
+    try {
+        const bus = await Bus.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(bus);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

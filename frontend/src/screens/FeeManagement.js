@@ -25,7 +25,9 @@ import {
     User,
     CheckCircle2,
     Clock,
-    AlertCircle
+
+    AlertCircle,
+    Edit2
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import api from '../api/api';
@@ -39,6 +41,7 @@ const FeeManagement = ({ navigation }) => {
     const [submitting, setSubmitting] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [students, setStudents] = useState([]);
+    const [editId, setEditId] = useState(null);
 
     // Form State
     const [studentId, setStudentId] = useState('');
@@ -96,6 +99,22 @@ const FeeManagement = ({ navigation }) => {
         fetchFees();
     };
 
+    const handleEdit = (fee) => {
+        setEditId(fee._id);
+        setStudentId(fee.student?._id || fee.student);
+        setAmount(fee.amount.toString());
+        setType(fee.type);
+        setDueDate(fee.dueDate ? new Date(fee.dueDate).toISOString().split('T')[0] : '');
+        setRemarks(fee.remarks || '');
+        setModalVisible(true);
+    };
+
+    const openCreateModal = () => {
+        setEditId(null);
+        resetForm();
+        setModalVisible(true);
+    };
+
     const handleSubmit = async () => {
         if (!studentId || !amount || !type) {
             Alert.alert('Error', 'Please fill in required fields');
@@ -112,14 +131,21 @@ const FeeManagement = ({ navigation }) => {
                 remarks
             };
 
-            await api.post('/college/fees', data);
-            Alert.alert('Success', 'Fee record created');
+            if (editId) {
+                await api.put(`/college/fees/${editId}`, data);
+                Alert.alert('Success', 'Fee record updated');
+            } else {
+                await api.post('/college/fees', data);
+                Alert.alert('Success', 'Fee record created');
+            }
+
             setModalVisible(false);
+            setEditId(null);
             resetForm();
             fetchFees();
         } catch (error) {
-            console.error('Create fee error:', error);
-            Alert.alert('Error', 'Failed to create fee record');
+            console.error('Create/Update fee error:', error);
+            Alert.alert('Error', `Failed to ${editId ? 'update' : 'create'} fee record`);
         } finally {
             setSubmitting(false);
         }
@@ -148,7 +174,12 @@ const FeeManagement = ({ navigation }) => {
                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
                     <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{item.status}</Text>
                 </View>
-                <Text style={styles.amountText}>₹{item.amount.toLocaleString()}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={[styles.amountText, { marginRight: 10 }]}>₹{item.amount.toLocaleString()}</Text>
+                    <TouchableOpacity onPress={() => handleEdit(item)} style={{ padding: 5, backgroundColor: '#f1f5f9', borderRadius: 8 }}>
+                        <Edit2 size={16} color="#0284c7" />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <View style={styles.studentInfo}>
@@ -189,7 +220,7 @@ const FeeManagement = ({ navigation }) => {
                     <Text style={styles.headerTitle}>Fee Management</Text>
                     <TouchableOpacity
                         style={styles.iconButton}
-                        onPress={() => setModalVisible(true)}
+                        onPress={openCreateModal}
                     >
                         <Plus size={24} color="#fff" />
                     </TouchableOpacity>
@@ -240,8 +271,8 @@ const FeeManagement = ({ navigation }) => {
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <View>
-                                <Text style={styles.modalTitle}>Add Fee Record</Text>
-                                <Text style={styles.modalSubtitle}>Create a new payment request</Text>
+                                <Text style={styles.modalTitle}>{editId ? 'Edit Fee Record' : 'Add Fee Record'}</Text>
+                                <Text style={styles.modalSubtitle}>{editId ? 'Update payment details' : 'Create a new payment request'}</Text>
                             </View>
                             <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
                                 <X size={20} color="#64748b" />
@@ -336,7 +367,7 @@ const FeeManagement = ({ navigation }) => {
                                     <ActivityIndicator color="#fff" />
                                 ) : (
                                     <>
-                                        <Text style={styles.submitButtonText}>Create Fee Entry</Text>
+                                        <Text style={styles.submitButtonText}>{editId ? 'Update Fee Entry' : 'Create Fee Entry'}</Text>
                                         <Send size={18} color="#fff" style={{ marginLeft: 8 }} />
                                     </>
                                 )}

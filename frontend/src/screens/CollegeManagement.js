@@ -33,7 +33,8 @@ import {
     LayoutDashboard,
     Briefcase,
     Banknote,
-    Megaphone
+    Megaphone,
+    Edit2
 } from 'lucide-react-native';
 import { AuthContext } from '../context/AuthContext';
 
@@ -50,6 +51,7 @@ const CollegeManagement = ({ navigation }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [formData, setFormData] = useState({ name: '', code: '', duration: '', department: '' });
     const [submitting, setSubmitting] = useState(false);
+    const [editId, setEditId] = useState(null);
 
     useEffect(() => {
         fetchData();
@@ -101,6 +103,27 @@ const CollegeManagement = ({ navigation }) => {
         }
     };
 
+    const handleEdit = (item) => {
+        setEditId(item._id);
+        if (activeTab === 'Departments') {
+            setFormData({ name: item.name, code: item.code, duration: '', department: '' });
+        } else if (activeTab === 'Courses') {
+            setFormData({
+                name: item.name,
+                code: item.code,
+                duration: item.duration,
+                department: item.department?._id || item.department // Handle populated or ID
+            });
+        }
+        setModalVisible(true);
+    };
+
+    const openCreateModal = () => {
+        setEditId(null);
+        setFormData({ name: '', code: '', duration: '', department: '' });
+        setModalVisible(true);
+    };
+
     const handleCreate = async () => {
         if (!formData.name || !formData.code) {
             Alert.alert('Error', 'Please fill in required fields');
@@ -110,26 +133,37 @@ const CollegeManagement = ({ navigation }) => {
         setSubmitting(true);
         try {
             if (activeTab === 'Departments') {
-                await api.post('/college/departments', { name: formData.name, code: formData.code });
+                if (editId) {
+                    await api.put(`/college/departments/${editId}`, { name: formData.name, code: formData.code });
+                } else {
+                    await api.post('/college/departments', { name: formData.name, code: formData.code });
+                }
             } else {
                 if (!formData.duration || !formData.department) {
                     Alert.alert('Error', 'Please fill in all course details');
                     setSubmitting(false);
                     return;
                 }
-                await api.post('/college/courses', {
+                const courseData = {
                     name: formData.name,
                     code: formData.code,
                     duration: formData.duration,
                     department: formData.department
-                });
+                };
+
+                if (editId) {
+                    await api.put(`/college/courses/${editId}`, courseData);
+                } else {
+                    await api.post('/college/courses', courseData);
+                }
             }
-            Alert.alert('Success', `${activeTab.slice(0, -1)} created successfully`);
+            Alert.alert('Success', `${activeTab.slice(0, -1)} ${editId ? 'updated' : 'created'} successfully`);
             setModalVisible(false);
+            setEditId(null);
             setFormData({ name: '', code: '', duration: '', department: '' });
             fetchData();
         } catch (error) {
-            Alert.alert('Error', error.response?.data?.message || 'Failed to create');
+            Alert.alert('Error', error.response?.data?.message || `Failed to ${editId ? 'update' : 'create'}`);
         } finally {
             setSubmitting(false);
         }
@@ -221,6 +255,14 @@ const CollegeManagement = ({ navigation }) => {
                             <Text style={styles.cardCode}>{item.code}</Text>
                         </View>
                     </View>
+
+                    <TouchableOpacity
+                        onPress={() => handleEdit(item)}
+                        style={[styles.deleteBtn, { marginRight: 8, backgroundColor: '#f0f9ff' }]}
+                    >
+                        <Edit2 size={18} color="#0284c7" />
+                    </TouchableOpacity>
+
                     <TouchableOpacity
                         onPress={() => handleDelete(item._id)}
                         style={styles.deleteBtn}
@@ -322,7 +364,7 @@ const CollegeManagement = ({ navigation }) => {
                         if (activeTab === 'Incharges') {
                             navigation.navigate('UserManagement', { roleFilter: 'Office' });
                         } else {
-                            setModalVisible(true);
+                            openCreateModal();
                         }
                     }}
                 >
@@ -449,8 +491,8 @@ const CollegeManagement = ({ navigation }) => {
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <View>
-                                <Text style={styles.modalTitle}>Add {activeTab.slice(0, -1)}</Text>
-                                <Text style={styles.modalSubtitle}>Enter details for the new {activeTab.slice(0, -1).toLowerCase()}</Text>
+                                <Text style={styles.modalTitle}>{editId ? 'Edit' : 'Add'} {activeTab.slice(0, -1)}</Text>
+                                <Text style={styles.modalSubtitle}>{editId ? 'Update' : 'Enter'} details for the {activeTab.slice(0, -1).toLowerCase()}</Text>
                             </View>
                             <TouchableOpacity
                                 onPress={() => setModalVisible(false)}
@@ -525,7 +567,7 @@ const CollegeManagement = ({ navigation }) => {
                                 {submitting ? (
                                     <ActivityIndicator color="#fff" />
                                 ) : (
-                                    <Text style={styles.submitBtnText}>Create {activeTab.slice(0, -1)}</Text>
+                                    <Text style={styles.submitBtnText}>{editId ? 'Update' : 'Create'} {activeTab.slice(0, -1)}</Text>
                                 )}
                             </TouchableOpacity>
                             <View style={{ height: 30 }} />
