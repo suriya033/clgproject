@@ -43,15 +43,9 @@ const SportsManagement = ({ navigation }) => {
     const [editId, setEditId] = useState(null);
 
     // Data
-    const [events, setEvents] = useState([
-        { id: 1, title: 'Inter-College Football', date: '2024-03-15', time: '10:00 AM', venue: 'Main Ground' },
-        { id: 2, title: 'Annual Sports Day', date: '2024-04-20', time: '09:00 AM', venue: 'Sports Complex' },
-    ]);
-
-    const [teams, setTeams] = useState([
-        { id: 1, name: 'College Football Team', captain: 'John Doe', members: 15, playerList: [] },
-        { id: 2, name: 'Basketball Squad', captain: 'Mike Ross', members: 12, playerList: [] },
-    ]);
+    // Data
+    const [events, setEvents] = useState([]);
+    const [teams, setTeams] = useState([]);
 
     const [allStudents, setAllStudents] = useState([]);
 
@@ -70,10 +64,31 @@ const SportsManagement = ({ navigation }) => {
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
 
     useEffect(() => {
-        if (activeTab === 'Teams') {
+        if (activeTab === 'Events') {
+            fetchEvents();
+        } else {
+            fetchTeams();
             fetchStudents();
         }
     }, [activeTab]);
+
+    const fetchEvents = async () => {
+        try {
+            const response = await api.get('/sports/events');
+            setEvents(response.data);
+        } catch (error) {
+            console.error('Error fetching events:', error);
+        }
+    };
+
+    const fetchTeams = async () => {
+        try {
+            const response = await api.get('/sports/teams');
+            setTeams(response.data);
+        } catch (error) {
+            console.error('Error fetching teams:', error);
+        }
+    };
 
     const fetchStudents = async () => {
         try {
@@ -83,23 +98,23 @@ const SportsManagement = ({ navigation }) => {
             setAllStudents(students);
         } catch (error) {
             console.error('Error fetching students:', error);
-            // Alert.alert('Error', 'Failed to fetch students list');
         } finally {
             setLoadingStudents(false);
         }
     };
 
     const handleEdit = (item) => {
-        setEditId(item.id);
+        setEditId(item._id); // Use _id for MongoDB
         if (activeTab === 'Events') {
             setEventName(item.title);
-            setEventDate(item.date);
+            // Format date if needed, assuming ISO string from DB
+            setEventDate(item.date ? item.date.split('T')[0] : '');
             setEventTime(item.time);
             setEventVenue(item.venue);
         } else {
             setTeamName(item.name);
             setTeamCaptain(item.captain);
-            setSelectedStudents(item.playerList || []);
+            setSelectedStudents(item.players || []); // Use players array from DB
         }
         setModalVisible(true);
     };
@@ -110,45 +125,62 @@ const SportsManagement = ({ navigation }) => {
         setModalVisible(true);
     };
 
-    const handleSubmit = () => {
-        if (activeTab === 'Events') {
-            if (!eventName || !eventDate || !eventVenue) {
-                Alert.alert('Error', 'Please fill in all required fields');
-                return;
-            }
-            if (editId) {
-                setEvents(events.map(e => e.id === editId ? { ...e, title: eventName, date: eventDate, time: eventTime, venue: eventVenue } : e));
-            } else {
-                const newEvent = {
-                    id: Date.now(),
+    const handleSubmit = async () => {
+        if (submitting) return;
+        setSubmitting(true);
+        try {
+            if (activeTab === 'Events') {
+                if (!eventName || !eventDate || !eventVenue) {
+                    Alert.alert('Error', 'Please fill in all required fields');
+                    return;
+                }
+
+                const eventData = {
                     title: eventName,
                     date: eventDate,
                     time: eventTime,
                     venue: eventVenue
                 };
-                setEvents([...events, newEvent]);
-            }
-        } else {
-            if (!teamName || !teamCaptain) {
-                Alert.alert('Error', 'Please fill in all required fields');
-                return;
-            }
-            if (editId) {
-                setTeams(teams.map(t => t.id === editId ? { ...t, name: teamName, captain: teamCaptain, members: selectedStudents.length, playerList: selectedStudents } : t));
+
+                if (editId) {
+                    await api.put(`/sports/events/${editId}`, eventData);
+                    Alert.alert('Success', 'Event updated');
+                } else {
+                    await api.post('/sports/events', eventData);
+                    Alert.alert('Success', 'Event created');
+                }
+                fetchEvents();
             } else {
-                const newTeam = {
-                    id: Date.now(),
+                if (!teamName || !teamCaptain) {
+                    Alert.alert('Error', 'Please fill in all required fields');
+                    return;
+                }
+
+                const teamData = {
                     name: teamName,
                     captain: teamCaptain,
                     members: selectedStudents.length,
-                    playerList: selectedStudents
+                    players: selectedStudents
                 };
-                setTeams([...teams, newTeam]);
+
+                if (editId) {
+                    await api.put(`/sports/teams/${editId}`, teamData);
+                    Alert.alert('Success', 'Team updated');
+                } else {
+                    await api.post('/sports/teams', teamData);
+                    Alert.alert('Success', 'Team created');
+                }
+                fetchTeams();
             }
+            setModalVisible(false);
+            setEditId(null);
+            resetForm();
+        } catch (error) {
+            console.error('Submit error:', error);
+            Alert.alert('Error', 'Operation failed');
+        } finally {
+            setSubmitting(false);
         }
-        setModalVisible(false);
-        setEditId(null);
-        resetForm();
     };
 
     const resetForm = () => {

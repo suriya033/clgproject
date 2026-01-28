@@ -1,7 +1,7 @@
 # Verification Plan
 
 ## Objective
-Verify that the "Edit" functionality works across all implemented modules.
+Verify that the "Edit" functionality works across all implemented modules and data persists to the backend.
 
 ## 1. Notice Management
 - [ ] Navigate to Notice Board.
@@ -9,7 +9,7 @@ Verify that the "Edit" functionality works across all implemented modules.
 - [ ] Verify the modal opens with pre-filled data.
 - [ ] Change the title or content.
 - [ ] Tap "Update Notice".
-- [ ] Verify the notice list updates with the new content.
+- [ ] Verify the notice list updates with the new content (Persisted).
 
 ## 2. Fee Management
 - [ ] Navigate to Fee Management.
@@ -32,16 +32,60 @@ Verify that the "Edit" functionality works across all implemented modules.
 - [ ] Tap "Update Bus".
 - [ ] Verify the bus details are updated.
 
-## 5. Sports Management
+## 5. Sports Management (Backend Integrated)
 - [ ] Navigate to Sports Management.
-- [ ] Tap "Edit" on an Event or Team.
-- [ ] Modify details.
-- [ ] Tap "Update".
-- [ ] Verify the list updates (Note: This is client-side only for now).
+- [ ] **Events Tab:**
+    - [ ] Add a new Event (e.g., "Cricket Match").
+    - [ ] Verify it appears in the list.
+    - [ ] Tap "Edit" on the event.
+    - [ ] Change the Venue or Time.
+    - [ ] Tap "Update".
+    - [ ] Verify the change persists (Refresh/Re-login to be sure).
+- [ ] **Teams Tab:**
+    - [ ] Add a new Team (e.g., "Cricket Team").
+    - [ ] Verify it appears.
+    - [ ] Tap "Edit".
+    - [ ] Change the Captain.
+    - [ ] Tap "Update".
+    - [ ] Verify the change persists.
 
-## 6. Hostel Management
+## 6. Hostel Management (Backend Integrated)
 - [ ] Navigate to Hostel Management -> Rooms.
-- [ ] Tap "Edit" on a Room.
-- [ ] Modify Capacity or Occupants.
+- [ ] Add a new Room (e.g., "201", Capacity 2).
+- [ ] Verify it appears.
+- [ ] Tap "Edit" on the Room.
+- [ ] Change Capacity or Type.
 - [ ] Tap "Update Room".
-- [ ] Verify the room details update (Note: Client-side only).
+- [ ] Verify the room details update and persist.
+
+## 7. Exam Cell - AI Timetable
+- [ ] Navigate to "Exam Cell".
+- [ ] Verify the "Ai Timetable" tab is active.
+- [ ] Enter "Number of Classes" (e.g. 5).
+- [ ] Enter "Number of Staffs" (e.g. 10).
+- [ ] Tap "Generate Timetable".
+- [ ] Wait for the generation (simulated delay).
+- [ ] Verify a Modal appears with the generated timetable.
+- [ ] Check if the timetable contains schedules for Class 1 to Class 5.
+
+## 8. Class Management (HOD)
+- [ ] Log in as HOD (or Admin).
+- [ ] Navigate to "Class Management" (from Dashboard).
+- [ ] Tap "+" to Add a new Class.
+- [ ] Enter "Name" (e.g. CSE), "Section" (e.g. A), "Year" (e.g. 2025).
+- [ ] Tap the "Select a Teacher" dropdown in "Assign Class Advisor".
+- [ ] Select a teacher (staff or HOD).
+- [ ] Tap "Create Class".
+- [ ] Verify the class appears with the advisor name.
+
+## 9. Subject Management (Admin)
+- [ ] Log in as Admin.
+- [ ] Navigate to "Subjects" from the dashboard grid.
+- [ ] Tap "+" to Add a Subject.
+- [ ] Enter details: Name, Code, Credits, Department.
+- [ ] Tap "Create Subject".
+- [ ] Verify subject is added to the list.
+- [ ] Tap the "Edit" (pencil) icon on a subject.
+- [ ] Change credits to 5.
+- [ ] Tap "Update Subject".
+- [ ] Verify change.

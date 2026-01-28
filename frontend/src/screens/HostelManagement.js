@@ -43,13 +43,10 @@ const HostelManagement = ({ navigation }) => {
     const [activeTab, setActiveTab] = useState('Rooms');
     const [modalVisible, setModalVisible] = useState(false);
     const [editId, setEditId] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
 
     // Mock Data
-    const [rooms, setRooms] = useState([
-        { id: 1, number: '101', type: 'Single', capacity: 1, occupied: 1, status: 'Full', students: [{ name: 'John Doe', id: '123' }] },
-        { id: 2, number: '102', type: 'Double', capacity: 2, occupied: 1, status: 'Available', students: [{ name: 'Alice Smith', id: '124' }] },
-        { id: 3, number: '103', type: 'Dormitory', capacity: 4, occupied: 3, status: 'Available', students: [] },
-    ]);
+    const [rooms, setRooms] = useState([]);
 
     const [queries, setQueries] = useState([
         { id: 1, student: 'Alice Smith', room: '102', issue: 'Fan not working', status: 'Pending', date: '2024-03-10' },
@@ -84,8 +81,18 @@ const HostelManagement = ({ navigation }) => {
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
 
     useEffect(() => {
+        fetchRooms();
         fetchStudents();
     }, []);
+
+    const fetchRooms = async () => {
+        try {
+            const response = await api.get('/hostel/rooms');
+            setRooms(response.data);
+        } catch (error) {
+            console.error('Error fetching rooms:', error);
+        }
+    };
 
     const fetchStudents = async () => {
         try {
@@ -110,7 +117,7 @@ const HostelManagement = ({ navigation }) => {
     ];
 
     const handleEdit = (room) => {
-        setEditId(room.id);
+        setEditId(room._id); // Use _id for MongoDB
         setRoomNumber(room.number);
         setRoomCapacity(room.capacity.toString());
         setRoomType(room.type);
@@ -124,7 +131,7 @@ const HostelManagement = ({ navigation }) => {
         setModalVisible(true);
     };
 
-    const handleAddRoom = () => {
+    const handleAddRoom = async () => {
         if (!roomNumber || !roomCapacity) {
             Alert.alert('Error', 'Please fill all fields');
             return;
@@ -136,19 +143,11 @@ const HostelManagement = ({ navigation }) => {
             return;
         }
 
-        if (editId) {
-            setRooms(rooms.map(room => room.id === editId ? {
-                ...room,
-                number: roomNumber,
-                type: roomType,
-                capacity: capacity,
-                occupied: selectedStudents.length,
-                status: selectedStudents.length >= capacity ? 'Full' : 'Available',
-                students: selectedStudents
-            } : room));
-        } else {
-            const newRoom = {
-                id: Date.now(),
+        if (submitting) return;
+        setSubmitting(true);
+
+        try {
+            const roomData = {
                 number: roomNumber,
                 type: roomType,
                 capacity: capacity,
@@ -156,11 +155,23 @@ const HostelManagement = ({ navigation }) => {
                 status: selectedStudents.length >= capacity ? 'Full' : 'Available',
                 students: selectedStudents
             };
-            setRooms([...rooms, newRoom]);
+
+            if (editId) {
+                await api.put(`/hostel/rooms/${editId}`, roomData);
+                Alert.alert('Success', 'Room updated successfully');
+            } else {
+                await api.post('/hostel/rooms', roomData);
+                Alert.alert('Success', 'Room created successfully');
+            }
+            fetchRooms();
+            setModalVisible(false);
+            resetForm();
+        } catch (error) {
+            console.error('Submit error:', error);
+            Alert.alert('Error', 'Operation failed');
+        } finally {
+            setSubmitting(false);
         }
-        setModalVisible(false);
-        setEditId(null);
-        resetForm();
     };
 
     const resetForm = () => {

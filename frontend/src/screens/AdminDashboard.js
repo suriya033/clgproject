@@ -86,8 +86,10 @@ const AdminDashboard = ({ navigation }) => {
         { id: '11', title: 'Exam Cell', icon: <ClipboardList size={24} color="#14b8a6" />, route: 'ExamCell', bg: '#f0fdfa' },
         { id: '12', title: 'Placements', icon: <Briefcase size={24} color="#64748b" />, route: 'Placements', bg: '#f8fafc' },
         { id: '13', title: 'Department', icon: <Building size={24} color="#8b5cf6" />, route: 'DepartmentManagement', bg: '#f5f3ff' },
+        { id: '14', title: 'Subjects', icon: <BookOpen size={24} color="#f97316" />, route: 'SubjectManagement', bg: '#fff7ed' },
 
         { id: '15', title: 'Office Incharge', icon: <UserCog size={24} color="#f59e0b" />, route: 'OfficeManagement', bg: '#fffbeb' },
+        { id: '16', title: 'Classes', icon: <BookOpen size={24} color="#0284c7" />, route: 'ClassManagement', bg: '#e0f2fe' },
     ];
 
     const stats = [

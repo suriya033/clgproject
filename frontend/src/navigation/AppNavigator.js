@@ -25,6 +25,9 @@ import OfficeDashboard from '../screens/OfficeDashboard';
 import SportsManagement from '../screens/SportsManagement';
 import HostelManagement from '../screens/HostelManagement';
 import DriverDashboard from '../screens/DriverDashboard';
+import ExamCell from '../screens/ExamCell';
+import ClassManagement from '../screens/ClassManagement';
+import SubjectManagement from '../screens/SubjectManagement';
 
 const Stack = createStackNavigator();
 
@@ -53,13 +56,15 @@ const AppNavigator = () => {
                                 <Stack.Screen name="CollegeManagement" component={CollegeManagement} />
                                 <Stack.Screen name="DepartmentManagement" component={DepartmentManagement} />
                                 <Stack.Screen name="CourseManagement" component={CourseManagement} />
+                                <Stack.Screen name="SubjectManagement" component={SubjectManagement} />
                                 <Stack.Screen name="Fees" component={FeeManagement} />
                                 <Stack.Screen name="Transport" component={TransportManagement} />
                                 <Stack.Screen name="OfficeManagement" component={OfficeManagement} />
                                 <Stack.Screen name="Sports" component={SportsManagement} />
                                 <Stack.Screen name="Hostel" component={HostelManagement} />
-                                <Stack.Screen name="ExamCell" component={GenericDashboard} />
+                                <Stack.Screen name="ExamCell" component={ExamCell} />
                                 <Stack.Screen name="Placements" component={GenericDashboard} />
+                                <Stack.Screen name="ClassManagement" component={ClassManagement} />
                                 <Stack.Screen name="Announcements" component={NoticeManagement} />
                             </>
                         )}
@@ -70,7 +75,10 @@ const AppNavigator = () => {
                             <Stack.Screen name="StaffDashboard" component={StaffDashboard} />
                         )}
                         {user.role === 'HOD' && (
-                            <Stack.Screen name="HODDashboard" component={GenericDashboard} />
+                            <>
+                                <Stack.Screen name="HODDashboard" component={GenericDashboard} />
+                                <Stack.Screen name="ClassManagement" component={ClassManagement} />
+                            </>
                         )}
                         {user.role === 'Transport' && (
                             <Stack.Screen name="TransportDashboard" component={TransportManagement} />
@@ -93,7 +101,7 @@ const AppNavigator = () => {
                                 <Stack.Screen name="HODManagement" component={HODManagement} />
                                 <Stack.Screen name="Sports" component={SportsManagement} />
                                 <Stack.Screen name="Hostel" component={HostelManagement} />
-                                <Stack.Screen name="ExamCell" component={GenericDashboard} />
+                                <Stack.Screen name="ExamCell" component={ExamCell} />
                                 <Stack.Screen name="Placements" component={GenericDashboard} />
                             </>
                         )}

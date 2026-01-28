@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, ScrollView, StatusBar, Platform } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
-import { LogOut, Info, Bell, Settings, Users, ArrowLeft } from 'lucide-react-native';
+import { LogOut, Info, Bell, Settings, Users, ArrowLeft, BookOpen } from 'lucide-react-native';
 
 const GenericDashboard = ({ navigation, route }) => {
     const { user, logout } = useContext(AuthContext);
@@ -73,6 +73,21 @@ const GenericDashboard = ({ navigation, route }) => {
                         <Text style={styles.menuSub}>View and manage notices</Text>
                     </View>
                 </TouchableOpacity>
+
+                {(user?.role === 'HOD' || user?.role === 'Admin') && (
+                    <TouchableOpacity
+                        style={styles.menuItem}
+                        onPress={() => navigation.navigate('ClassManagement')}
+                    >
+                        <View style={[styles.menuIconWrapper, { backgroundColor: '#e0f2fe' }]}>
+                            <BookOpen size={24} color="#0284c7" />
+                        </View>
+                        <View style={styles.menuContent}>
+                            <Text style={styles.menuText}>Class Management</Text>
+                            <Text style={styles.menuSub}>Assign classes & students</Text>
+                        </View>
+                    </TouchableOpacity>
+                )}
 
                 <TouchableOpacity style={styles.menuItem}>
                     <View style={[styles.menuIconWrapper, { backgroundColor: '#f8fafc' }]}>

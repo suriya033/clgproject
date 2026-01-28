@@ -55,6 +55,8 @@ app.get('/', (req, res) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/college', require('./routes/college'));
+app.use('/api/sports', require('./routes/sports'));
+app.use('/api/hostel', require('./routes/hostel'));
 
 const PORT = process.env.PORT || 5002;
 const HOST = '0.0.0.0';
