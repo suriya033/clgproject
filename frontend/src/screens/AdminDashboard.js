@@ -93,6 +93,7 @@ const AdminDashboard = ({ navigation }) => {
     const stats = [
         { label: 'Students', value: statsData.students.toString(), icon: <GraduationCap size={16} color="#fff" /> },
         { label: 'Staff', value: statsData.staff.toString(), icon: <Users size={16} color="#fff" /> },
+        { label: 'Drivers', value: (statsData.drivers || 0).toString(), icon: <Bus size={16} color="#fff" /> },
         { label: 'Depts', value: statsData.departments.toString(), icon: <Building size={16} color="#fff" /> },
     ];
 

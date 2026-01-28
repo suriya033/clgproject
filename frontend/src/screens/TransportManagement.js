@@ -27,7 +27,8 @@ import {
     Trash2,
     Users,
     Clock,
-    LogOut
+    LogOut,
+    UserPlus
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../context/AuthContext';
@@ -35,6 +36,7 @@ import api from '../api/api';
 
 const TransportManagement = ({ navigation }) => {
     const { user: currentUser, logout } = useContext(AuthContext);
+    const [activeTab, setActiveTab] = useState('buses'); // 'buses' or 'drivers'
     const [buses, setBuses] = useState([]);
     const [filteredBuses, setFilteredBuses] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -50,9 +52,33 @@ const TransportManagement = ({ navigation }) => {
     const [driverContact, setDriverContact] = useState('');
     const [capacity, setCapacity] = useState('');
 
+    // Driver Form State
+    const [driverModalVisible, setDriverModalVisible] = useState(false);
+    const [driverSubmitting, setDriverSubmitting] = useState(false);
+    const [driverUserId, setDriverUserId] = useState('');
+    const [driverPassword, setDriverPassword] = useState('');
+    const [driverNameInput, setDriverNameInput] = useState('');
+    const [driverEmail, setDriverEmail] = useState('');
+    const [driverContactInput, setDriverContactInput] = useState('');
+
+    // Drivers List for Selection
+    const [drivers, setDrivers] = useState([]);
+    const [selectedDriverId, setSelectedDriverId] = useState('');
+
     useEffect(() => {
         fetchBuses();
+        fetchDrivers();
     }, []);
+
+    const fetchDrivers = async () => {
+        try {
+            const response = await api.get('/admin/users');
+            const driverUsers = response.data.filter(u => u.role === 'Driver');
+            setDrivers(driverUsers);
+        } catch (error) {
+            console.error('Fetch drivers error:', error);
+        }
+    };
 
     useEffect(() => {
         if (searchQuery.trim() === '') {
@@ -84,7 +110,11 @@ const TransportManagement = ({ navigation }) => {
 
     const onRefresh = () => {
         setRefreshing(true);
-        fetchBuses();
+        if (activeTab === 'buses') {
+            fetchBuses();
+        } else {
+            fetchDrivers();
+        }
     };
 
     const handleSubmit = async () => {
@@ -100,6 +130,7 @@ const TransportManagement = ({ navigation }) => {
                 route,
                 driverName,
                 driverContact,
+                driverId: selectedDriverId || null,
                 capacity: parseInt(capacity) || 0
             };
 
@@ -138,12 +169,73 @@ const TransportManagement = ({ navigation }) => {
         );
     };
 
+    const handleDeleteDriver = (id) => {
+        Alert.alert(
+            'Delete Driver',
+            'Are you sure you want to delete this driver account?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await api.delete(`/admin/users/${id}`);
+                            fetchDrivers();
+                        } catch (error) {
+                            Alert.alert('Error', 'Failed to delete driver');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     const resetForm = () => {
         setBusNumber('');
         setRoute('');
         setDriverName('');
         setDriverContact('');
         setCapacity('');
+        setSelectedDriverId('');
+    };
+
+    const handleCreateDriver = async () => {
+        if (!driverUserId || !driverPassword || !driverNameInput || !driverEmail) {
+            Alert.alert('Error', 'Please fill in all required fields');
+            return;
+        }
+
+        try {
+            setDriverSubmitting(true);
+            const data = {
+                userId: driverUserId,
+                password: driverPassword,
+                name: driverNameInput,
+                email: driverEmail,
+                mobileNo: driverContactInput,
+                role: 'Driver'
+            };
+
+            await api.post('/admin/users', data);
+            Alert.alert('Success', 'Driver account created successfully');
+            setDriverModalVisible(false);
+            resetDriverForm();
+            fetchDrivers();
+        } catch (error) {
+            console.error('Create driver error:', error);
+            Alert.alert('Error', error.response?.data?.message || 'Failed to create driver account');
+        } finally {
+            setDriverSubmitting(false);
+        }
+    };
+
+    const resetDriverForm = () => {
+        setDriverUserId('');
+        setDriverPassword('');
+        setDriverNameInput('');
+        setDriverEmail('');
+        setDriverContactInput('');
     };
 
     const renderBusCard = ({ item }) => (
@@ -166,12 +258,16 @@ const TransportManagement = ({ navigation }) => {
             <View style={styles.driverSection}>
                 <View style={styles.driverInfo}>
                     <User size={14} color="#94a3b8" />
-                    <Text style={styles.driverName}>{item.driverName || 'No Driver Assigned'}</Text>
+                    <Text style={styles.driverName}>
+                        {item.driverId?.name || item.driverName || 'No Driver Assigned'}
+                    </Text>
                 </View>
-                {item.driverContact && (
+                {(item.driverId?.mobileNo || item.driverContact) && (
                     <View style={styles.driverInfo}>
                         <Phone size={14} color="#94a3b8" />
-                        <Text style={styles.driverContact}>{item.driverContact}</Text>
+                        <Text style={styles.driverContact}>
+                            {item.driverId?.mobileNo || item.driverContact}
+                        </Text>
                     </View>
                 )}
             </View>
@@ -184,6 +280,37 @@ const TransportManagement = ({ navigation }) => {
                 <TouchableOpacity style={styles.trackButton}>
                     <Text style={styles.trackButtonText}>Track Live</Text>
                 </TouchableOpacity>
+            </View>
+        </View>
+    );
+
+    const renderDriverCard = ({ item }) => (
+        <View style={styles.busCard}>
+            <View style={styles.cardHeader}>
+                <View style={styles.busBadge}>
+                    <User size={16} color="#4361ee" />
+                    <Text style={styles.busNumberText}>{item.name}</Text>
+                </View>
+                <TouchableOpacity onPress={() => handleDeleteDriver(item._id)} style={styles.deleteButton}>
+                    <Trash2 size={18} color="#ef4444" />
+                </TouchableOpacity>
+            </View>
+
+            <View style={styles.driverSection}>
+                <View style={styles.driverInfo}>
+                    <User size={14} color="#94a3b8" />
+                    <Text style={styles.driverName}>ID: {item.userId}</Text>
+                </View>
+                <View style={styles.driverInfo}>
+                    <Send size={14} color="#94a3b8" />
+                    <Text style={styles.driverContact}>{item.email}</Text>
+                </View>
+                {item.mobileNo && (
+                    <View style={styles.driverInfo}>
+                        <Phone size={14} color="#94a3b8" />
+                        <Text style={styles.driverContact}>{item.mobileNo}</Text>
+                    </View>
+                )}
             </View>
         </View>
     );
@@ -222,18 +349,33 @@ const TransportManagement = ({ navigation }) => {
                         )}
                         <TouchableOpacity
                             style={styles.iconButton}
-                            onPress={() => setModalVisible(true)}
+                            onPress={() => activeTab === 'buses' ? setModalVisible(true) : setDriverModalVisible(true)}
                         >
                             <Plus size={24} color="#fff" />
                         </TouchableOpacity>
                     </View>
                 </View>
 
+                <View style={styles.tabContainer}>
+                    <TouchableOpacity
+                        style={[styles.tab, activeTab === 'buses' && styles.activeTab]}
+                        onPress={() => setActiveTab('buses')}
+                    >
+                        <Text style={[styles.tabText, activeTab === 'buses' && styles.activeTabText]}>Buses</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.tab, activeTab === 'drivers' && styles.activeTab]}
+                        onPress={() => setActiveTab('drivers')}
+                    >
+                        <Text style={[styles.tabText, activeTab === 'drivers' && styles.activeTabText]}>Drivers</Text>
+                    </TouchableOpacity>
+                </View>
+
                 <View style={styles.searchContainer}>
                     <Search size={20} color="rgba(255,255,255,0.6)" style={styles.searchIcon} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search by bus no, route, driver..."
+                        placeholder={activeTab === 'buses' ? "Search by bus no, route, driver..." : "Search drivers..."}
                         placeholderTextColor="rgba(255,255,255,0.6)"
                         value={searchQuery}
                         onChangeText={setSearchQuery}
@@ -241,29 +383,32 @@ const TransportManagement = ({ navigation }) => {
                 </View>
             </LinearGradient>
 
-            {loading && !refreshing ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#4361ee" />
-                </View>
-            ) : (
-                <FlatList
-                    data={filteredBuses}
-                    renderItem={renderBusCard}
-                    keyExtractor={item => item._id}
-                    contentContainerStyle={styles.listContent}
-                    refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4361ee" />
-                    }
-                    ListEmptyComponent={
-                        <View style={styles.emptyContainer}>
-                            <Bus size={64} color="#cbd5e1" />
-                            <Text style={styles.emptyTitle}>No Buses Found</Text>
-                            <Text style={styles.emptySubtitle}>Add your first college bus record</Text>
-                        </View>
-                    }
-                />
-            )}
+            {
+                loading && !refreshing ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#4361ee" />
+                    </View>
+                ) : (
+                    <FlatList
+                        data={activeTab === 'buses' ? filteredBuses : drivers.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()) || d.userId.toLowerCase().includes(searchQuery.toLowerCase()))}
+                        renderItem={activeTab === 'buses' ? renderBusCard : renderDriverCard}
+                        keyExtractor={item => item._id}
+                        contentContainerStyle={styles.listContent}
+                        refreshControl={
+                            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4361ee" />
+                        }
+                        ListEmptyComponent={
+                            <View style={styles.emptyContainer}>
+                                {activeTab === 'buses' ? <Bus size={64} color="#cbd5e1" /> : <User size={64} color="#cbd5e1" />}
+                                <Text style={styles.emptyTitle}>{activeTab === 'buses' ? 'No Buses Found' : 'No Drivers Found'}</Text>
+                                <Text style={styles.emptySubtitle}>{activeTab === 'buses' ? 'Add your first college bus record' : 'Create a driver account to assign to buses'}</Text>
+                            </View>
+                        }
+                    />
+                )
+            }
 
+            {/* Bus Creation Modal */}
             <Modal
                 animationType="slide"
                 transparent={true}
@@ -302,6 +447,34 @@ const TransportManagement = ({ navigation }) => {
                                     value={route}
                                     onChangeText={setRoute}
                                 />
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Select Driver (Optional)</Text>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.driverSelector}>
+                                    {drivers.map(driver => (
+                                        <TouchableOpacity
+                                            key={driver._id}
+                                            style={[
+                                                styles.driverChip,
+                                                selectedDriverId === driver._id && styles.selectedDriverChip
+                                            ]}
+                                            onPress={() => {
+                                                setSelectedDriverId(driver._id);
+                                                setDriverName(driver.name);
+                                                setDriverContact(driver.mobileNo || '');
+                                            }}
+                                        >
+                                            <Text style={[
+                                                styles.driverChipText,
+                                                selectedDriverId === driver._id && styles.selectedDriverChipText
+                                            ]}>{driver.name}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                    {drivers.length === 0 && (
+                                        <Text style={styles.noDriversText}>No driver accounts found. Create one first.</Text>
+                                    )}
+                                </ScrollView>
                             </View>
 
                             <View style={styles.inputGroup}>
@@ -355,7 +528,101 @@ const TransportManagement = ({ navigation }) => {
                     </View>
                 </View>
             </Modal>
-        </SafeAreaView>
+
+            {/* Driver Creation Modal */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={driverModalVisible}
+                onRequestClose={() => setDriverModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <View>
+                                <Text style={styles.modalTitle}>Add Driver</Text>
+                                <Text style={styles.modalSubtitle}>Create a new driver login account</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setDriverModalVisible(false)} style={styles.closeButton}>
+                                <X size={20} color="#64748b" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={styles.modalForm} showsVerticalScrollIndicator={false}>
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Login ID (User ID)</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="e.g. DRV001"
+                                    value={driverUserId}
+                                    onChangeText={setDriverUserId}
+                                />
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Password</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Enter login password"
+                                    value={driverPassword}
+                                    onChangeText={setDriverPassword}
+                                    secureTextEntry
+                                />
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Full Name</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Enter driver's full name"
+                                    value={driverNameInput}
+                                    onChangeText={setDriverNameInput}
+                                />
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Email Address</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="driver@college.com"
+                                    value={driverEmail}
+                                    onChangeText={setDriverEmail}
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                />
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Contact Number</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Enter mobile number"
+                                    value={driverContactInput}
+                                    onChangeText={setDriverContactInput}
+                                    keyboardType="phone-pad"
+                                />
+                            </View>
+
+                            <TouchableOpacity
+                                style={[styles.submitButton, driverSubmitting && styles.disabledButton]}
+                                onPress={handleCreateDriver}
+                                disabled={driverSubmitting}
+                            >
+                                {driverSubmitting ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <>
+                                        <Text style={styles.submitButtonText}>Create Driver Login</Text>
+                                        <Send size={18} color="#fff" style={{ marginLeft: 8 }} />
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                            <View style={{ height: 40 }} />
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
+        </SafeAreaView >
     );
 };
 
@@ -372,7 +639,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 20,
+        marginBottom: 15,
     },
     iconButton: {
         width: 40,
@@ -386,6 +653,30 @@ const styles = StyleSheet.create({
         fontSize: 22,
         fontWeight: '800',
         color: '#fff',
+    },
+    tabContainer: {
+        flexDirection: 'row',
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        borderRadius: 12,
+        padding: 4,
+        marginBottom: 15,
+    },
+    tab: {
+        flex: 1,
+        paddingVertical: 8,
+        alignItems: 'center',
+        borderRadius: 10,
+    },
+    activeTab: {
+        backgroundColor: '#fff',
+    },
+    tabText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: 'rgba(255,255,255,0.8)',
+    },
+    activeTabText: {
+        color: '#4361ee',
     },
     searchContainer: {
         flexDirection: 'row',
@@ -560,6 +851,34 @@ const styles = StyleSheet.create({
     },
     disabledButton: { opacity: 0.7 },
     submitButtonText: { fontSize: 18, fontWeight: '800', color: '#fff' },
+    driverSelector: { flexDirection: 'row', marginBottom: 5 },
+    driverChip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: '#f1f5f9',
+        marginRight: 10,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+    },
+    selectedDriverChip: {
+        backgroundColor: '#4361ee',
+        borderColor: '#4361ee',
+    },
+    driverChipText: {
+        fontSize: 14,
+        color: '#64748b',
+        fontWeight: '600',
+    },
+    selectedDriverChipText: {
+        color: '#fff',
+    },
+    noDriversText: {
+        fontSize: 14,
+        color: '#94a3b8',
+        fontStyle: 'italic',
+        paddingVertical: 5,
+    },
 });
 
 export default TransportManagement;

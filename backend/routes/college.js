@@ -207,7 +207,7 @@ router.post('/buses', auth(['Admin', 'Transport', 'Office']), async (req, res) =
 
 router.get('/buses', auth(), async (req, res) => {
     try {
-        const buses = await Bus.find();
+        const buses = await Bus.find().populate('driverId', 'name email mobileNo');
         res.json(buses);
     } catch (err) {
         res.status(500).json({ message: err.message });

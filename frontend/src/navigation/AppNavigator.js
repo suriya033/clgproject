@@ -24,6 +24,7 @@ import OfficeManagement from '../screens/OfficeManagement';
 import OfficeDashboard from '../screens/OfficeDashboard';
 import SportsManagement from '../screens/SportsManagement';
 import HostelManagement from '../screens/HostelManagement';
+import DriverDashboard from '../screens/DriverDashboard';
 
 const Stack = createStackNavigator();
 
@@ -96,7 +97,10 @@ const AppNavigator = () => {
                                 <Stack.Screen name="Placements" component={GenericDashboard} />
                             </>
                         )}
-                        {!['Admin', 'Student', 'Staff', 'HOD', 'Transport', 'Library', 'Office'].includes(user.role) && (
+                        {user.role === 'Driver' && (
+                            <Stack.Screen name="DriverDashboard" component={DriverDashboard} />
+                        )}
+                        {!['Admin', 'Student', 'Staff', 'HOD', 'Transport', 'Library', 'Office', 'Driver'].includes(user.role) && (
                             <Stack.Screen name="GenericDashboard" component={GenericDashboard} />
                         )}
                         <Stack.Screen name="DefaultDashboard" component={GenericDashboard} />
