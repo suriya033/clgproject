@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import {
     StyleSheet,
     Text,
@@ -30,8 +30,10 @@ import {
     LogOut,
 
     UserPlus,
-    Edit2
+    Edit2,
+    RefreshCw
 } from 'lucide-react-native';
+import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/api';
@@ -47,6 +49,12 @@ const TransportManagement = ({ navigation }) => {
     const [submitting, setSubmitting] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [editId, setEditId] = useState(null);
+
+    // Tracking State
+    const [trackingBus, setTrackingBus] = useState(null);
+    const [mapModalVisible, setMapModalVisible] = useState(false);
+    const [busLocation, setBusLocation] = useState(null);
+    const mapRef = useRef(null);
 
     // Form State
     const [busNumber, setBusNumber] = useState('');
@@ -81,6 +89,39 @@ const TransportManagement = ({ navigation }) => {
         } catch (error) {
             console.error('Fetch drivers error:', error);
         }
+    };
+
+    // Polling for live location when map is open
+    useEffect(() => {
+        let interval;
+        if (mapModalVisible && trackingBus) {
+            fetchBusLocation(); // Initial fetch
+            interval = setInterval(fetchBusLocation, 5000); // Poll every 5 seconds
+        }
+        return () => clearInterval(interval);
+    }, [mapModalVisible, trackingBus]);
+
+    const fetchBusLocation = async () => {
+        if (!trackingBus) return;
+        try {
+            const response = await api.get(`/transport/bus/${trackingBus._id}/location`);
+            if (response.data.location && response.data.location.lat) {
+                setBusLocation({
+                    latitude: response.data.location.lat,
+                    longitude: response.data.location.lng,
+                    latitudeDelta: 0.01,
+                    longitudeDelta: 0.01,
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching bus location', error);
+        }
+    };
+
+    const handleTrack = (bus) => {
+        setTrackingBus(bus);
+        setBusLocation(null); // Reset previous location
+        setMapModalVisible(true);
     };
 
     useEffect(() => {
@@ -309,7 +350,10 @@ const TransportManagement = ({ navigation }) => {
                     <Clock size={14} color="#94a3b8" />
                     <Text style={styles.footerText}>Capacity: {item.capacity || 'N/A'}</Text>
                 </View>
-                <TouchableOpacity style={styles.trackButton}>
+                <TouchableOpacity
+                    style={styles.trackButton}
+                    onPress={() => handleTrack(item)}
+                >
                     <Text style={styles.trackButtonText}>Track Live</Text>
                 </TouchableOpacity>
             </View>
@@ -654,6 +698,76 @@ const TransportManagement = ({ navigation }) => {
                     </View>
                 </View>
             </Modal>
+
+            {/* Map Tracking Modal */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={mapModalVisible}
+                onRequestClose={() => setMapModalVisible(false)}
+            >
+                <View style={styles.fullScreenModal}>
+                    <View style={styles.mapHeader}>
+                        <TouchableOpacity
+                            style={styles.backButton}
+                            onPress={() => setMapModalVisible(false)}
+                        >
+                            <ChevronLeft size={24} color="#1e293b" />
+                        </TouchableOpacity>
+                        <View>
+                            <Text style={styles.mapTitle}>Live Tracking</Text>
+                            <Text style={styles.mapSubtitle}>
+                                {trackingBus?.busNumber} • {trackingBus?.route}
+                            </Text>
+                        </View>
+                        <View style={{ width: 40 }} />
+                    </View>
+
+                    {busLocation ? (
+                        <MapView
+                            ref={mapRef}
+                            style={styles.map}
+                            provider={PROVIDER_DEFAULT}
+                            initialRegion={busLocation}
+                            region={busLocation}
+                        >
+                            <Marker
+                                coordinate={busLocation}
+                                title={trackingBus?.busNumber}
+                                description={`Driver: ${trackingBus?.driverName || 'Unknown'}`}
+                            >
+                                <View style={styles.busMarker}>
+                                    <Bus size={20} color="#fff" />
+                                </View>
+                            </Marker>
+                        </MapView>
+                    ) : (
+                        <View style={styles.mapLoading}>
+                            <ActivityIndicator size="large" color="#800000" />
+                            <Text style={styles.mapLoadingText}>Locating Bus...</Text>
+                        </View>
+                    )}
+
+                    <View style={styles.mapFooter}>
+                        <View style={styles.driverCard}>
+                            <View style={styles.driverAvatar}>
+                                <Text style={styles.driverInitials}>
+                                    {(trackingBus?.driverName || 'D').charAt(0)}
+                                </Text>
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.driverNameMap}>{trackingBus?.driverName || 'No Driver'}</Text>
+                                <Text style={styles.driverStatus}>
+                                    {busLocation ? '● Live Updates' : '○ Connecting...'}
+                                </Text>
+                            </View>
+                            <TouchableOpacity onPress={fetchBusLocation} style={styles.refreshBtn}>
+                                <RefreshCw size={20} color="#64748b" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView >
     );
 };
@@ -911,6 +1025,119 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
         paddingVertical: 5,
     },
+
+    // Map Modal Styles
+    fullScreenModal: {
+        flex: 1,
+        backgroundColor: '#fff',
+    },
+    mapHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingTop: Platform.OS === 'ios' ? 50 : 20,
+        paddingBottom: 15,
+        paddingHorizontal: 20,
+        backgroundColor: '#fff',
+        zIndex: 10,
+        elevation: 5,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f1f5f9'
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#f1f5f9',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    mapTitle: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#1e293b',
+        textAlign: 'center',
+    },
+    mapSubtitle: {
+        fontSize: 12,
+        color: '#64748b',
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+    map: {
+        flex: 1,
+    },
+    mapLoading: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f8fafc',
+    },
+    mapLoadingText: {
+        marginTop: 10,
+        color: '#64748b',
+        fontWeight: '600',
+    },
+    busMarker: {
+        backgroundColor: '#800000',
+        padding: 8,
+        borderRadius: 20,
+        borderWidth: 2,
+        borderColor: '#fff',
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+    },
+    mapFooter: {
+        position: 'absolute',
+        bottom: 30,
+        left: 20,
+        right: 20,
+    },
+    driverCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        padding: 15,
+        borderRadius: 20,
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+    },
+    driverAvatar: {
+        width: 45,
+        height: 45,
+        borderRadius: 15,
+        backgroundColor: '#ffe4e6',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 15,
+    },
+    driverInitials: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#800000',
+    },
+    driverNameMap: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1e293b',
+    },
+    driverStatus: {
+        fontSize: 12,
+        color: '#22c55e',
+        fontWeight: '600',
+        marginTop: 2,
+    },
+    refreshBtn: {
+        padding: 10,
+        backgroundColor: '#f1f5f9',
+        borderRadius: 12,
+    }
 });
 
 export default TransportManagement;

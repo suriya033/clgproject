@@ -57,6 +57,7 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/college', require('./routes/college'));
 app.use('/api/sports', require('./routes/sports'));
 app.use('/api/hostel', require('./routes/hostel'));
+app.use('/api/transport', require('./routes/transport'));
 
 const PORT = process.env.PORT || 5002;
 const HOST = '0.0.0.0';

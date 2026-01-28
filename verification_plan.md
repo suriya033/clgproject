@@ -89,3 +89,20 @@ Verify that the "Edit" functionality works across all implemented modules and da
 - [ ] Change credits to 5.
 - [ ] Tap "Update Subject".
 - [ ] Verify change.
+
+## 10. Transport Tracking
+- [ ] **Driver Side:**
+    - [ ] Log in as a Driver (use an existing Driver account or create one via Admin).
+    - [ ] Ensure a bus is assigned to this driver (matches Driver Name or User ID).
+    - [ ] On Dashboard, see "Assigned Vehicle".
+    - [ ] Tap "Start Sharing Location".
+    - [ ] Grant Location Permissions (Allow While Using App).
+    - [ ] Verify status changes to "Sharing Location".
+- [ ] **Admin/Transport Side:**
+    - [ ] Log in as Admin or Transport Officer.
+    - [ ] Navigate to Transport Portal -> Buses.
+    - [ ] Find the same bus the driver is driving.
+    - [ ] Tap "Track Live".
+    - [ ] Verify a map modal opens.
+    - [ ] Check if the bus marker is displayed at the driver's current location.
+    - [ ] Verify the marker moves if the driver moves (updates every 5s).

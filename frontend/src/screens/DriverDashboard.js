@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import {
     StyleSheet,
     Text,
@@ -9,7 +9,10 @@ import {
     StatusBar,
     ActivityIndicator,
     RefreshControl,
-    Platform
+    Platform,
+    Alert,
+    Modal,
+    FlatList
 } from 'react-native';
 import {
     Bus,
@@ -26,6 +29,7 @@ import {
     Shield
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Location from 'expo-location';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/api';
 
@@ -35,25 +39,37 @@ const DriverDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [isSharing, setIsSharing] = useState(false);
+    const locationSubscription = useRef(null);
+    const [buses, setBuses] = useState([]);
+    const [busModalVisible, setBusModalVisible] = useState(false);
 
     useEffect(() => {
-        fetchAssignedBus();
+        fetchBuses();
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
+        return () => {
+            clearInterval(timer);
+            stopLocationSharing(); // Cleanup on unmount
+        };
     }, []);
 
-    const fetchAssignedBus = async () => {
+    const fetchBuses = async () => {
         try {
             setLoading(true);
             const response = await api.get('/college/buses');
-            // Find bus assigned to this driver
-            const bus = response.data.find(b =>
+            setBuses(response.data);
+
+            // Auto-select if assigned
+            const MyBus = response.data.find(b =>
                 (b.driverId && (b.driverId._id === user.id || b.driverId === user.id)) ||
                 b.driverName === user.name
             );
-            setAssignedBus(bus);
+
+            if (MyBus) {
+                setAssignedBus(MyBus);
+            }
         } catch (error) {
-            console.error('Fetch assigned bus error:', error);
+            console.error('Fetch buses error:', error);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -62,7 +78,70 @@ const DriverDashboard = () => {
 
     const onRefresh = () => {
         setRefreshing(true);
-        fetchAssignedBus();
+        fetchBuses();
+    };
+
+    const handleSelectBus = (bus) => {
+        setAssignedBus(bus);
+        setBusModalVisible(false);
+    };
+
+    const startLocationSharing = async () => {
+        if (!assignedBus) {
+            Alert.alert('Error', 'No bus assigned to you.');
+            return;
+        }
+
+        try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Permission denied', 'Permission to access location was denied');
+                return;
+            }
+
+            setIsSharing(true);
+
+            // Start watching position
+            locationSubscription.current = await Location.watchPositionAsync(
+                {
+                    accuracy: Location.Accuracy.High,
+                    timeInterval: 5000, // Update every 5 seconds
+                    distanceInterval: 10, // Update every 10 meters
+                },
+                async (location) => {
+                    try {
+                        const { latitude, longitude } = location.coords;
+                        await api.put(`/transport/bus/${assignedBus._id}/location`, {
+                            lat: latitude,
+                            lng: longitude
+                        });
+                        console.log('Location updated:', latitude, longitude);
+                    } catch (error) {
+                        console.error('Error sending location:', error);
+                    }
+                }
+            );
+        } catch (error) {
+            console.error('Start sharing error:', error);
+            setIsSharing(false);
+            Alert.alert('Error', 'Failed to start location sharing');
+        }
+    };
+
+    const stopLocationSharing = async () => {
+        if (locationSubscription.current) {
+            await locationSubscription.current.remove();
+            locationSubscription.current = null;
+        }
+        setIsSharing(false);
+    };
+
+    const toggleLocationSharing = () => {
+        if (isSharing) {
+            stopLocationSharing();
+        } else {
+            startLocationSharing();
+        }
     };
 
     const formatTime = (date) => {
@@ -120,10 +199,10 @@ const DriverDashboard = () => {
                 <View style={styles.content}>
                     {/* Status Section */}
                     <View style={styles.statusSection}>
-                        <View style={[styles.statusBadge, { backgroundColor: assignedBus ? '#dcfce7' : '#fee2e2' }]}>
-                            <View style={[styles.statusDot, { backgroundColor: assignedBus ? '#22c55e' : '#ef4444' }]} />
-                            <Text style={[styles.statusText, { color: assignedBus ? '#166534' : '#991b1b' }]}>
-                                {assignedBus ? 'On Duty' : 'Off Duty'}
+                        <View style={[styles.statusBadge, { backgroundColor: isSharing ? '#dcfce7' : '#fee2e2' }]}>
+                            <View style={[styles.statusDot, { backgroundColor: isSharing ? '#22c55e' : '#ef4444' }]} />
+                            <Text style={[styles.statusText, { color: isSharing ? '#166534' : '#991b1b' }]}>
+                                {isSharing ? 'Sharing Location' : 'Not Sharing'}
                             </Text>
                         </View>
                         <TouchableOpacity style={styles.notificationBtn}>
@@ -141,10 +220,15 @@ const DriverDashboard = () => {
                                     <Bus size={32} color="#800000" />
                                 </View>
                                 <View style={styles.busInfo}>
-                                    <Text style={styles.busNumber}>{assignedBus.busNumber}</Text>
+                                    <TouchableOpacity onPress={() => setBusModalVisible(true)}>
+                                        <Text style={styles.busNumber}>{assignedBus.busNumber} ▾</Text>
+                                    </TouchableOpacity>
                                     <Text style={styles.busRouteLabel}>Primary Route</Text>
                                 </View>
-                                <TouchableOpacity style={styles.navigationBtn}>
+                                <TouchableOpacity
+                                    style={[styles.navigationBtn, { backgroundColor: isSharing ? '#ef4444' : '#22c55e' }]}
+                                    onPress={toggleLocationSharing}
+                                >
                                     <Navigation size={20} color="#fff" />
                                 </TouchableOpacity>
                             </View>
@@ -165,23 +249,38 @@ const DriverDashboard = () => {
                                     <Text style={styles.statValue}>Active</Text>
                                 </View>
                             </View>
+
+                            <TouchableOpacity
+                                style={[styles.shareBtn, { backgroundColor: isSharing ? '#fff1f2' : '#f0fdf4', borderColor: isSharing ? '#ef4444' : '#22c55e' }]}
+                                onPress={toggleLocationSharing}
+                            >
+                                <Text style={[styles.shareBtnText, { color: isSharing ? '#ef4444' : '#166534' }]}>
+                                    {isSharing ? 'Stop Sharing Location' : 'Start Sharing Location'}
+                                </Text>
+                            </TouchableOpacity>
                         </View>
                     ) : (
                         <View style={styles.emptyCard}>
                             <Bus size={48} color="#cbd5e1" />
-                            <Text style={styles.emptyText}>No bus assigned yet</Text>
-                            <Text style={styles.emptySubtext}>Contact transport office for assignment</Text>
+                            <Text style={styles.emptyText}>No vehicle selected</Text>
+                            <Text style={styles.emptySubtext}>Select a bus to start your duty</Text>
+                            <TouchableOpacity
+                                style={styles.selectBusBtn}
+                                onPress={() => setBusModalVisible(true)}
+                            >
+                                <Text style={styles.selectBusBtnText}>Select Vehicle</Text>
+                            </TouchableOpacity>
                         </View>
                     )}
 
                     {/* Quick Actions */}
                     <Text style={styles.sectionTitle}>Quick Actions</Text>
                     <View style={styles.actionGrid}>
-                        <TouchableOpacity style={styles.actionCard}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#ffe4e6' }]}>
-                                <Navigation size={24} color="#800000" />
+                        <TouchableOpacity style={styles.actionCard} onPress={toggleLocationSharing}>
+                            <View style={[styles.actionIcon, { backgroundColor: isSharing ? '#fee2e2' : '#f0fdf4' }]}>
+                                <Navigation size={24} color={isSharing ? '#ef4444' : '#22c55e'} />
                             </View>
-                            <Text style={styles.actionLabel}>Start Trip</Text>
+                            <Text style={styles.actionLabel}>{isSharing ? 'Stop Trip' : 'Start Trip'}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.actionCard}>
                             <View style={[styles.actionIcon, { backgroundColor: '#fff7ed' }]}>
@@ -212,6 +311,44 @@ const DriverDashboard = () => {
                     </TouchableOpacity>
                 </View>
             </ScrollView>
+
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={busModalVisible}
+                onRequestClose={() => setBusModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Select Vehicle</Text>
+                        <FlatList
+                            data={buses}
+                            keyExtractor={item => item._id}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={styles.busItem}
+                                    onPress={() => handleSelectBus(item)}
+                                >
+                                    <View style={styles.busItemIcon}>
+                                        <Bus size={20} color="#800000" />
+                                    </View>
+                                    <View>
+                                        <Text style={styles.busItemNumber}>{item.busNumber}</Text>
+                                        <Text style={styles.busItemRoute}>{item.route}</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+                            ListEmptyComponent={<Text style={styles.emptyListText}>No buses available</Text>}
+                        />
+                        <TouchableOpacity
+                            style={styles.closeModalBtn}
+                            onPress={() => setBusModalVisible(false)}
+                        >
+                            <Text style={styles.closeModalText}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };
@@ -386,7 +523,6 @@ const styles = StyleSheet.create({
         width: 45,
         height: 45,
         borderRadius: 15,
-        backgroundColor: '#800000',
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -411,6 +547,7 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         borderTopColor: '#f1f5f9',
         paddingTop: 20,
+        marginBottom: 20,
     },
     statItem: {
         flex: 1,
@@ -432,6 +569,17 @@ const styles = StyleSheet.create({
         width: 1,
         height: 30,
         backgroundColor: '#f1f5f9',
+    },
+    shareBtn: {
+        paddingVertical: 12,
+        borderRadius: 12,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderStyle: 'dashed',
+    },
+    shareBtnText: {
+        fontSize: 14,
+        fontWeight: '700',
     },
     emptyCard: {
         backgroundColor: '#fff',
@@ -521,6 +669,76 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#94a3b8',
         fontWeight: '500',
+    },
+    selectBusBtn: {
+        marginTop: 20,
+        backgroundColor: '#800000',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 12,
+    },
+    selectBusBtnText: {
+        color: '#fff',
+        fontWeight: '700',
+        fontSize: 14,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 25,
+        borderTopRightRadius: 25,
+        padding: 20,
+        maxHeight: '60%',
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: '#1e293b',
+        marginBottom: 20,
+    },
+    busItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 15,
+        backgroundColor: '#f8fafc',
+        borderRadius: 15,
+        marginBottom: 10,
+    },
+    busItemIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: '#ffe4e6',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 15,
+    },
+    busItemNumber: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1e293b',
+    },
+    busItemRoute: {
+        fontSize: 12,
+        color: '#64748b',
+    },
+    closeModalBtn: {
+        marginTop: 15,
+        padding: 15,
+        alignItems: 'center',
+    },
+    closeModalText: {
+        color: '#64748b',
+        fontWeight: '600',
+    },
+    emptyListText: {
+        textAlign: 'center',
+        color: '#94a3b8',
+        padding: 20,
     }
 });
 
