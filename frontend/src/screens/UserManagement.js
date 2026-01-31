@@ -78,9 +78,25 @@ const UserManagement = ({ navigation, route }) => {
         try {
             const response = await api.get('/admin/users');
             let filteredUsers = response.data;
+
             if (roleFilter) {
                 filteredUsers = filteredUsers.filter(user => user.role === roleFilter);
             }
+
+            // Additional Filters
+            const deptFilter = route?.params?.departmentFilter;
+            const yearFilter = route?.params?.yearFilter;
+
+            if (deptFilter) {
+                filteredUsers = filteredUsers.filter(user =>
+                    user.department && user.department.toLowerCase() === deptFilter.toLowerCase()
+                );
+            }
+
+            if (yearFilter) {
+                filteredUsers = filteredUsers.filter(user => user.year === yearFilter);
+            }
+
             setUsers(filteredUsers);
         } catch (error) {
             console.error('Error fetching users:', error);
@@ -257,7 +273,12 @@ const UserManagement = ({ navigation, route }) => {
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                         <ArrowLeft size={24} color="#fff" />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>{roleFilter ? `${roleFilter} Management` : 'User Management'}</Text>
+                    <Text style={styles.headerTitle}>
+                        {route?.params?.departmentFilter
+                            ? `${route.params.departmentFilter} ${route.params.yearFilter ? `- ${route.params.yearFilter} Year` : ''} Students`
+                            : (roleFilter ? `${roleFilter} Management` : 'User Management')
+                        }
+                    </Text>
                     <View style={{ width: 40 }} />
                 </View>
 

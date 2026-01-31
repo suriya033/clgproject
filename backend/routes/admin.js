@@ -76,8 +76,8 @@ router.post('/users', auth(['Admin', 'Office']), async (req, res) => {
 
 // @route   GET api/admin/users
 // @desc    Get all users
-// @access  Private (Admin only)
-router.get('/users', auth(['Admin', 'Office']), async (req, res) => {
+// @access  Private (Admin/Office/HOD)
+router.get('/users', auth(['Admin', 'Office', 'HOD']), async (req, res) => {
     try {
         const users = await User.find().select('-password');
         res.json(users);

@@ -44,6 +44,26 @@ const DepartmentManagement = ({ navigation }) => {
     const [code, setCode] = useState('');
     const [hod, setHod] = useState('');
 
+    // Action Modal State
+    const [actionModalVisible, setActionModalVisible] = useState(false);
+    const [selectedDept, setSelectedDept] = useState(null);
+
+    const handleDeptClick = (dept) => {
+        setSelectedDept(dept);
+        setActionModalVisible(true);
+    };
+
+    const navigateToStudents = (year) => {
+        setActionModalVisible(false);
+        const params = {
+            departmentFilter: selectedDept.name,
+            roleFilter: 'Student'
+        };
+        if (year) params.yearFilter = year;
+
+        navigation.navigate('StudentManagement', params);
+    };
+
     useEffect(() => {
         fetchDepartments();
         fetchStaff();
@@ -144,7 +164,12 @@ const DepartmentManagement = ({ navigation }) => {
     };
 
     const renderDeptCard = (dept) => (
-        <View key={dept._id} style={styles.deptCard}>
+        <TouchableOpacity
+            key={dept._id}
+            style={styles.deptCard}
+            activeOpacity={0.9}
+            onPress={() => handleDeptClick(dept)}
+        >
             <View style={styles.cardHeader}>
                 <View style={styles.codeBadge}>
                     <Hash size={12} color="#800000" />
@@ -170,10 +195,10 @@ const DepartmentManagement = ({ navigation }) => {
             <View style={styles.cardFooter}>
                 <View style={styles.footerItem}>
                     <Briefcase size={14} color="#94a3b8" />
-                    <Text style={styles.footerText}>Academic Unit</Text>
+                    <Text style={styles.footerText}>Tap to view students</Text>
                 </View>
             </View>
-        </View>
+        </TouchableOpacity>
     );
 
     return (
@@ -311,6 +336,53 @@ const DepartmentManagement = ({ navigation }) => {
                         </ScrollView>
                     </View>
                 </View>
+            </Modal>
+
+            {/* Action Modal for Years/Details */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={actionModalVisible}
+                onRequestClose={() => setActionModalVisible(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setActionModalVisible(false)}
+                >
+                    <View style={styles.modalContentSmall}>
+                        <View style={styles.modalHeader}>
+                            <View>
+                                <Text style={styles.modalTitle}>{selectedDept?.name}</Text>
+                                <Text style={styles.modalSubtitle}>Select category to view</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setActionModalVisible(false)} style={styles.closeButton}>
+                                <X size={20} color="#64748b" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.yearGrid}>
+                            {['1', '2', '3', '4'].map((year) => (
+                                <TouchableOpacity
+                                    key={year}
+                                    style={styles.yearCard}
+                                    onPress={() => navigateToStudents(year)}
+                                >
+                                    <Text style={styles.yearNumber}>{year}</Text>
+                                    <Text style={styles.yearLabel}>Year</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <TouchableOpacity
+                            style={styles.viewAllBtn}
+                            onPress={() => navigateToStudents(null)}
+                        >
+                            <User size={20} color="#fff" style={{ marginRight: 10 }} />
+                            <Text style={styles.viewAllText}>View All Students</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
             </Modal>
         </SafeAreaView>
     );
@@ -514,6 +586,44 @@ const styles = StyleSheet.create({
     },
     disabledButton: { opacity: 0.7 },
     submitButtonText: { fontSize: 18, fontWeight: '800', color: '#fff' },
+
+    // Action Modal Styles
+    modalContentSmall: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 35,
+        borderTopRightRadius: 35,
+        padding: 25,
+        paddingBottom: 40
+    },
+    yearGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        marginBottom: 20
+    },
+    yearCard: {
+        width: '48%',
+        backgroundColor: '#f8fafc',
+        borderRadius: 16,
+        padding: 20,
+        alignItems: 'center',
+        marginBottom: 15,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        elevation: 2
+    },
+    yearNumber: { fontSize: 24, fontWeight: '800', color: '#800000', marginBottom: 4 },
+    yearLabel: { fontSize: 14, color: '#64748b', fontWeight: '600' },
+    viewAllBtn: {
+        backgroundColor: '#800000',
+        borderRadius: 16,
+        padding: 18,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 4
+    },
+    viewAllText: { fontSize: 16, fontWeight: '700', color: '#fff' }
 });
 
 export default DepartmentManagement;

@@ -31,7 +31,8 @@ import {
     Menu,
     Bell,
     LogOut,
-    BookOpen
+    BookOpen,
+    Calendar
 } from 'lucide-react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -90,12 +91,12 @@ const AdminDashboard = ({ navigation }) => {
 
         { id: '15', title: 'Office Incharge', icon: <UserCog size={24} color="#f59e0b" />, route: 'OfficeManagement', bg: '#fffbeb' },
         { id: '16', title: 'Classes', icon: <BookOpen size={24} color="#0284c7" />, route: 'ClassManagement', bg: '#e0f2fe' },
+        { id: '17', title: 'Start AI Gen', icon: <Calendar size={24} color="#800000" />, route: 'TimeTableGenerator', bg: '#ffe4e6' },
     ];
 
     const stats = [
         { label: 'Students', value: statsData.students.toString(), icon: <GraduationCap size={16} color="#fff" /> },
         { label: 'Staff', value: statsData.staff.toString(), icon: <Users size={16} color="#fff" /> },
-        { label: 'Drivers', value: (statsData.drivers || 0).toString(), icon: <Bus size={16} color="#fff" /> },
         { label: 'Depts', value: statsData.departments.toString(), icon: <Building size={16} color="#fff" /> },
     ];
 
@@ -186,19 +187,33 @@ const AdminDashboard = ({ navigation }) => {
                     </View>
 
                     <View style={styles.quickActionsSection}>
-                        <Text style={styles.sectionTitle}>Quick Actions</Text>
-                        <AnimateOnScroll delay={200}>
-                            <View style={styles.bottomRow}>
-                                <TouchableOpacity style={[styles.bottomCard, { backgroundColor: '#800000' }]} activeOpacity={0.9}>
-                                    <View style={styles.bottomIconWrapper}><Bus size={22} color="#fff" /></View>
-                                    <Text style={styles.bottomLabel}>Track Bus</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={[styles.bottomCard, { backgroundColor: '#f43f5e' }]} activeOpacity={0.9}>
-                                    <View style={styles.bottomIconWrapper}><Utensils size={22} color="#fff" /></View>
-                                    <Text style={styles.bottomLabel}>Food Menu</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </AnimateOnScroll>
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Quick Actions</Text>
+                            <TouchableOpacity><Text style={styles.seeAll}>See All</Text></TouchableOpacity>
+                        </View>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+                            <TouchableOpacity style={[styles.actionCard]} activeOpacity={0.9}>
+                                <LinearGradient colors={['#800000', '#a52a2a']} style={styles.actionGradient}>
+                                    <Bus size={28} color="#fff" />
+                                    <Text style={styles.actionLabel}>Track Bus</Text>
+                                    <Text style={styles.actionSub}>Real-time location</Text>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.actionCard]} activeOpacity={0.9}>
+                                <LinearGradient colors={['#f43f5e', '#fb7185']} style={styles.actionGradient}>
+                                    <Utensils size={28} color="#fff" />
+                                    <Text style={styles.actionLabel}>Cafeteria</Text>
+                                    <Text style={styles.actionSub}>Today's menu</Text>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.actionCard]} activeOpacity={0.9}>
+                                <LinearGradient colors={['#6366f1', '#818cf8']} style={styles.actionGradient}>
+                                    <UserCog size={28} color="#fff" />
+                                    <Text style={styles.actionLabel}>Security</Text>
+                                    <Text style={styles.actionSub}>Access logs</Text>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        </ScrollView>
                     </View>
                 </View>
             </ScrollView>
@@ -227,7 +242,7 @@ const styles = StyleSheet.create({
     badge: { position: 'absolute', top: 10, right: 10, width: 10, height: 10, borderRadius: 5, backgroundColor: '#ef4444', borderWidth: 2, borderColor: '#800000' },
     headerContent: { marginBottom: 25 },
     welcomeText: { fontSize: 16, color: 'rgba(255,255,255,0.8)', fontWeight: '600' },
-    username: { fontSize: 32, color: '#fff', fontWeight: '800', letterSpacing: -0.5, marginBottom: 4 },
+    username: { fontSize: 25, color: '#fff', fontWeight: '800', letterSpacing: -0.5, marginBottom: 4 },
     subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: '500' },
 
     statsGrid: {
@@ -289,25 +304,38 @@ const styles = StyleSheet.create({
     iconWrapper: { width: 60, height: 60, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginBottom: 14 },
     gridLabel: { fontSize: 13, fontWeight: '700', color: '#334155', textAlign: 'center', lineHeight: 18 },
 
-    quickActionsSection: { marginTop: 15 },
-    bottomRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
-    bottomCard: {
-        width: '48%',
-        borderRadius: 28,
-        paddingVertical: 22,
-        paddingHorizontal: 20,
-        flexDirection: 'row',
-        alignItems: 'center',
+    quickActionsSection: { marginTop: 25, marginBottom: 20 },
+    horizontalScroll: { paddingRight: 20 },
+    actionCard: {
+        width: 160,
+        height: 79,
+        marginRight: 16,
+        borderRadius: 30,
+        overflow: 'hidden',
         elevation: 8,
-        shadowColor: '#800000',
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.2,
-        shadowRadius: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)'
+        shadowOpacity: 0.15,
+        shadowRadius: 15,
     },
-    bottomIconWrapper: { width: 46, height: 46, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 14 },
-    bottomLabel: { fontSize: 17, fontWeight: '800', color: '#fff' },
+    actionGradient: {
+        flex: 1,
+        padding: 20,
+        justifyContent: 'flex-end',
+    },
+    actionLabel: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: '800',
+        marginTop: 12,
+        letterSpacing: -0.5,
+    },
+    actionSub: {
+        color: 'rgba(255,255,255,0.8)',
+        fontSize: 12,
+        fontWeight: '600',
+        marginTop: 4,
+    },
 });
 
 export default AdminDashboard;

@@ -28,6 +28,8 @@ import DriverDashboard from '../screens/DriverDashboard';
 import ExamCell from '../screens/ExamCell';
 import ClassManagement from '../screens/ClassManagement';
 import SubjectManagement from '../screens/SubjectManagement';
+import TimeTableGenerator from '../screens/TimeTableGenerator';
+import HODDashboard from '../screens/HODDashboard';
 
 const Stack = createStackNavigator();
 
@@ -66,6 +68,7 @@ const AppNavigator = () => {
                                 <Stack.Screen name="Placements" component={GenericDashboard} />
                                 <Stack.Screen name="ClassManagement" component={ClassManagement} />
                                 <Stack.Screen name="Announcements" component={NoticeManagement} />
+                                <Stack.Screen name="TimeTableGenerator" component={TimeTableGenerator} />
                             </>
                         )}
                         {user.role === 'Student' && (
@@ -76,8 +79,13 @@ const AppNavigator = () => {
                         )}
                         {user.role === 'HOD' && (
                             <>
-                                <Stack.Screen name="HODDashboard" component={GenericDashboard} />
+                                <Stack.Screen name="HODDashboard" component={HODDashboard} />
+                                <Stack.Screen name="TimeTableGenerator" component={TimeTableGenerator} />
                                 <Stack.Screen name="ClassManagement" component={ClassManagement} />
+                                <Stack.Screen name="StaffManagement" component={StaffManagement} />
+                                <Stack.Screen name="StudentManagement" component={StudentManagement} />
+                                <Stack.Screen name="SubjectManagement" component={SubjectManagement} />
+                                <Stack.Screen name="Announcements" component={NoticeManagement} />
                             </>
                         )}
                         {user.role === 'Transport' && (
@@ -103,6 +111,7 @@ const AppNavigator = () => {
                                 <Stack.Screen name="Hostel" component={HostelManagement} />
                                 <Stack.Screen name="ExamCell" component={ExamCell} />
                                 <Stack.Screen name="Placements" component={GenericDashboard} />
+                                <Stack.Screen name="TimeTableGenerator" component={TimeTableGenerator} />
                             </>
                         )}
                         {user.role === 'Driver' && (

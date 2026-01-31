@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
     StyleSheet,
     Text,
@@ -12,7 +12,9 @@ import {
     Modal,
     FlatList,
     Platform,
-    RefreshControl
+    RefreshControl,
+    Dimensions,
+    StatusBar
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -25,17 +27,114 @@ import {
     Search,
     Hash,
     Layers,
-    Clock
+    Clock,
+    Check,
+    Calendar,
+    ChevronDown
 } from 'lucide-react-native';
 import api from '../api/api';
+import { AuthContext } from '../context/AuthContext';
+
+const { width } = Dimensions.get('window');
+
+const CustomDropdown = ({ label, value, options = [], onSelect, placeholder, icon: Icon, disabled = false }) => {
+    const [visible, setVisible] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const filteredOptions = (options || []).filter(opt =>
+        opt?.label?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const selectedLabel = options?.find(opt => opt?.value === value)?.label;
+
+    return (
+        <View style={styles.dropdownContainer}>
+            <Text style={styles.inputLabel}>{label}</Text>
+            <TouchableOpacity
+                style={[styles.dropdownButton, disabled && styles.disabledDropdown]}
+                onPress={() => !disabled && setVisible(true)}
+                activeOpacity={0.7}
+            >
+                <View style={styles.dropdownButtonContent}>
+                    {Icon && <Icon size={20} color={disabled ? "#94a3b8" : "#800000"} style={{ marginRight: 10 }} />}
+                    <Text style={[
+                        styles.dropdownValue,
+                        !value && styles.placeholderText,
+                        disabled && { color: '#64748b' }
+                    ]}>
+                        {value ? selectedLabel : placeholder}
+                    </Text>
+                </View>
+                {!disabled && <ChevronDown size={20} color="#94a3b8" />}
+            </TouchableOpacity>
+
+            <Modal
+                visible={visible}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setVisible(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setVisible(false)}
+                >
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Select {label}</Text>
+                            <TouchableOpacity onPress={() => setVisible(false)}>
+                                <X size={24} color="#64748b" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.searchBar}>
+                            <Search size={20} color="#94a3b8" />
+                            <TextInput
+                                style={styles.searchInput}
+                                placeholder="Search..."
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                            />
+                        </View>
+
+                        <FlatList
+                            data={filteredOptions}
+                            keyExtractor={(item) => item.value}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={[
+                                        styles.optionItem,
+                                        value === item.value && styles.selectedOption
+                                    ]}
+                                    onPress={() => {
+                                        onSelect(item.value);
+                                        setVisible(false);
+                                        setSearchQuery('');
+                                    }}
+                                >
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={[
+                                            styles.optionText,
+                                            value === item.value && styles.selectedOptionText
+                                        ]}>{item.label}</Text>
+                                    </View>
+                                    {value === item.value && <Check size={20} color="#800000" />}
+                                </TouchableOpacity>
+                            )}
+                            ListEmptyComponent={
+                                <Text style={styles.emptyText}>No options found</Text>
+                            }
+                        />
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+        </View>
+    );
+};
 
 const SubjectManagement = ({ navigation }) => {
-    // MOCK DATA - Replace with API calls
-    const [subjects, setSubjects] = useState([
-        { id: '1', name: 'Data Structures', code: 'CS101', credits: '4', department: 'Computer Science' },
-        { id: '2', name: 'Thermodynamics', code: 'ME201', credits: '3', department: 'Mechanical' },
-        { id: '3', name: 'Digital Logic', code: 'EC301', credits: '4', department: 'Electronics' },
-    ]);
+    const { user } = useContext(AuthContext);
+    const [subjects, setSubjects] = useState([]);
     const [departments, setDepartments] = useState([]);
     const [filteredSubjects, setFilteredSubjects] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -49,11 +148,53 @@ const SubjectManagement = ({ navigation }) => {
     const [code, setCode] = useState('');
     const [credits, setCredits] = useState('');
     const [department, setDepartment] = useState('');
+    const [year, setYear] = useState('');
+    const [semester, setSemester] = useState('');
+
+    const years = [
+        { label: '1st Year', value: '1' },
+        { label: '2nd Year', value: '2' },
+        { label: '3rd Year', value: '3' },
+        { label: '4th Year', value: '4' },
+    ];
 
     useEffect(() => {
-        setFilteredSubjects(subjects);
-        fetchDepartments();
+        fetchData();
     }, []);
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [subRes, deptRes] = await Promise.all([
+                api.get('/college/subjects'),
+                api.get('/college/departments')
+            ]);
+            setSubjects(subRes.data);
+            setFilteredSubjects(subRes.data);
+            setDepartments(deptRes.data);
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            Alert.alert('Error', 'Failed to fetch data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Auto-select and lock department for HOD
+    useEffect(() => {
+        if (user?.role === 'HOD' && departments.length > 0) {
+            const hDept = departments.find(d =>
+                d.name.toLowerCase() === user.department?.toLowerCase()
+            );
+            if (hDept) setDepartment(hDept._id);
+        }
+    }, [user, departments, modalVisible]);
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await fetchData();
+        setRefreshing(false);
+    };
 
     useEffect(() => {
         if (searchQuery.trim() === '') {
@@ -61,81 +202,79 @@ const SubjectManagement = ({ navigation }) => {
         } else {
             const filtered = subjects.filter(sub =>
                 sub.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                sub.code.toLowerCase().includes(searchQuery.toLowerCase())
+                sub.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (sub.department?.name && sub.department.name.toLowerCase().includes(searchQuery.toLowerCase()))
             );
             setFilteredSubjects(filtered);
         }
     }, [searchQuery, subjects]);
 
-    const fetchDepartments = async () => {
-        try {
-            // MOCK FETCH
-            const response = await api.get('/college/departments');
-            setDepartments(response.data);
-        } catch (error) {
-            console.error('Fetch departments error (using mock data):', error);
-            // Fallback mock data if API fails or doesn't exist
-            setDepartments([
-                { _id: '1', name: 'Computer Science' },
-                { _id: '2', name: 'Mechanical' },
-                { _id: '3', name: 'Electronics' },
-            ]);
-        }
-    };
-
-    const handleCreateOrUpdate = () => {
-        if (!name || !code || !credits || !department) {
+    const handleCreateOrUpdate = async () => {
+        if (!name || !code || !credits || !department || !year || !semester) {
             Alert.alert('Error', 'Please fill all fields');
             return;
         }
 
-        if (editId) {
-            setSubjects(subjects.map(s => s.id === editId ? {
-                ...s,
+        setLoading(true);
+        try {
+            const subjectData = {
                 name,
                 code,
-                credits,
-                department: departments.find(d => d._id === department)?.name || department
-            } : s));
-            Alert.alert('Success', 'Subject updated successfully');
-        } else {
-            const newSubject = {
-                id: Date.now().toString(),
-                name,
-                code,
-                credits,
-                department: departments.find(d => d._id === department)?.name || department
+                credits: parseInt(credits),
+                department,
+                year,
+                semester: semester.toString()
             };
-            setSubjects([...subjects, newSubject]);
-            Alert.alert('Success', 'Subject created successfully');
-        }
 
-        setModalVisible(false);
-        resetForm();
+            if (editId) {
+                await api.put(`/college/subjects/${editId}`, subjectData);
+                Alert.alert('Success', 'Subject updated successfully');
+            } else {
+                await api.post('/college/subjects', subjectData);
+                Alert.alert('Success', 'Subject created successfully');
+            }
+            setModalVisible(false);
+            resetForm();
+            fetchData();
+        } catch (error) {
+            console.error('Error saving subject:', error);
+            Alert.alert('Error', error.response?.data?.message || 'Failed to save subject');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleEdit = (sub) => {
-        setEditId(sub.id);
+        setEditId(sub._id);
         setName(sub.name);
         setCode(sub.code);
-        setCredits(sub.credits);
-        // Reverse lookup for department ID if needed, simplified here
-        const deptObj = departments.find(d => d.name === sub.department);
-        setDepartment(deptObj ? deptObj._id : '');
+        setCredits(sub.credits.toString());
+        setDepartment(sub.department?._id || sub.department);
+        setYear(sub.year);
+        setSemester(sub.semester);
         setModalVisible(true);
     };
 
     const handleDelete = (id) => {
         Alert.alert(
             'Delete Subject',
-            'Are you sure?',
+            'Are you sure you want to delete this subject?',
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
                     text: 'Delete',
                     style: 'destructive',
-                    onPress: () => {
-                        setSubjects(subjects.filter(s => s.id !== id));
+                    onPress: async () => {
+                        setLoading(true);
+                        try {
+                            await api.delete(`/college/subjects/${id}`);
+                            Alert.alert('Success', 'Subject deleted successfully');
+                            fetchData();
+                        } catch (error) {
+                            Alert.alert('Error', 'Failed to delete subject');
+                        } finally {
+                            setLoading(false);
+                        }
                     }
                 }
             ]
@@ -152,7 +291,9 @@ const SubjectManagement = ({ navigation }) => {
         setName('');
         setCode('');
         setCredits('');
-        setDepartment('');
+        if (user?.role !== 'HOD') setDepartment('');
+        setYear('');
+        setSemester('');
         setEditId(null);
     };
 
@@ -167,7 +308,7 @@ const SubjectManagement = ({ navigation }) => {
                     <TouchableOpacity onPress={() => handleEdit(item)} style={styles.actionButton}>
                         <Edit2 size={16} color="#0284c7" />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleDelete(item.id)} style={[styles.actionButton, { backgroundColor: '#fee2e2' }]}>
+                    <TouchableOpacity onPress={() => handleDelete(item._id)} style={[styles.actionButton, { backgroundColor: '#fee2e2' }]}>
                         <Trash2 size={16} color="#ef4444" />
                     </TouchableOpacity>
                 </View>
@@ -175,14 +316,20 @@ const SubjectManagement = ({ navigation }) => {
 
             <Text style={styles.subjectName}>{item.name}</Text>
 
-            <View style={styles.infoRow}>
+            <View style={styles.infoGrid}>
                 <View style={styles.infoItem}>
                     <Layers size={14} color="#64748b" />
-                    <Text style={styles.infoText}>{item.department}</Text>
+                    <Text style={styles.infoText} numberOfLines={1}>{item.department?.name || 'N/A'}</Text>
                 </View>
-                <View style={styles.infoItem}>
-                    <Clock size={14} color="#64748b" />
-                    <Text style={styles.infoText}>{item.credits} Credits</Text>
+                <View style={[styles.infoItem, { justifyContent: 'space-between', width: '100%' }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Calendar size={14} color="#64748b" />
+                        <Text style={styles.infoText}>{item.year} Yr • Sem {item.semester}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Clock size={14} color="#64748b" />
+                        <Text style={styles.infoText}>{item.credits} Credits</Text>
+                    </View>
                 </View>
             </View>
         </View>
@@ -190,6 +337,7 @@ const SubjectManagement = ({ navigation }) => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <StatusBar barStyle="light-content" />
             <LinearGradient
                 colors={['#800000', '#5a0000']}
                 style={styles.headerGradient}
@@ -198,7 +346,7 @@ const SubjectManagement = ({ navigation }) => {
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
                         <ChevronLeft size={24} color="#fff" />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Subjects</Text>
+                    <Text style={styles.headerTitle}>Subject Management</Text>
                     <TouchableOpacity onPress={openCreateModal} style={styles.iconButton}>
                         <Plus size={24} color="#fff" />
                     </TouchableOpacity>
@@ -208,7 +356,7 @@ const SubjectManagement = ({ navigation }) => {
                     <Search size={20} color="rgba(255,255,255,0.6)" style={styles.searchIcon} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search subjects..."
+                        placeholder="Search subjects, codes, depts..."
                         placeholderTextColor="rgba(255,255,255,0.6)"
                         value={searchQuery}
                         onChangeText={setSearchQuery}
@@ -216,11 +364,20 @@ const SubjectManagement = ({ navigation }) => {
                 </View>
             </LinearGradient>
 
+            {loading && !refreshing && (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#800000" />
+                </View>
+            )}
+
             <FlatList
                 data={filteredSubjects}
                 renderItem={renderSubjectCard}
-                keyExtractor={item => item.id}
+                keyExtractor={item => item._id}
                 contentContainerStyle={styles.listContent}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#800000" />
+                }
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
                         <BookOpen size={50} color="#cbd5e1" />
@@ -254,6 +411,7 @@ const SubjectManagement = ({ navigation }) => {
                                     onChangeText={setName}
                                 />
                             </View>
+
                             <View style={styles.rowInputs}>
                                 <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
                                     <Text style={styles.label}>Code</Text>
@@ -277,30 +435,45 @@ const SubjectManagement = ({ navigation }) => {
                                 </View>
                             </View>
 
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Department</Text>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.deptScroll}>
-                                    {departments.map(dept => (
-                                        <TouchableOpacity
-                                            key={dept._id}
-                                            style={[
-                                                styles.deptOption,
-                                                department === dept._id && styles.deptOptionActive
-                                            ]}
-                                            onPress={() => setDepartment(dept._id)}
-                                        >
-                                            <Text style={[
-                                                styles.deptText,
-                                                department === dept._id && styles.deptTextActive
-                                            ]}>{dept.name}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
+                            <CustomDropdown
+                                label="Department"
+                                value={department}
+                                options={departments.map(d => ({ label: d.name, value: d._id }))}
+                                onSelect={setDepartment}
+                                placeholder="Choose Department"
+                                disabled={user?.role === 'HOD'}
+                            />
+
+                            <View style={styles.rowInputs}>
+                                <View style={{ flex: 1, marginRight: 10 }}>
+                                    <CustomDropdown
+                                        label="Year"
+                                        value={year}
+                                        options={years}
+                                        onSelect={setYear}
+                                        placeholder="Year"
+                                    />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.label}>Semester</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="e.g. 5"
+                                        value={semester}
+                                        onChangeText={setSemester}
+                                        keyboardType="numeric"
+                                    />
+                                </View>
                             </View>
 
-                            <TouchableOpacity style={styles.submitButton} onPress={handleCreateOrUpdate}>
-                                <Text style={styles.submitButtonText}>{editId ? 'Update Subject' : 'Create Subject'}</Text>
+                            <TouchableOpacity style={styles.submitButton} onPress={handleCreateOrUpdate} activeOpacity={0.8}>
+                                {loading ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.submitButtonText}>{editId ? 'Update Subject' : 'Create Subject'}</Text>
+                                )}
                             </TouchableOpacity>
+                            <View style={{ height: 40 }} />
                         </ScrollView>
                     </View>
                 </View>
@@ -312,7 +485,7 @@ const SubjectManagement = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f8fafc' },
     headerGradient: {
-        paddingTop: 40,
+        paddingTop: Platform.OS === 'ios' ? 50 : 40,
         paddingBottom: 25,
         paddingHorizontal: 20,
         borderBottomLeftRadius: 30,
@@ -333,8 +506,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     headerTitle: {
-        fontSize: 22,
-        fontWeight: '800',
+        fontSize: 20,
+        fontWeight: 'bold',
         color: '#fff',
     },
     searchContainer: {
@@ -351,6 +524,10 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
     },
+    loadingContainer: {
+        padding: 20,
+        alignItems: 'center'
+    },
     listContent: { padding: 20 },
     card: {
         backgroundColor: '#fff',
@@ -362,6 +539,8 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 3 },
         shadowOpacity: 0.05,
         shadowRadius: 10,
+        borderWidth: 1,
+        borderColor: '#f1f5f9'
     },
     cardHeader: {
         flexDirection: 'row',
@@ -394,18 +573,17 @@ const styles = StyleSheet.create({
         color: '#1e293b',
         marginBottom: 12,
     },
-    infoRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
+    infoGrid: {
+        flexDirection: 'column',
+        gap: 8,
         borderTopWidth: 1,
         borderTopColor: '#f1f5f9',
         paddingTop: 12,
-        gap: 15
     },
     infoItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6
+        gap: 8
     },
     infoText: {
         fontSize: 13,
@@ -452,7 +630,7 @@ const styles = StyleSheet.create({
     },
     inputGroup: { marginBottom: 20 },
     rowInputs: { flexDirection: 'row', justifyContent: 'space-between' },
-    label: { fontSize: 14, fontWeight: '700', color: '#475569', marginBottom: 8 },
+    label: { fontSize: 13, fontWeight: '700', color: '#475569', marginBottom: 8, marginLeft: 4 },
     input: {
         backgroundColor: '#f8fafc',
         borderWidth: 1,
@@ -462,34 +640,58 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#1e293b',
     },
-    deptScroll: { flexDirection: 'row', marginTop: 5 },
-    deptOption: {
-        paddingHorizontal: 16,
-        paddingVertical: 10,
+    dropdownContainer: { marginBottom: 18 },
+    inputLabel: { fontSize: 13, fontWeight: '700', color: '#475569', marginBottom: 8, marginLeft: 4 },
+    dropdownButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: '#f8fafc',
         borderRadius: 12,
-        backgroundColor: '#f1f5f9',
-        marginRight: 10,
+        paddingHorizontal: 14,
+        height: 56,
         borderWidth: 1,
-        borderColor: 'transparent'
+        borderColor: '#e2e8f0',
     },
-    deptOptionActive: {
-        backgroundColor: '#ffe4e6',
-        borderColor: '#800000'
+    disabledDropdown: { backgroundColor: '#f1f5f9', borderColor: '#e2e8f0' },
+    dropdownButtonContent: { flexDirection: 'row', alignItems: 'center' },
+    dropdownValue: { fontSize: 16, color: '#1e293b', fontWeight: '500' },
+    placeholderText: { color: '#94a3b8' },
+
+    // Searchable Modal
+    searchBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f8fafc',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        height: 48,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        marginBottom: 15
     },
-    deptText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#64748b'
+    searchInput: { flex: 1, marginLeft: 10, fontSize: 16, color: '#1e293b' },
+    optionItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f1f5f9'
     },
-    deptTextActive: {
-        color: '#800000'
-    },
+    selectedOption: { backgroundColor: '#fff5f5' },
+    optionText: { fontSize: 16, color: '#1e293b', fontWeight: '500' },
+    selectedOptionText: { color: '#800000', fontWeight: '700' },
+    emptyText: { textAlign: 'center', color: '#94a3b8', marginTop: 20 },
+
     submitButton: {
         backgroundColor: '#800000',
         padding: 16,
         borderRadius: 16,
         alignItems: 'center',
         marginTop: 10,
+        height: 56,
+        justifyContent: 'center'
     },
     submitButtonText: {
         color: '#fff',

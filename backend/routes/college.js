@@ -8,6 +8,7 @@ const Fee = require('../models/Fee');
 const Bus = require('../models/Bus');
 const User = require('../models/User');
 const LibraryItem = require('../models/LibraryItem');
+const Subject = require('../models/Subject');
 const multer = require('multer');
 const path = require('path');
 
@@ -96,6 +97,44 @@ router.put('/courses/:id', auth(['Admin', 'Office']), async (req, res) => {
     try {
         const course = await Course.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.json(course);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// --- Subject Routes ---
+router.post('/subjects', auth(['Admin', 'Office']), async (req, res) => {
+    try {
+        const subject = new Subject(req.body);
+        await subject.save();
+        res.json(subject);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.get('/subjects', auth(), async (req, res) => {
+    try {
+        const subjects = await Subject.find().populate('department', 'name');
+        res.json(subjects);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.delete('/subjects/:id', auth(['Admin', 'Office']), async (req, res) => {
+    try {
+        await Subject.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Subject deleted' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.put('/subjects/:id', auth(['Admin', 'Office']), async (req, res) => {
+    try {
+        const subject = await Subject.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json(subject);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

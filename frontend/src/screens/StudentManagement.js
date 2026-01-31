@@ -1,10 +1,10 @@
 import React from 'react';
 import UserManagement from './UserManagement';
 
-const StudentManagement = ({ navigation }) => {
+const StudentManagement = ({ navigation, route }) => {
     return (
         <UserManagement
-            route={{ params: { roleFilter: 'Student' } }}
+            route={{ params: { roleFilter: 'Student', ...route.params } }}
             navigation={navigation}
         />
     );

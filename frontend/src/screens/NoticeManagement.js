@@ -38,6 +38,7 @@ import {
 import * as DocumentPicker from 'expo-document-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { college } from '../api/api';
+import api from '../api/api';
 import { AuthContext } from '../context/AuthContext';
 
 const { width } = Dimensions.get('window');
@@ -52,6 +53,8 @@ const NoticeManagement = ({ navigation }) => {
     const [submitting, setSubmitting] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [editId, setEditId] = useState(null);
+    const [viewImageModal, setViewImageModal] = useState(false);
+    const [selectedImage, setSelectedImage] = useState(null);
 
     // Form State
     const [title, setTitle] = useState('');
@@ -177,7 +180,7 @@ const NoticeManagement = ({ navigation }) => {
             setModalVisible(false);
             setEditId(null);
             resetForm();
-            fetchNotices();
+            setTimeout(() => fetchNotices(), 500); // Small delay to let DB update
         } catch (error) {
             console.error('Post/Update notice error:', error);
             Alert.alert('Error', `Failed to ${editId ? 'update' : 'post'} notice`);
@@ -251,24 +254,42 @@ const NoticeManagement = ({ navigation }) => {
 
             {notice.attachmentUrl && (
                 <View style={styles.attachmentSection}>
-                    {notice.attachmentType === 'image' ? (
-                        <View style={styles.imagePreviewContainer}>
-                            <Image source={{ uri: notice.attachmentUrl }} style={styles.imagePreview} resizeMode="cover" />
-                            <TouchableOpacity style={styles.viewOverlay}>
-                                <Eye size={20} color="#fff" />
-                                <Text style={styles.viewText}>View Image</Text>
-                            </TouchableOpacity>
-                        </View>
+                    {notice.attachmentType === 'image' || (!notice.attachmentType && notice.attachmentUrl?.match(/\.(jpg|jpeg|png|gif)$/i)) ? (
+                        <TouchableOpacity
+                            style={styles.imagePreviewContainer}
+                            onPress={() => {
+                                setSelectedImage(notice.attachmentUrl);
+                                setViewImageModal(true);
+                            }}
+                            activeOpacity={0.9}
+                        >
+                            <Image
+                                source={{ uri: notice.attachmentUrl }}
+                                style={styles.imagePreview}
+                                resizeMode="contain"
+                            />
+                            <View style={styles.imageTag}>
+                                <ImageIcon size={12} color="#fff" />
+                                <Text style={styles.imageTagText}>Image</Text>
+                            </View>
+                            <View style={styles.viewOverlay}>
+                                <Eye size={18} color="#fff" />
+                                <Text style={styles.viewText}>Tap to enlarge</Text>
+                            </View>
+                        </TouchableOpacity>
                     ) : (
-                        <TouchableOpacity style={styles.fileAttachment}>
+                        <TouchableOpacity
+                            style={styles.fileAttachment}
+                            onPress={() => Alert.alert('Notice Info', `This notice contains a ${notice.attachmentType || 'document'}.`)}
+                        >
                             <View style={styles.fileIconWrapper}>
-                                {getIconForType(notice.attachmentType)}
+                                {getIconForType(notice.attachmentType || 'document')}
                             </View>
                             <View style={styles.fileInfo}>
                                 <Text style={styles.fileName} numberOfLines={1}>
-                                    {notice.attachmentType.toUpperCase()} Document
+                                    {(notice.attachmentType || 'File').toUpperCase()}
                                 </Text>
-                                <Text style={styles.fileSize}>Click to download</Text>
+                                <Text style={styles.fileSize}>College Document</Text>
                             </View>
                             <Download size={18} color="#94a3b8" />
                         </TouchableOpacity>
@@ -425,13 +446,22 @@ const NoticeManagement = ({ navigation }) => {
                                     onPress={handlePickDocument}
                                 >
                                     {attachment ? (
-                                        <View style={styles.selectedFile}>
-                                            <View style={styles.successIconWrapper}>
-                                                <CheckCircle2 size={16} color="#fff" />
+                                        <View style={styles.selectedFileContainer}>
+                                            {attachment.mimeType?.startsWith('image/') || attachment.type?.startsWith('image/') ? (
+                                                <Image source={{ uri: attachment.uri }} style={styles.pickerImagePreview} />
+                                            ) : (
+                                                <View style={styles.successIconWrapper}>
+                                                    <CheckCircle2 size={16} color="#fff" />
+                                                </View>
+                                            )}
+                                            <View style={styles.selectedFileInfo}>
+                                                <Text style={styles.selectedFileName} numberOfLines={1}>{attachment.name}</Text>
+                                                <Text style={styles.selectedFileSize}>
+                                                    {(attachment.size / 1024).toFixed(1)} KB
+                                                </Text>
                                             </View>
-                                            <Text style={styles.fileName} numberOfLines={1}>{attachment.name}</Text>
                                             <TouchableOpacity onPress={() => setAttachment(null)} style={styles.removeFile}>
-                                                <X size={16} color="#ef4444" />
+                                                <X size={20} color="#ef4444" />
                                             </TouchableOpacity>
                                         </View>
                                     ) : (
@@ -462,6 +492,30 @@ const NoticeManagement = ({ navigation }) => {
                             <View style={{ height: 40 }} />
                         </ScrollView>
                     </View>
+                </View>
+            </Modal>
+
+            {/* Full Image View Modal */}
+            <Modal
+                visible={viewImageModal}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setViewImageModal(false)}
+            >
+                <View style={styles.fullImageOverlay}>
+                    <TouchableOpacity
+                        style={styles.closeFullImage}
+                        onPress={() => setViewImageModal(false)}
+                    >
+                        <X size={30} color="#fff" />
+                    </TouchableOpacity>
+                    {selectedImage && (
+                        <Image
+                            source={{ uri: selectedImage }}
+                            style={styles.fullImage}
+                            resizeMode="contain"
+                        />
+                    )}
                 </View>
             </Modal>
         </SafeAreaView>
@@ -564,27 +618,42 @@ const styles = StyleSheet.create({
     },
     imagePreviewContainer: {
         width: '100%',
-        height: 200,
-        borderRadius: 18,
+        height: 220,
+        borderRadius: 20,
         overflow: 'hidden',
         position: 'relative',
+        backgroundColor: '#f1f5f9', // Light background for 'contain' mode
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
     },
     imagePreview: {
         width: '100%',
         height: '100%',
     },
-    viewOverlay: {
+    imageTag: {
         position: 'absolute',
-        bottom: 12,
-        right: 12,
-        backgroundColor: 'rgba(0,0,0,0.6)',
+        top: 12,
+        left: 12,
+        backgroundColor: 'rgba(128, 0, 0, 0.8)',
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 8,
     },
-    viewText: { color: '#fff', fontSize: 12, fontWeight: '600', marginLeft: 6 },
+    imageTagText: { color: '#fff', fontSize: 10, fontWeight: '800', marginLeft: 4, textTransform: 'uppercase' },
+    viewOverlay: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 10,
+    },
+    viewText: { color: '#fff', fontSize: 13, fontWeight: '700', marginLeft: 8 },
     fileAttachment: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -607,6 +676,27 @@ const styles = StyleSheet.create({
     fileInfo: { flex: 1 },
     fileName: { fontSize: 14, fontWeight: '700', color: '#1e293b' },
     fileSize: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
+
+    // Full Image Styles
+    fullImageOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.95)',
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    closeFullImage: {
+        position: 'absolute',
+        top: 50,
+        right: 25,
+        zIndex: 10,
+        padding: 10,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        borderRadius: 30
+    },
+    fullImage: {
+        width: '100%',
+        height: '100%',
+    },
     cardFooter: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -718,18 +808,34 @@ const styles = StyleSheet.create({
         marginBottom: 10
     },
     pickerText: { fontSize: 14, color: '#800000', fontWeight: '700' },
-    selectedFile: { flexDirection: 'row', alignItems: 'center', width: '100%' },
+    selectedFileContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        width: '100%',
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 10,
+        elevation: 1,
+    },
+    pickerImagePreview: {
+        width: 50,
+        height: 50,
+        borderRadius: 8,
+        marginRight: 12,
+    },
+    selectedFileInfo: { flex: 1 },
+    selectedFileName: { fontSize: 14, color: '#1e293b', fontWeight: '700' },
+    selectedFileSize: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
     successIconWrapper: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         backgroundColor: '#10b981',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12
     },
-    fileName: { flex: 1, fontSize: 15, color: '#1e293b', fontWeight: '700' },
-    removeFile: { padding: 5 },
+    removeFile: { padding: 8, backgroundColor: '#fee2e2', borderRadius: 10 },
     submitButton: {
         backgroundColor: '#800000',
         borderRadius: 18,
