@@ -49,7 +49,9 @@ router.post('/login', async (req, res) => {
                         userId: user.userId,
                         name: user.name,
                         role: user.role,
-                        email: user.email
+                        email: user.email,
+                        department: user.department,
+                        mobileNo: user.mobileNo
                     }
                 });
             }

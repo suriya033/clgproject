@@ -15,7 +15,7 @@ import {
     Platform,
     ScrollView
 } from 'react-native';
-import { ArrowLeft, Search, Plus, Trash2, X, ChevronRight, UserPlus, Camera, Image as ImageIcon, Edit2, Save } from 'lucide-react-native';
+import { ArrowLeft, Search, Plus, Trash2, X, ChevronRight, UserPlus, Camera, Image as ImageIcon, Edit2, Save, ChevronDown, Check } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import api from '../api/api';
 
@@ -38,8 +38,106 @@ const DetailItem = ({ label, value }) => (
     </View>
 );
 
+const CustomDropdown = ({ label, value, options = [], onSelect, placeholder, icon: Icon, disabled = false }) => {
+    const [visible, setVisible] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const filteredOptions = (options || []).filter(opt =>
+        opt?.label?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const selectedLabel = options?.find(opt => opt?.value === value)?.label || value;
+
+    return (
+        <View style={styles.dropdownContainer}>
+            <Text style={styles.label}>{label}</Text>
+            <TouchableOpacity
+                style={[styles.dropdownButton, disabled && styles.disabledDropdown]}
+                onPress={() => !disabled && setVisible(true)}
+                activeOpacity={0.7}
+            >
+                <View style={styles.dropdownButtonContent}>
+                    {Icon && <Icon size={20} color={disabled ? "#94a3b8" : "#800000"} style={{ marginRight: 10 }} />}
+                    <Text style={[
+                        styles.dropdownValue,
+                        !value && styles.placeholderText,
+                        disabled && { color: '#64748b' }
+                    ]}>
+                        {value ? selectedLabel : placeholder}
+                    </Text>
+                </View>
+                {!disabled && <ChevronDown size={20} color="#94a3b8" />}
+            </TouchableOpacity>
+
+            <Modal
+                visible={visible}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setVisible(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setVisible(false)}
+                >
+                    <View style={styles.modalScrollContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Select {label}</Text>
+                            <TouchableOpacity onPress={() => setVisible(false)}>
+                                <X size={24} color="#64748b" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.searchBar}>
+                            <Search size={20} color="#94a3b8" />
+                            <TextInput
+                                style={styles.searchInputDropdown}
+                                placeholder="Search..."
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                                placeholderTextColor="#94a3b8"
+                            />
+                        </View>
+
+                        <FlatList
+                            data={filteredOptions}
+                            keyExtractor={(item) => item.value}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={[
+                                        styles.optionItem,
+                                        value === item.value && styles.selectedOption
+                                    ]}
+                                    onPress={() => {
+                                        onSelect(item.value, item.label);
+                                        setVisible(false);
+                                        setSearchQuery('');
+                                    }}
+                                >
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={[
+                                            styles.optionText,
+                                            value === item.value && styles.selectedOptionText
+                                        ]}>{item.label}</Text>
+                                    </View>
+                                    {value === item.value && <Check size={20} color="#800000" />}
+                                </TouchableOpacity>
+                            )}
+                            ListEmptyComponent={
+                                <Text style={styles.emptyText}>No options found</Text>
+                            }
+                        />
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+        </View>
+    );
+};
+
 const UserManagement = ({ navigation, route }) => {
     const roleFilter = route?.params?.roleFilter;
+    const departmentFilter = route?.params?.departmentFilter;
+    const yearFilter = route?.params?.yearFilter;
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -48,13 +146,14 @@ const UserManagement = ({ navigation, route }) => {
     const [selectedUser, setSelectedUser] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editFormData, setEditFormData] = useState({});
+    const [departments, setDepartments] = useState([]);
     const [newUser, setNewUser] = useState({
         userId: '',
         password: '',
         name: '',
         email: '',
         role: roleFilter || 'Student',
-        department: '',
+        department: departmentFilter || '',
         contact: '',
         photo: null,
         dob: '',
@@ -72,7 +171,20 @@ const UserManagement = ({ navigation, route }) => {
 
     useEffect(() => {
         fetchUsers();
-    }, [roleFilter]);
+        fetchDepartments();
+        if (departmentFilter) {
+            setNewUser(prev => ({ ...prev, department: departmentFilter }));
+        }
+    }, [roleFilter, departmentFilter]);
+
+    const fetchDepartments = async () => {
+        try {
+            const response = await api.get('/college/departments');
+            setDepartments(response.data.map(d => ({ label: d.name, value: d.name })));
+        } catch (error) {
+            console.error('Error fetching departments:', error);
+        }
+    };
 
     const fetchUsers = async () => {
         try {
@@ -88,9 +200,15 @@ const UserManagement = ({ navigation, route }) => {
             const yearFilter = route?.params?.yearFilter;
 
             if (deptFilter) {
+                const normalizedFilter = deptFilter.trim().toLowerCase();
                 filteredUsers = filteredUsers.filter(user =>
-                    user.department && user.department.toLowerCase() === deptFilter.toLowerCase()
+                    user.department && user.department.trim().toLowerCase() === normalizedFilter
                 );
+
+                // If filtering by department, we might want to show both Staff and HODs 
+                // in that department, but strictly respecting the roleFilter if it's provided.
+                // However, for HOD view, showing both roles in their department is often preferred.
+                // For now, we'll stick to the roleFilter to avoid confusion, but ensure it's strict.
             }
 
             if (yearFilter) {
@@ -375,13 +493,31 @@ const UserManagement = ({ navigation, route }) => {
                                         <>
                                             <EditItem label="User ID" value={editFormData.userId} onChange={(text) => setEditFormData({ ...editFormData, userId: text })} />
                                             <EditItem label="Email" value={editFormData.email} onChange={(text) => setEditFormData({ ...editFormData, email: text })} />
-                                            <EditItem label="Department" value={editFormData.department} onChange={(text) => setEditFormData({ ...editFormData, department: text })} />
+                                            <CustomDropdown
+                                                label="Department"
+                                                value={editFormData.department}
+                                                options={departments}
+                                                onSelect={(val) => setEditFormData({ ...editFormData, department: val })}
+                                                placeholder="Select Department"
+                                                disabled={!!departmentFilter}
+                                            />
                                             <EditItem label="Mobile No" value={editFormData.mobileNo} onChange={(text) => setEditFormData({ ...editFormData, mobileNo: text })} />
                                             <EditItem label="DOB" value={editFormData.dob} onChange={(text) => setEditFormData({ ...editFormData, dob: text })} />
                                             {selectedUser.role === 'Student' && (
                                                 <>
                                                     <EditItem label="Branch" value={editFormData.branch} onChange={(text) => setEditFormData({ ...editFormData, branch: text })} />
-                                                    <EditItem label="Year" value={editFormData.year} onChange={(text) => setEditFormData({ ...editFormData, year: text })} />
+                                                    <CustomDropdown
+                                                        label="Academic Year"
+                                                        value={editFormData.year}
+                                                        options={[
+                                                            { label: '1st Year', value: '1' },
+                                                            { label: '2nd Year', value: '2' },
+                                                            { label: '3rd Year', value: '3' },
+                                                            { label: '4th Year', value: '4' },
+                                                        ]}
+                                                        onSelect={(val) => setEditFormData({ ...editFormData, year: val })}
+                                                        placeholder="Select Academic Year"
+                                                    />
                                                 </>
                                             )}
                                             <EditItem label="Contact" value={editFormData.contact} onChange={(text) => setEditFormData({ ...editFormData, contact: text })} />
@@ -500,15 +636,14 @@ const UserManagement = ({ navigation, route }) => {
                                 </View>
                             )}
 
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Department</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    value={newUser.department}
-                                    onChangeText={(text) => setNewUser({ ...newUser, department: text })}
-                                    placeholder="e.g. CSE, ECE"
-                                />
-                            </View>
+                            <CustomDropdown
+                                label="Department"
+                                value={newUser.department}
+                                options={departments}
+                                onSelect={(val) => setNewUser({ ...newUser, department: val })}
+                                placeholder="Select Department"
+                                disabled={!!departmentFilter}
+                            />
 
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Phone Number</Text>
@@ -579,6 +714,19 @@ const UserManagement = ({ navigation, route }) => {
 
                             {newUser.role === 'Student' && (
                                 <>
+                                    <CustomDropdown
+                                        label="Academic Year"
+                                        value={newUser.year}
+                                        options={[
+                                            { label: '1st Year', value: '1' },
+                                            { label: '2nd Year', value: '2' },
+                                            { label: '3rd Year', value: '3' },
+                                            { label: '4th Year', value: '4' },
+                                        ]}
+                                        onSelect={(val) => setNewUser({ ...newUser, year: val })}
+                                        placeholder="Select Academic Year"
+                                    />
+
                                     <View style={styles.inputGroup}>
                                         <Text style={styles.label}>Residency Type</Text>
                                         <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -631,7 +779,7 @@ const UserManagement = ({ navigation, route }) => {
                     </View>
                 </View>
             </Modal>
-        </SafeAreaView>
+        </SafeAreaView >
     );
 };
 
@@ -990,6 +1138,79 @@ const styles = StyleSheet.create({
     },
     selectionButtonTextActive: {
         color: '#800000',
+    },
+    dropdownContainer: {
+        marginBottom: 20,
+    },
+    dropdownButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: '#f8fafc',
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        height: 56,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+    },
+    dropdownButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    dropdownValue: {
+        fontSize: 16,
+        color: '#1e293b',
+        fontWeight: '500',
+    },
+    placeholderText: {
+        color: '#94a3b8',
+    },
+    disabledDropdown: {
+        backgroundColor: '#f1f5f9',
+    },
+    modalScrollContent: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+        height: '70%',
+        padding: 24,
+    },
+    searchBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f8fafc',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        height: 48,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        marginBottom: 15,
+    },
+    searchInputDropdown: {
+        flex: 1,
+        marginLeft: 10,
+        fontSize: 16,
+        color: '#1e293b',
+    },
+    optionItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f1f5f9',
+    },
+    selectedOption: {
+        backgroundColor: '#fff5f5',
+    },
+    optionText: {
+        fontSize: 16,
+        color: '#1e293b',
+        fontWeight: '500',
+    },
+    selectedOptionText: {
+        color: '#800000',
+        fontWeight: '700',
     },
 });
 

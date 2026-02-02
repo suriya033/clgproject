@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
-        backgroundColor: 'rgba(255,255,255,0.15)',
+        backgroundColor: 'rgba(255,255,255,0.16)',
         borderRadius: 28,
         padding: 16,
         borderWidth: 1,

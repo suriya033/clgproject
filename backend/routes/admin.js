@@ -26,8 +26,8 @@ const upload = multer({ storage });
 
 // @route   POST api/admin/upload
 // @desc    Upload user photo
-// @access  Private (Admin only)
-router.post('/upload', auth(['Admin', 'Office']), upload.single('photo'), (req, res) => {
+// @access  Private (Admin/Office/HOD)
+router.post('/upload', auth(['Admin', 'Office', 'HOD']), upload.single('photo'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: 'No file uploaded' });
     }
@@ -37,8 +37,8 @@ router.post('/upload', auth(['Admin', 'Office']), upload.single('photo'), (req, 
 
 // @route   POST api/admin/users
 // @desc    Create a new user
-// @access  Private (Admin only)
-router.post('/users', auth(['Admin', 'Office']), async (req, res) => {
+// @access  Private (Admin/Office/HOD)
+router.post('/users', auth(['Admin', 'Office', 'HOD']), async (req, res) => {
     console.log('Creating user with data:', req.body);
     const { userId, password, name, email, role, department, contact, photo, dob, mobileNo, branch, year } = req.body;
 
@@ -89,8 +89,8 @@ router.get('/users', auth(['Admin', 'Office', 'HOD']), async (req, res) => {
 
 // @route   PUT api/admin/users/:id
 // @desc    Update user
-// @access  Private (Admin only)
-router.put('/users/:id', auth(['Admin', 'Office']), async (req, res) => {
+// @access  Private (Admin/Office/HOD)
+router.put('/users/:id', auth(['Admin', 'Office', 'HOD']), async (req, res) => {
     try {
         const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true }).select('-password');
         res.json(user);
@@ -102,8 +102,8 @@ router.put('/users/:id', auth(['Admin', 'Office']), async (req, res) => {
 
 // @route   DELETE api/admin/users/:id
 // @desc    Delete user
-// @access  Private (Admin only)
-router.delete('/users/:id', auth(['Admin', 'Office']), async (req, res) => {
+// @access  Private (Admin/Office/HOD)
+router.delete('/users/:id', auth(['Admin', 'Office', 'HOD']), async (req, res) => {
     try {
         await User.findByIdAndDelete(req.params.id);
         res.json({ message: 'User deleted' });
@@ -305,6 +305,46 @@ router.get('/stats', auth(['Admin', 'Office']), async (req, res) => {
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server error');
+    }
+});
+
+// @route   GET api/admin/hod-stats/:department
+// @desc    Get dashboard stats for HOD (department specific)
+// @access  Private (Admin/Office/HOD)
+router.get('/hod-stats/:department', auth(['Admin', 'Office', 'HOD']), async (req, res) => {
+    try {
+        const deptName = req.params.department;
+
+        // Find the actual department document to get ID for Course matching
+        const departmentDoc = await Department.findOne({
+            name: { $regex: new RegExp('^' + deptName + '$', 'i') }
+        });
+
+        const studentCount = await User.countDocuments({
+            role: 'Student',
+            department: { $regex: new RegExp('^' + deptName + '$', 'i') }
+        });
+
+        const staffCount = await User.countDocuments({
+            role: { $in: ['Staff', 'HOD'] },
+            department: { $regex: new RegExp('^' + deptName + '$', 'i') }
+        });
+
+        let courseCount = 0;
+        if (departmentDoc) {
+            courseCount = await Course.countDocuments({
+                department: departmentDoc._id
+            });
+        }
+
+        res.json({
+            students: studentCount,
+            staff: staffCount,
+            courses: courseCount
+        });
+    } catch (err) {
+        console.error('HOD Stats Error:', err.message);
+        res.status(500).send('Server error: ' + err.message);
     }
 });
 

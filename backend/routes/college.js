@@ -56,7 +56,25 @@ router.delete('/departments/:id', auth(['Admin', 'Office']), async (req, res) =>
 
 router.put('/departments/:id', auth(['Admin', 'Office']), async (req, res) => {
     try {
+        const { hod: newHodId } = req.body;
+        const oldDept = await Department.findById(req.params.id);
+
+        // If HOD is being updated
+        if (newHodId && oldDept.hod && oldDept.hod.toString() !== newHodId) {
+            // Revert old HOD to Staff
+            await User.findByIdAndUpdate(oldDept.hod, { role: 'Staff' });
+        }
+
         const dept = await Department.findByIdAndUpdate(req.params.id, req.body, { new: true }).populate('hod', 'name');
+
+        // Promote new HOD
+        if (newHodId) {
+            await User.findByIdAndUpdate(newHodId, {
+                role: 'HOD',
+                department: dept.name
+            });
+        }
+
         res.json(dept);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -154,7 +172,8 @@ router.post('/announcements', auth(['Admin', 'HOD', 'Office']), upload.single('a
             title,
             content,
             targetRoles: roles,
-            createdBy: req.user.id
+            createdBy: req.user.id,
+            department: req.user.role === 'HOD' ? req.user.department : (req.body.department || 'All')
         };
 
         if (req.file) {
@@ -220,9 +239,14 @@ router.get('/announcements', auth(), async (req, res) => {
         let query = {};
 
         // Admin, Office, and HOD can see all announcements for management
+        // Admin, Office, and HOD can see all announcements for management
         if (!['Admin', 'Office', 'HOD'].includes(req.user.role)) {
             query = {
-                targetRoles: { $in: ['All', req.user.role] }
+                targetRoles: { $in: ['All', req.user.role] },
+                $or: [
+                    { department: 'All' },
+                    { department: req.user.department }
+                ]
             };
         }
 

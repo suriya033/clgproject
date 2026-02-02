@@ -79,24 +79,36 @@ const HODManagement = ({ navigation }) => {
             return;
         }
 
-        setSubmitting(true);
-        try {
-            // Update Department with new HOD
-            await api.put(`/college/departments/${selectedDept._id}`, {
-                hod: selectedStaff._id
-            });
+        Alert.alert(
+            'Confirm Assignment',
+            `Are you sure you want to assign ${selectedStaff.name} as the HOD of ${selectedDept.name}?\n\nThis will update their role to HOD and grant them dashboard management access.`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Confirm',
+                    onPress: async () => {
+                        setSubmitting(true);
+                        try {
+                            // Update Department with new HOD
+                            await api.put(`/college/departments/${selectedDept._id}`, {
+                                hod: selectedStaff._id
+                            });
 
-            Alert.alert('Success', `HOD Assigned successfully to ${selectedDept.name}`);
-            setModalVisible(false);
-            setSelectedDept(null);
-            setSelectedStaff(null);
-            fetchData();
-        } catch (error) {
-            console.error(error);
-            Alert.alert('Error', 'Failed to assign HOD');
-        } finally {
-            setSubmitting(false);
-        }
+                            Alert.alert('Success', `HOD Assigned successfully to ${selectedDept.name}. They will see their new dashboard on next login.`);
+                            setModalVisible(false);
+                            setSelectedDept(null);
+                            setSelectedStaff(null);
+                            fetchData();
+                        } catch (error) {
+                            console.error(error);
+                            Alert.alert('Error', 'Failed to assign HOD');
+                        } finally {
+                            setSubmitting(false);
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     const openAssignModal = (dept = null) => {
@@ -117,11 +129,27 @@ const HODManagement = ({ navigation }) => {
         dept.code.toLowerCase().includes(deptSearchQuery.toLowerCase())
     );
 
-    const filteredStaff = staff.filter(s =>
-        s.name.toLowerCase().includes(staffSearchQuery.toLowerCase()) ||
-        s.userId.toLowerCase().includes(staffSearchQuery.toLowerCase()) ||
-        (s.department && s.department.toLowerCase().includes(staffSearchQuery.toLowerCase()))
-    );
+    const getFilteredStaff = () => {
+        let baseStaff = staff.filter(s =>
+            s.name.toLowerCase().includes(staffSearchQuery.toLowerCase()) ||
+            s.userId.toLowerCase().includes(staffSearchQuery.toLowerCase()) ||
+            (s.department && s.department.toLowerCase().includes(staffSearchQuery.toLowerCase()))
+        );
+
+        if (selectedDept) {
+            // Sort to show staff from the same department at the top
+            return [...baseStaff].sort((a, b) => {
+                const aInDept = a.department?.toLowerCase() === selectedDept.name?.toLowerCase();
+                const bInDept = b.department?.toLowerCase() === selectedDept.name?.toLowerCase();
+                if (aInDept && !bInDept) return -1;
+                if (!aInDept && bInDept) return 1;
+                return 0;
+            });
+        }
+        return baseStaff;
+    };
+
+    const filteredStaff = getFilteredStaff();
 
     const renderDepartmentItem = ({ item }) => (
         <View style={styles.card}>
@@ -293,29 +321,42 @@ const HODManagement = ({ navigation }) => {
                                     data={filteredStaff}
                                     keyExtractor={item => item._id}
                                     style={styles.staffList}
-                                    renderItem={({ item }) => (
-                                        <TouchableOpacity
-                                            style={[
-                                                styles.staffItem,
-                                                selectedStaff?._id === item._id && styles.selectedStaffItem
-                                            ]}
-                                            onPress={() => setSelectedStaff(item)}
-                                        >
-                                            <View style={styles.staffInfo}>
-                                                <Text style={[
-                                                    styles.staffName,
-                                                    selectedStaff?._id === item._id && styles.selectedStaffText
-                                                ]}>{item.name}</Text>
-                                                <Text style={[
-                                                    styles.staffDept,
-                                                    selectedStaff?._id === item._id && styles.selectedStaffSubText
-                                                ]}>{item.department || 'No Dept'} • {item.userId}</Text>
-                                            </View>
-                                            {selectedStaff?._id === item._id && (
-                                                <CheckCircle2 size={20} color="#800000" />
-                                            )}
-                                        </TouchableOpacity>
-                                    )}
+                                    renderItem={({ item }) => {
+                                        const isInThisDept = item.department?.toLowerCase() === selectedDept.name?.toLowerCase();
+                                        return (
+                                            <TouchableOpacity
+                                                style={[
+                                                    styles.staffItem,
+                                                    selectedStaff?._id === item._id && styles.selectedStaffItem,
+                                                    isInThisDept && !selectedStaff && styles.highlightedStaffItem
+                                                ]}
+                                                onPress={() => setSelectedStaff(item)}
+                                            >
+                                                <View style={styles.staffInfo}>
+                                                    <View style={styles.nameRow}>
+                                                        <Text style={[
+                                                            styles.staffName,
+                                                            selectedStaff?._id === item._id && styles.selectedStaffText
+                                                        ]}>{item.name}</Text>
+                                                        {isInThisDept && (
+                                                            <View style={styles.deptBadge}>
+                                                                <Text style={styles.deptBadgeText}>This Dept</Text>
+                                                            </View>
+                                                        )}
+                                                    </View>
+                                                    <Text style={[
+                                                        styles.staffDept,
+                                                        selectedStaff?._id === item._id && styles.selectedStaffSubText
+                                                    ]}>{item.department || 'No Dept'} • {item.userId}</Text>
+                                                </View>
+                                                {selectedStaff?._id === item._id ? (
+                                                    <CheckCircle2 size={24} color="#800000" />
+                                                ) : (
+                                                    <View style={styles.selectionCircle} />
+                                                )}
+                                            </TouchableOpacity>
+                                        );
+                                    }}
                                     ListEmptyComponent={
                                         <Text style={styles.noResultText}>No teachers found</Text>
                                     }
@@ -566,6 +607,36 @@ const styles = StyleSheet.create({
     },
     selectedStaffSubText: {
         color: '#5a0000'
+    },
+    nameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8
+    },
+    deptBadge: {
+        backgroundColor: '#fef2f2',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: '#fee2e2'
+    },
+    deptBadgeText: {
+        fontSize: 10,
+        color: '#b91c1c',
+        fontWeight: '700',
+        textTransform: 'uppercase'
+    },
+    highlightedStaffItem: {
+        borderLeftWidth: 4,
+        borderLeftColor: '#800000'
+    },
+    selectionCircle: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: '#e2e8f0'
     },
     noResultText: {
         textAlign: 'center',

@@ -6,45 +6,21 @@ const auth = require('../middleware/auth');
 // Generate Timetable (AI/Algorithmic)
 router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
     try {
-        const { subjects, slotsPerDay = 7, days = 5 } = req.body;
-        // subjects: [{ name, code, hoursPerWeek, staffName }]
+        const { subjects, slotsPerDay = 7, days = 5, classes } = req.body;
 
-        if (!subjects || subjects.length === 0) {
-            return res.status(400).json({ message: 'No subjects provided' });
+        let batch = [];
+        if (classes && Array.isArray(classes)) {
+            batch = classes;
+        } else {
+            // Backward compatibility for single class entry
+            if (!subjects || subjects.length === 0) {
+                return res.status(400).json({ message: 'No subjects provided' });
+            }
+            batch = [{ subjects, metadata: {} }];
         }
 
         const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const activeDays = weekDays.slice(0, days);
-        // Smart Scheduling Algorithm
-        const schedule = {};
-        const dailyLimits = {}; // Track usage per day
-        const subjectCounts = {}; // Track total assigned
-
-        // Initialize structures
-        activeDays.forEach(day => {
-            schedule[day] = [];
-            dailyLimits[day] = {};
-        });
-
-        // Create a pool of tasks with priority
-        let tasks = [];
-        subjects.forEach(sub => {
-            const hours = parseInt(sub.hoursPerWeek) || 3;
-            subjectCounts[sub.name] = 0;
-            // Weigh tasks by remaining hours needed
-            for (let i = 0; i < hours; i++) {
-                tasks.push({
-                    subject: sub.name,
-                    staff: sub.staffName || 'TBD',
-                    id: sub.subjectId // Keep ID for reference
-                });
-            }
-        });
-
-        // Sort tasks random initially
-        tasks.sort(() => Math.random() - 0.5);
-
-        // Define Time Slots (Standard College 7-hour day)
         const timeSlots = [
             '09:00 - 09:50',
             '09:50 - 10:40',
@@ -57,90 +33,126 @@ router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
             '03:10 - 04:00'
         ];
 
-        // Fill slots
+        // Initialize structures for each class
+        const results = batch.map(c => ({
+            metadata: c.metadata || {},
+            subjects: c.subjects,
+            schedule: {},
+            lastSubject: null,
+            dailyLimits: {},
+            tasks: []
+        }));
+
+        // Global staff tracker: { day: { slotIndex: Set([staffId/Name]) } }
+        const globalStaffBusy = {};
+        activeDays.forEach(day => {
+            globalStaffBusy[day] = timeSlots.map(() => new Set());
+            results.forEach(r => {
+                r.schedule[day] = [];
+                r.dailyLimits[day] = {};
+            });
+        });
+
+        // Prepare tasks for each class with priority
+        results.forEach(r => {
+            r.subjects.forEach(sub => {
+                const hours = parseInt(sub.hoursPerWeek) || 3;
+                for (let i = 0; i < hours; i++) {
+                    r.tasks.push({
+                        name: sub.name,
+                        subjectId: sub.subjectId,
+                        staff: sub.staffName || sub.staffId || 'TBD',
+                        staffId: sub.staffId
+                    });
+                }
+            });
+            // Shuffle tasks initially
+            r.tasks.sort(() => Math.random() - 0.5);
+        });
+
+        // Fill slots day by day, slot by slot across ALL classes
         for (const day of activeDays) {
-            let lastSubject = null;
-
-            for (const slotTime of timeSlots) {
+            timeSlots.forEach((slotTime, slotIndex) => {
                 if (slotTime.includes('Break') || slotTime.includes('Lunch')) {
-                    schedule[day].push({
-                        startTime: slotTime.split(' - ')[0],
-                        endTime: slotTime.split(' - ')[1],
-                        subject: slotTime.includes('Break') ? 'Break' : 'Lunch',
-                        staff: '-',
-                        isFixed: true
+                    results.forEach(r => {
+                        r.schedule[day].push({
+                            startTime: slotTime.split(' - ')[0],
+                            endTime: slotTime.split(' - ')[1],
+                            subject: slotTime.includes('Break') ? 'Break' : 'Lunch',
+                            staff: '-',
+                            isFixed: true
+                        });
+                        r.lastSubject = null;
                     });
-                    lastSubject = null; // Reset consecutive check after break
-                    continue;
+                    return;
                 }
 
-                // Find a suitable task for this slot
-                // Criteria: 
-                // 1. Not same as last subject (avoid consecutive)
-                // 2. Not already scheduled more than twice this day
+                const busyInThisSlot = globalStaffBusy[day][slotIndex];
 
-                // Prioritize tasks that meet criteria:
-                // 1. Not same as last subject
-                // 2. Not already scheduled more than twice
+                // Shuffle results order each slot to give each class a fair chance at staff
+                const shuffledIndices = results.map((_, i) => i).sort(() => Math.random() - 0.5);
 
-                // Shuffle tasks a bit to ensure variety if multiple candidates exist
-                // We use a simple strategy: Find first valid, or best effort
-                let taskIndex = -1;
+                shuffledIndices.forEach(idx => {
+                    const r = results[idx];
 
-                // First pass: Find strictly valid task
-                taskIndex = tasks.findIndex(t => {
-                    const isConsecutive = t.subject === lastSubject;
-                    const dailyCount = dailyLimits[day][t.subject] || 0;
-                    return !isConsecutive && dailyCount < 2;
-                });
+                    // Filter tasks that satisfy STRICT constraints:
+                    // 1. Staff not already busy in ANOTHER class this slot
+                    // 2. Not same as last subject (STRICTLY no back-to-back)
+                    // 3. Not already scheduled more than twice this day (STRICTLY max 2)
 
-                let assignedTask = null;
+                    const validCandidateIndices = [];
+                    r.tasks.forEach((t, tIdx) => {
+                        const isConsecutive = t.name === r.lastSubject;
+                        const dailyCount = r.dailyLimits[day][t.name] || 0;
+                        const staffBusy = busyInThisSlot.has(t.staff);
 
-                if (taskIndex !== -1) {
-                    assignedTask = tasks[taskIndex];
-                    tasks.splice(taskIndex, 1);
-                } else if (tasks.length > 0) {
-                    // Second pass: Relax "consecutive" if we really have to, but keep "max 2" if possible
-                    taskIndex = tasks.findIndex(t => {
-                        const dailyCount = dailyLimits[day][t.subject] || 0;
-                        return dailyCount < 2;
+                        if (!isConsecutive && dailyCount < 2 && !staffBusy) {
+                            validCandidateIndices.push(tIdx);
+                        }
                     });
 
-                    if (taskIndex !== -1) {
-                        assignedTask = tasks[taskIndex];
-                        tasks.splice(taskIndex, 1);
+                    if (validCandidateIndices.length > 0) {
+                        // Pick a random task from pool of valid candidates
+                        const randomIndex = Math.floor(Math.random() * validCandidateIndices.length);
+                        const taskIdx = validCandidateIndices[randomIndex];
+                        const task = r.tasks[taskIdx];
+
+                        r.schedule[day].push({
+                            startTime: slotTime.split(' - ')[0],
+                            endTime: slotTime.split(' - ')[1],
+                            subject: task.name,
+                            staff: task.staff,
+                            room: 'Room 101'
+                        });
+
+                        r.lastSubject = task.name;
+                        r.dailyLimits[day][task.name] = (r.dailyLimits[day][task.name] || 0) + 1;
+                        busyInThisSlot.add(task.staff);
+                        r.tasks.splice(taskIdx, 1);
                     } else {
-                        // Fallback: Must violate max 2 constraint (very rare if logic is sound)
-                        assignedTask = tasks.shift();
+                        // If no subject meets strict criteria, assign a Free period
+                        r.schedule[day].push({
+                            startTime: slotTime.split(' - ')[0],
+                            endTime: slotTime.split(' - ')[1],
+                            subject: 'Free',
+                            staff: '-',
+                            room: '-'
+                        });
+                        r.lastSubject = 'Free';
                     }
-                }
-
-                if (assignedTask) {
-                    schedule[day].push({
-                        startTime: slotTime.split(' - ')[0],
-                        endTime: slotTime.split(' - ')[1],
-                        subject: assignedTask.subject,
-                        staff: assignedTask.staff,
-                        room: 'Room 101'
-                    });
-
-                    // Update constraints
-                    lastSubject = assignedTask.subject;
-                    dailyLimits[day][assignedTask.subject] = (dailyLimits[day][assignedTask.subject] || 0) + 1;
-                } else {
-                    schedule[day].push({
-                        startTime: slotTime.split(' - ')[0],
-                        endTime: slotTime.split(' - ')[1],
-                        subject: 'Free',
-                        staff: '-',
-                        room: '-'
-                    });
-                    lastSubject = 'Free';
-                }
-            }
+                });
+            });
         }
 
-        res.json(schedule);
+        if (classes) {
+            res.json(results.map(r => ({
+                metadata: r.metadata,
+                schedule: r.schedule,
+                subjects: r.subjects // Return subjects for display
+            })));
+        } else {
+            res.json(results[0].schedule);
+        }
 
     } catch (err) {
         console.error(err);

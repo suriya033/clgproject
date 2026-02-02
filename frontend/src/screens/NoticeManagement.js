@@ -61,12 +61,27 @@ const NoticeManagement = ({ navigation }) => {
     const [content, setContent] = useState('');
     const [targetRoles, setTargetRoles] = useState(['All']);
     const [attachment, setAttachment] = useState(null);
+    const [departments, setDepartments] = useState([]);
+    const [selectedDept, setSelectedDept] = useState('All');
 
     const roles = ['All', 'Student', 'Staff', 'HOD', 'Transport', 'Library', 'Hostel', 'Placement', 'Sports', 'Office', 'ExamCell'];
 
     useEffect(() => {
         fetchNotices();
-    }, []);
+        fetchDepartments();
+        if (user?.role === 'HOD') {
+            setSelectedDept(user.department);
+        }
+    }, [user]);
+
+    const fetchDepartments = async () => {
+        try {
+            const res = await api.get('/college/departments');
+            setDepartments([{ name: 'All', _id: 'all' }, ...res.data]);
+        } catch (error) {
+            console.error('Fetch depts error:', error);
+        }
+    };
 
     useEffect(() => {
         if (searchQuery.trim() === '') {
@@ -157,6 +172,7 @@ const NoticeManagement = ({ navigation }) => {
             formData.append('title', title);
             formData.append('content', content);
             formData.append('targetRoles', JSON.stringify(targetRoles));
+            formData.append('department', selectedDept);
 
             if (attachment) {
                 formData.append('attachment', {
@@ -236,6 +252,11 @@ const NoticeManagement = ({ navigation }) => {
                             <Text style={[styles.roleBadgeText, { color: role === 'All' ? '#800000' : '#10b981' }]}>{role}</Text>
                         </View>
                     ))}
+                    {notice.department && notice.department !== 'All' && (
+                        <View style={[styles.roleBadge, { backgroundColor: '#f5f3ff' }]}>
+                            <Text style={[styles.roleBadgeText, { color: '#8b5cf6' }]}>{notice.department}</Text>
+                        </View>
+                    )}
                 </View>
                 {(user?.role === 'Admin' || user?.id === notice.createdBy?._id || (user?.role === 'Office' && notice.createdBy?._id === user?.id)) && (
                     <View style={{ flexDirection: 'row' }}>
@@ -416,6 +437,32 @@ const NoticeManagement = ({ navigation }) => {
                                     multiline
                                     numberOfLines={6}
                                 />
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Target Department</Text>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.deptSelectorList}>
+                                    {departments.map(dept => (
+                                        <TouchableOpacity
+                                            key={dept._id}
+                                            style={[
+                                                styles.roleOption,
+                                                selectedDept === dept.name && styles.roleOptionActive,
+                                                user?.role === 'HOD' && selectedDept !== dept.name && styles.disabledOption
+                                            ]}
+                                            onPress={() => user?.role !== 'HOD' && setSelectedDept(dept.name)}
+                                            disabled={user?.role === 'HOD'}
+                                        >
+                                            <Text style={[
+                                                styles.roleOptionText,
+                                                selectedDept === dept.name && styles.roleOptionTextActive
+                                            ]}>{dept.name}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                                {user?.role === 'HOD' && (
+                                    <Text style={styles.helperText}>HODs can only post to their department.</Text>
+                                )}
                             </View>
 
                             <View style={styles.inputGroup}>
@@ -852,6 +899,9 @@ const styles = StyleSheet.create({
     },
     disabledButton: { opacity: 0.7 },
     submitButtonText: { fontSize: 18, fontWeight: '800', color: '#fff' },
+    disabledOption: { opacity: 0.4 },
+    deptSelectorList: { marginBottom: 5 },
+    helperText: { fontSize: 12, color: '#6366f1', marginTop: 5, fontStyle: 'italic' },
 });
 
 export default NoticeManagement;

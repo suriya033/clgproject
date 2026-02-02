@@ -170,8 +170,10 @@ const TimeTableGenerator = ({ navigation }) => {
     // Added subjects list
     const [addedSubjects, setAddedSubjects] = useState([]);
 
-    // Generated Schedule
-    const [schedule, setSchedule] = useState(null);
+    // Batch Generation State
+    const [pendingClasses, setPendingClasses] = useState([]);
+    const [batchResults, setBatchResults] = useState([]);
+    const [currentClassIndex, setCurrentClassIndex] = useState(0);
 
     // Edit Slot State
     const [editSlotModalVisible, setEditSlotModalVisible] = useState(false);
@@ -294,69 +296,92 @@ const TimeTableGenerator = ({ navigation }) => {
     };
 
     const generateTimeTable = async () => {
-        if (!selectedDept || !selectedYear || !semester || addedSubjects.length === 0) {
-            Alert.alert('Error', 'Please fill class details and add subjects');
+        let classesToGenerate = [...pendingClasses];
+
+        // If current form has data, offer to include it or validate it's needed
+        if (selectedDept && selectedYear && semester && addedSubjects.length > 0) {
+            classesToGenerate.push({
+                metadata: {
+                    department: selectedDept,
+                    deptName: departments.find(d => d.value === selectedDept)?.label,
+                    semester: `${selectedYear} Year - Sem ${semester}`,
+                    section: section || 'A',
+                    year: selectedYear,
+                    semVal: semester
+                },
+                subjects: addedSubjects
+            });
+        }
+
+        if (classesToGenerate.length === 0) {
+            Alert.alert('Error', 'Add at least one class to generate timetables');
             return;
         }
 
         setLoading(true);
         try {
             const res = await api.post('/timetable/generate', {
-                subjects: addedSubjects,
+                classes: classesToGenerate,
                 days: 5,
                 slotsPerDay: 7
             });
-            setSchedule(res.data);
+            setBatchResults(res.data);
+            setCurrentClassIndex(0);
             setStep(2);
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'Failed to generate timetable');
+            Alert.alert('Error', 'Failed to generate timetables');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleNext = async () => {
+    const handleNext = () => {
         if (!selectedDept || !selectedYear || !semester || addedSubjects.length === 0) {
             Alert.alert('Error', 'Please fill class details and add subjects');
             return;
         }
 
-        Alert.alert(
-            'Save & Continue',
-            'This will generate and save the timetable, then clear the form for the next entry.',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Proceed',
-                    onPress: async () => {
-                        setLoading(true);
-                        try {
-                            const res = await api.post('/timetable/generate', {
-                                subjects: addedSubjects,
-                                days: 5,
-                                slotsPerDay: 7
-                            });
+        const newClass = {
+            metadata: {
+                department: selectedDept,
+                deptName: departments.find(d => d.value === selectedDept)?.label,
+                semester: `${selectedYear} Year - Sem ${semester}`,
+                section: section || 'A',
+                year: selectedYear,
+                semVal: semester
+            },
+            subjects: addedSubjects
+        };
 
-                            await api.post('/timetable/save', {
-                                department: selectedDept,
-                                semester: `${selectedYear} Year - Sem ${semester}`,
-                                section: section || 'A',
-                                schedule: res.data
-                            });
-
-                            resetForm();
-                            Alert.alert('Success', 'Timetable saved. Ready for next entry.');
-                        } catch (error) {
-                            console.error(error);
-                            Alert.alert('Error', 'Failed to complete operation');
-                        } finally {
-                            setLoading(false);
-                        }
-                    }
-                }
-            ]
+        // Check for duplicate class in batch
+        const isDuplicate = pendingClasses.find(c =>
+            c.metadata.department === newClass.metadata.department &&
+            c.metadata.semester === newClass.metadata.semester &&
+            c.metadata.section === newClass.metadata.section
         );
+
+        if (isDuplicate) {
+            Alert.alert('Error', 'This class is already in the batch');
+            return;
+        }
+
+        setPendingClasses([...pendingClasses, newClass]);
+
+        // Reset specific fields for next entry
+        setAddedSubjects([]);
+        setSelectedYear('');
+        setSemester('');
+        setSection('');
+        setCurrentSubject({ subjectId: '', staffId: '', hoursPerWeek: '4' });
+
+        Alert.alert('Success', 'Class added to batch. You can enter another or click Submit to generate all.');
+    };
+
+    const removeClassFromBatch = (index) => {
+        const updated = [...pendingClasses];
+        updated.splice(index, 1);
+        setPendingClasses(updated);
     };
 
     const resetForm = () => {
@@ -378,39 +403,29 @@ const TimeTableGenerator = ({ navigation }) => {
         }
     };
 
-    const saveTimeTable = async (createNew = false) => {
+    const saveTimeTable = async () => {
         setLoading(true);
         try {
-            await api.post('/timetable/save', {
-                department: selectedDept,
-                semester: `${selectedYear} Year - Sem ${semester}`,
-                section: section || 'A',
-                schedule
-            });
+            // Save all generated timetables in the batch
+            const savePromises = batchResults.map(res =>
+                api.post('/timetable/save', {
+                    department: res.metadata.department,
+                    semester: res.metadata.semester,
+                    section: res.metadata.section,
+                    schedule: res.schedule
+                })
+            );
 
-            if (createNew) {
-                resetForm();
-                Alert.alert('Success', 'Previous timetable saved. Enter details for next department.');
-            } else {
-                Alert.alert(
-                    'Timetable Saved',
-                    'What would you like to do next?',
-                    [
-                        {
-                            text: 'Exit',
-                            style: 'cancel',
-                            onPress: () => navigation.goBack()
-                        },
-                        {
-                            text: 'Create Another',
-                            onPress: resetForm
-                        }
-                    ]
-                );
-            }
+            await Promise.all(savePromises);
+
+            Alert.alert(
+                'Success',
+                'All timetables saved successfully',
+                [{ text: 'Exit', onPress: () => navigation.goBack() }]
+            );
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'Failed to save timetable');
+            Alert.alert('Error', 'Failed to save timetables');
         } finally {
             setLoading(false);
         }
@@ -421,15 +436,18 @@ const TimeTableGenerator = ({ navigation }) => {
         setSelectedSlot({ day, index: slotIndex, ...currentData });
 
         // Pre-select current subject ID if possible, else empty
-        const foundSub = addedSubjects.find(s => s.name === currentData.subject);
-        setNewSubjectForSlot(foundSub ? foundSub.subjectId : '');
+        const currentSubjects = batchResults[currentClassIndex]?.subjects || [];
+        const foundSub = currentSubjects.find(s => (s.name || s.label) === currentData.subject);
+        setNewSubjectForSlot(foundSub ? (foundSub.subjectId || foundSub.id) : '');
         setEditSlotModalVisible(true);
     };
 
     const handleSaveSlot = () => {
         if (!selectedSlot) return;
 
-        const newSchedule = { ...schedule };
+        const newResults = [...batchResults];
+        const currentRes = newResults[currentClassIndex];
+        const newSchedule = { ...currentRes.schedule };
         const daySlots = [...newSchedule[selectedSlot.day]];
 
         if (newSubjectForSlot === 'FREE') {
@@ -440,19 +458,20 @@ const TimeTableGenerator = ({ navigation }) => {
                 room: '-'
             };
         } else {
-            const subDetails = addedSubjects.find(s => s.subjectId === newSubjectForSlot);
+            const subDetails = currentRes.subjects.find(s => (s.subjectId || s.id) === newSubjectForSlot);
             if (subDetails) {
                 daySlots[selectedSlot.index] = {
                     ...daySlots[selectedSlot.index],
-                    subject: subDetails.name,
-                    staff: subDetails.staffName,
+                    subject: subDetails.name || subDetails.label,
+                    staff: subDetails.staffName || subDetails.staffId,
                     room: 'Room 101'
                 };
             }
         }
 
         newSchedule[selectedSlot.day] = daySlots;
-        setSchedule(newSchedule);
+        currentRes.schedule = newSchedule;
+        setBatchResults(newResults);
         setEditSlotModalVisible(false);
     };
 
@@ -622,6 +641,35 @@ const TimeTableGenerator = ({ navigation }) => {
                                 </View>
                             )}
 
+                            {/* Pending Classes Batch */}
+                            {pendingClasses.length > 0 && (
+                                <View style={styles.batchSection}>
+                                    <View style={styles.sectionHeader}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                            <Sparkles size={20} color="#800000" style={{ marginRight: 8 }} />
+                                            <Text style={styles.sectionTitle}>Batch Queue ({pendingClasses.length})</Text>
+                                        </View>
+                                    </View>
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.batchContainer}>
+                                        {pendingClasses.map((item, idx) => (
+                                            <View key={idx} style={styles.batchCard}>
+                                                <View style={styles.batchCardContent}>
+                                                    <Text style={styles.batchCardTitle}>{item.metadata.deptName}</Text>
+                                                    <Text style={styles.batchCardSubtitle}>{item.metadata.semester} • Sec {item.metadata.section}</Text>
+                                                    <Text style={styles.batchCardCount}>{item.subjects.length} Subjects</Text>
+                                                </View>
+                                                <TouchableOpacity
+                                                    style={styles.batchRemoveBtn}
+                                                    onPress={() => removeClassFromBatch(idx)}
+                                                >
+                                                    <X size={14} color="#ef4444" />
+                                                </TouchableOpacity>
+                                            </View>
+                                        ))}
+                                    </ScrollView>
+                                </View>
+                            )}
+
                             <View style={{ height: 100 }} />
                         </ScrollView>
 
@@ -631,13 +679,15 @@ const TimeTableGenerator = ({ navigation }) => {
                                 style={styles.nextBtn}
                                 onPress={handleNext}
                             >
-                                <Text style={styles.nextBtnText}>Next</Text>
+                                <Plus size={20} color="#800000" style={{ marginRight: 8 }} />
+                                <Text style={styles.nextBtnText}>Add to Batch</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.submitBtn}
                                 onPress={generateTimeTable}
                             >
-                                <Text style={styles.submitBtnText}>Submit</Text>
+                                <Sparkles size={20} color="#fff" style={{ marginRight: 8 }} />
+                                <Text style={styles.submitBtnText}>Generate All</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -645,33 +695,55 @@ const TimeTableGenerator = ({ navigation }) => {
                     <View style={{ flex: 1 }}>
                         <View style={styles.resultHeader}>
                             <View>
-                                <Text style={styles.resultTitle}>Preview Schedule</Text>
+                                <Text style={styles.resultTitle}>Preview Schedules</Text>
                                 <Text style={styles.resultSubtitle}>
-                                    Tap on any slot to edit • {selectedYear} Yr
+                                    Showing {currentClassIndex + 1} of {batchResults.length} classes
                                 </Text>
                             </View>
                             <TouchableOpacity onPress={() => setStep(1)} style={styles.editBtnSmall}>
-                                <Text style={styles.editBtnTextSmall}>Edit Input</Text>
+                                <Text style={styles.editBtnTextSmall}>Add More</Text>
                             </TouchableOpacity>
                         </View>
 
+                        {/* Tabs for multiple classes */}
+                        <View style={styles.tabsContainer}>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                {batchResults.map((res, idx) => (
+                                    <TouchableOpacity
+                                        key={idx}
+                                        style={[styles.tab, currentClassIndex === idx && styles.activeTab]}
+                                        onPress={() => setCurrentClassIndex(idx)}
+                                    >
+                                        <Text style={[styles.tabText, currentClassIndex === idx && styles.activeTabText]}>
+                                            {res.metadata.section} ({res.metadata.semester.split(' ')[0]} Yr)
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </View>
+
+                        <Text style={styles.classDetailHeader}>
+                            {batchResults[currentClassIndex].metadata.deptName} - {batchResults[currentClassIndex].metadata.semester} Section {batchResults[currentClassIndex].metadata.section}
+                        </Text>
+
                         <ScrollView showsVerticalScrollIndicator={false}>
-                            {schedule && Object.entries(schedule).map(([day, slots]) => renderDaySchedule(day, slots))}
+                            {batchResults[currentClassIndex].schedule &&
+                                Object.entries(batchResults[currentClassIndex].schedule).map(([day, slots]) => renderDaySchedule(day, slots))}
                             <View style={{ height: 100 }} />
                         </ScrollView>
 
                         <View style={styles.bottomActions}>
                             <TouchableOpacity
                                 style={[styles.submitBtn, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', marginRight: 10 }]}
-                                onPress={() => saveTimeTable(true)}
+                                onPress={() => setStep(1)}
                             >
-                                <Plus size={20} color="#64748b" style={{ marginRight: 8 }} />
-                                <Text style={[styles.submitBtnText, { color: '#64748b' }]}>Save & Next</Text>
+                                <Edit3 size={20} color="#64748b" style={{ marginRight: 8 }} />
+                                <Text style={[styles.submitBtnText, { color: '#64748b' }]}>Edit Batch</Text>
                             </TouchableOpacity>
 
-                            <TouchableOpacity style={styles.submitBtn} onPress={() => saveTimeTable(false)}>
+                            <TouchableOpacity style={styles.submitBtn} onPress={saveTimeTable}>
                                 <Save size={20} color="#fff" style={{ marginRight: 8 }} />
-                                <Text style={styles.submitBtnText}>Save</Text>
+                                <Text style={styles.submitBtnText}>Save All</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -712,7 +784,13 @@ const TimeTableGenerator = ({ navigation }) => {
                             <CustomDropdown
                                 label="Select Subject"
                                 value={newSubjectForSlot}
-                                options={editOptions}
+                                options={[
+                                    { label: 'Free Period', value: 'FREE' },
+                                    ...(batchResults[currentClassIndex]?.subjects || []).map(s => ({
+                                        label: `${s.name || s.label} (${s.staffName || s.staffId})`,
+                                        value: s.subjectId || s.id
+                                    }))
+                                ]}
                                 onSelect={setNewSubjectForSlot}
                                 placeholder="Select Subject or Free"
                             />
@@ -956,7 +1034,44 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 1000
-    }
+    },
+
+    batchSection: { marginTop: 20 },
+    batchContainer: { paddingVertical: 10 },
+    batchCard: {
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        padding: 12,
+        marginRight: 10,
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
+        width: width * 0.45,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 5
+    },
+    batchCardContent: { flex: 1 },
+    batchCardTitle: { fontSize: 13, fontWeight: '800', color: '#1e293b' },
+    batchCardSubtitle: { fontSize: 10, color: '#64748b', marginTop: 2 },
+    batchCardCount: { fontSize: 10, color: '#800000', fontWeight: '700', marginTop: 4 },
+    batchRemoveBtn: { position: 'absolute', top: 8, right: 8, padding: 4 },
+
+    tabsContainer: { marginBottom: 20 },
+    tab: {
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 12,
+        backgroundColor: '#fff',
+        marginRight: 10,
+        borderWidth: 1,
+        borderColor: '#e2e8f0'
+    },
+    activeTab: { backgroundColor: '#800000', borderColor: '#800000' },
+    tabText: { fontSize: 14, fontWeight: '600', color: '#64748b' },
+    activeTabText: { color: '#fff' },
+    classDetailHeader: { fontSize: 16, fontWeight: '800', color: '#1e293b', marginBottom: 15, textAlign: 'center' }
 });
 
 export default TimeTableGenerator;

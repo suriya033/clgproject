@@ -22,30 +22,76 @@ import {
     LogOut,
     Calendar,
     LayoutDashboard,
-    ClipboardList
+    ClipboardList,
+    Building2,
+    X,
+    ChevronRight,
+    Search,
+    Info,
+    User,
+    Mail,
+    Phone,
+    Briefcase
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Modal } from 'react-native';
+import api from '../api/api';
 
 const HODDashboard = ({ navigation }) => {
     const { user, logout } = useContext(AuthContext);
     const [refreshing, setRefreshing] = useState(false);
+    const [yearModalVisible, setYearModalVisible] = useState(false);
+    const [bioModalVisible, setBioModalVisible] = useState(false);
+    const [stats, setStats] = useState({ students: 0, staff: 0, courses: 0 });
 
-    const onRefresh = () => {
+    useEffect(() => {
+        if (user?.department) {
+            fetchStats();
+        }
+    }, [user]);
+
+    const fetchStats = async () => {
+        try {
+            const response = await api.get(`/admin/hod-stats/${user.department}`);
+            setStats(response.data);
+        } catch (error) {
+            console.error('Error fetching HOD stats:', error);
+        }
+    };
+
+    const onRefresh = async () => {
         setRefreshing(true);
-        setTimeout(() => setRefreshing(false), 1000);
+        await fetchStats();
+        setRefreshing(false);
     };
 
     const gridItems = [
         { id: '1', title: 'Time Table', icon: <Calendar size={24} color="#800000" />, route: 'TimeTableGenerator', bg: '#ffe4e6' },
-        { id: '2', title: 'Staff', icon: <Users size={24} color="#ec4899" />, route: 'StaffManagement', bg: '#fdf2f8' },
-        { id: '3', title: 'Students', icon: <GraduationCap size={24} color="#6366f1" />, route: 'StudentManagement', bg: '#e0e7ff' },
-        { id: '4', title: 'Subjects', icon: <BookOpen size={24} color="#10b981" />, route: 'SubjectManagement', bg: '#d1fae5' },
-        { id: '5', title: 'Classes', icon: <LayoutDashboard size={24} color="#f59e0b" />, route: 'ClassManagement', bg: '#ffedd5' },
+        { id: '2', title: 'Staff', icon: <Users size={24} color="#ec4899" />, route: 'StaffManagement', bg: '#fdf2f8', params: { departmentFilter: user?.department } },
+        { id: '3', title: 'Students', icon: <GraduationCap size={24} color="#6366f1" />, action: 'openYears', bg: '#e0e7ff' },
+        { id: '4', title: 'Subjects', icon: <BookOpen size={24} color="#10b981" />, route: 'SubjectManagement', bg: '#d1fae5', params: { departmentFilter: user?.department } },
+        { id: '5', title: 'Classes', icon: <LayoutDashboard size={24} color="#f59e0b" />, route: 'ClassManagement', bg: '#ffedd5', params: { departmentFilter: user?.department } },
         { id: '6', title: 'Notice', icon: <Megaphone size={24} color="#06b6d4" />, route: 'Announcements', bg: '#cffafe' },
+        { id: '7', title: 'Department', icon: <Building2 size={24} color="#8b5cf6" />, action: 'openYears', bg: '#f5f3ff' },
     ];
 
     const handleNavigation = (item) => {
-        navigation.navigate(item.route, { title: item.title });
+        if (item.action === 'openYears') {
+            setYearModalVisible(true);
+        } else {
+            navigation.navigate(item.route, {
+                title: item.title,
+                ...item.params
+            });
+        }
+    };
+
+    const handleYearSelection = (year) => {
+        setYearModalVisible(false);
+        navigation.navigate('StudentManagement', {
+            departmentFilter: user?.department,
+            yearFilter: year
+        });
     };
 
     return (
@@ -72,7 +118,19 @@ const HODDashboard = ({ navigation }) => {
                 <View style={styles.headerContent}>
                     <Text style={styles.welcomeText}>Welcome back,</Text>
                     <Text style={styles.username}>{user?.name || 'Head of Department'}</Text>
-                    <Text style={styles.subtitle}>{user?.department} Department</Text>
+                    <View style={styles.deptRow}>
+                        <View style={styles.deptBadge}>
+                            <Building2 size={18} color="#fff" />
+                            <Text style={styles.deptBadgeText}>{user?.department} Department</Text>
+                        </View>
+                        <TouchableOpacity
+                            style={styles.viewBioBtn}
+                            onPress={() => setBioModalVisible(true)}
+                        >
+                            <Text style={styles.viewBioText}>View More</Text>
+                            <ChevronRight size={14} color="rgba(255,255,255,0.7)" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Quick Stats for HOD */}
@@ -81,14 +139,14 @@ const HODDashboard = ({ navigation }) => {
                         <View style={styles.statIconWrapper}>
                             <GraduationCap size={20} color="#800000" />
                         </View>
-                        <Text style={styles.statValue}>--</Text>
+                        <Text style={styles.statValue}>{stats.students}</Text>
                         <Text style={styles.statLabel}>Students</Text>
                     </View>
                     <View style={[styles.statBox]}>
                         <View style={styles.statIconWrapper}>
                             <Users size={20} color="#800000" />
                         </View>
-                        <Text style={styles.statValue}>--</Text>
+                        <Text style={styles.statValue}>{stats.staff}</Text>
                         <Text style={styles.statLabel}>Staff</Text>
                     </View>
                 </View>
@@ -116,6 +174,117 @@ const HODDashboard = ({ navigation }) => {
 
                 <View style={{ height: 30 }} />
             </ScrollView>
+
+            {/* Year Selection Modal */}
+            <Modal
+                visible={yearModalVisible}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setYearModalVisible(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setYearModalVisible(false)}
+                >
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <View>
+                                <Text style={styles.modalTitle}>Select Year</Text>
+                                <Text style={styles.modalSubtitle}>{user?.department} Department</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setYearModalVisible(false)} style={styles.closeButton}>
+                                <X size={24} color="#64748b" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.yearList}>
+                            {['1', '2', '3', '4'].map((year) => (
+                                <TouchableOpacity
+                                    key={year}
+                                    style={styles.yearItem}
+                                    onPress={() => handleYearSelection(year)}
+                                >
+                                    <View style={styles.yearInfo}>
+                                        <View style={styles.yearIconWrapper}>
+                                            <Calendar size={20} color="#800000" />
+                                        </View>
+                                        <Text style={styles.yearText}>
+                                            {year === '1' ? '1st' : year === '2' ? '2nd' : year === '3' ? '3rd' : '4th'} Year
+                                        </Text>
+                                    </View>
+                                    <ChevronRight size={20} color="#94a3b8" />
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+
+            {/* Bio Data Modal */}
+            <Modal
+                visible={bioModalVisible}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setBioModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.bioModalContent}>
+                        <View style={styles.bioHeader}>
+                            <View style={styles.bioAvatar}>
+                                <Text style={styles.avatarText}>{user?.name?.charAt(0)}</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setBioModalVisible(false)} style={styles.closeBioBtn}>
+                                <X size={20} color="#64748b" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={styles.bioName}>{user?.name}</Text>
+                        <Text style={styles.bioRole}>Head of Department</Text>
+
+                        <View style={styles.bioInfoSection}>
+                            <View style={styles.bioItem}>
+                                <User size={20} color="#800000" style={styles.bioIcon} />
+                                <View>
+                                    <Text style={styles.bioLabel}>User ID</Text>
+                                    <Text style={styles.bioValue}>{user?.userId}</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.bioItem}>
+                                <Mail size={20} color="#800000" style={styles.bioIcon} />
+                                <View>
+                                    <Text style={styles.bioLabel}>Email Address</Text>
+                                    <Text style={styles.bioValue}>{user?.email}</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.bioItem}>
+                                <Phone size={20} color="#800000" style={styles.bioIcon} />
+                                <View>
+                                    <Text style={styles.bioLabel}>Contact Number</Text>
+                                    <Text style={styles.bioValue}>{user?.mobileNo || 'Not provided'}</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.bioItem}>
+                                <Briefcase size={20} color="#800000" style={styles.bioIcon} />
+                                <View>
+                                    <Text style={styles.bioLabel}>Department</Text>
+                                    <Text style={styles.bioValue}>{user?.department}</Text>
+                                </View>
+                            </View>
+                        </View>
+
+                        <TouchableOpacity
+                            style={styles.closeProfileBtn}
+                            onPress={() => setBioModalVisible(false)}
+                        >
+                            <Text style={styles.closeProfileText}>Close Profile</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -272,6 +441,212 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#334155',
         textAlign: 'center',
+    },
+    // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        borderRadius: 24,
+        width: '100%',
+        padding: 24,
+        elevation: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.2,
+        shadowRadius: 20,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 24,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: '#1e293b',
+    },
+    modalSubtitle: {
+        fontSize: 14,
+        color: '#64748b',
+        fontWeight: '500',
+        marginTop: 2,
+    },
+    closeButton: {
+        padding: 4,
+        backgroundColor: '#f1f5f9',
+        borderRadius: 10,
+    },
+    yearList: {
+        gap: 12,
+    },
+    yearItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 16,
+        backgroundColor: '#f8fafc',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
+    },
+    yearInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    yearIconWrapper: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: '#ffe4e6',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    yearText: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1e293b',
+    },
+    // New Styles for Department prominence and Bio Modal
+    deptRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        marginTop: 4,
+    },
+    deptBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 14,
+        gap: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.25)',
+    },
+    deptBadgeText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#fff',
+        letterSpacing: 0.3,
+    },
+    viewBioBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingVertical: 4,
+    },
+    viewBioText: {
+        fontSize: 13,
+        color: 'rgba(255,255,255,0.8)',
+        fontWeight: '600',
+        textDecorationLine: 'underline',
+    },
+    bioModalContent: {
+        backgroundColor: '#fff',
+        borderRadius: 32,
+        width: '100%',
+        padding: 24,
+        elevation: 25,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 15 },
+        shadowOpacity: 0.25,
+        shadowRadius: 25,
+    },
+    bioHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 20,
+    },
+    bioAvatar: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#ffe4e6',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 4,
+        borderColor: '#fff',
+        elevation: 8,
+        shadowColor: '#800000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+    },
+    avatarText: {
+        fontSize: 36,
+        fontWeight: '900',
+        color: '#800000',
+    },
+    closeBioBtn: {
+        padding: 8,
+        backgroundColor: '#f1f5f9',
+        borderRadius: 14,
+    },
+    bioName: {
+        fontSize: 24,
+        fontWeight: '800',
+        color: '#1e293b',
+        textAlign: 'center',
+    },
+    bioRole: {
+        fontSize: 14,
+        color: '#800000',
+        fontWeight: '700',
+        textAlign: 'center',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginBottom: 24,
+    },
+    bioInfoSection: {
+        gap: 16,
+        backgroundColor: '#f8fafc',
+        padding: 20,
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
+    },
+    bioItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 15,
+    },
+    bioIcon: {
+        backgroundColor: '#fff',
+        padding: 10,
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
+    bioLabel: {
+        fontSize: 12,
+        color: '#64748b',
+        fontWeight: '600',
+    },
+    bioValue: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#1e293b',
+    },
+    closeProfileBtn: {
+        backgroundColor: '#800000',
+        paddingVertical: 16,
+        borderRadius: 16,
+        alignItems: 'center',
+        marginTop: 24,
+    },
+    closeProfileText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '700',
     },
 });
 

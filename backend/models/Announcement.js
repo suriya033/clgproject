@@ -23,6 +23,10 @@ const AnnouncementSchema = new mongoose.Schema({
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
+    },
+    department: {
+        type: String,
+        default: 'All'
     }
 }, { timestamps: true });
 

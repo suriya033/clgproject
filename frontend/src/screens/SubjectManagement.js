@@ -132,8 +132,10 @@ const CustomDropdown = ({ label, value, options = [], onSelect, placeholder, ico
     );
 };
 
-const SubjectManagement = ({ navigation }) => {
+const SubjectManagement = ({ navigation, route }) => {
     const { user } = useContext(AuthContext);
+    const departmentFilter = route?.params?.departmentFilter;
+
     const [subjects, setSubjects] = useState([]);
     const [departments, setDepartments] = useState([]);
     const [filteredSubjects, setFilteredSubjects] = useState([]);
@@ -170,8 +172,18 @@ const SubjectManagement = ({ navigation }) => {
                 api.get('/college/subjects'),
                 api.get('/college/departments')
             ]);
-            setSubjects(subRes.data);
-            setFilteredSubjects(subRes.data);
+            let fetchedSubjects = subRes.data;
+
+            // Filter by department if HOD or if filter passed
+            const targetDept = departmentFilter || (user?.role === 'HOD' ? user?.department : null);
+            if (targetDept) {
+                fetchedSubjects = fetchedSubjects.filter(sub =>
+                    sub.department?.name?.toLowerCase() === targetDept.toLowerCase()
+                );
+            }
+
+            setSubjects(fetchedSubjects);
+            setFilteredSubjects(fetchedSubjects);
             setDepartments(deptRes.data);
         } catch (error) {
             console.error('Error fetching data:', error);

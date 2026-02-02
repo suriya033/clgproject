@@ -28,7 +28,8 @@ import {
 } from 'lucide-react-native';
 import api from '../api/api';
 
-const ClassManagement = ({ navigation }) => {
+const ClassManagement = ({ navigation, route }) => {
+    const departmentFilter = route?.params?.departmentFilter;
     const [classes, setClasses] = useState([
         { id: '1', name: 'Computer Science', section: 'A', year: '1st Year', students: [], advisor: null },
         { id: '2', name: 'Computer Science', section: 'B', year: '1st Year', students: [], advisor: null },
@@ -59,8 +60,19 @@ const ClassManagement = ({ navigation }) => {
     const fetchData = async () => {
         try {
             const response = await api.get('/admin/users');
-            const students = response.data.filter(u => u.role === 'Student');
-            const teachers = response.data.filter(u => u.role === 'Staff' || u.role === 'HOD');
+            let students = response.data.filter(u => u.role === 'Student');
+            let teachers = response.data.filter(u => u.role === 'Staff' || u.role === 'HOD');
+
+            if (departmentFilter) {
+                const deptLower = departmentFilter.toLowerCase();
+                students = students.filter(s => s.department?.toLowerCase() === deptLower);
+                teachers = teachers.filter(t => t.department?.toLowerCase() === deptLower);
+
+                // Also filter initial hardcoded classes as an example, 
+                // though in a real app these would come from an API
+                setClasses(prev => prev.filter(c => c.name.toLowerCase().includes(deptLower)));
+            }
+
             setAllStudents(students);
             setAllStaff(teachers);
         } catch (error) {
