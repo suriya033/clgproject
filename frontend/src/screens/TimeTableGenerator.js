@@ -147,11 +147,17 @@ const TimeTableGenerator = ({ navigation }) => {
         { label: '3rd Year', value: '3' },
         { label: '4th Year', value: '4' },
     ];
+    const sectionOptions = [
+        { label: 'A', value: 'A' },
+        { label: 'B', value: 'B' },
+        { label: 'C', value: 'C' }
+    ];
 
     // Inputs
     const [selectedDept, setSelectedDept] = useState('');
     const [selectedYear, setSelectedYear] = useState('');
     const [semester, setSemester] = useState('');
+    const [semesterOptions, setSemesterOptions] = useState([]);
     const [section, setSection] = useState('');
 
     // Current Subject being added
@@ -216,11 +222,42 @@ const TimeTableGenerator = ({ navigation }) => {
         }
     }, [user, departments]);
 
+    // Update semester options based on selected year
+    useEffect(() => {
+        if (!selectedYear) {
+            setSemesterOptions([]);
+            setSemester('');
+            return;
+        }
+
+        const yearInt = parseInt(selectedYear);
+        const startSem = (yearInt - 1) * 2 + 1;
+        const endSem = startSem + 1;
+
+        setSemesterOptions([
+            { label: `Semester ${startSem}`, value: String(startSem) },
+            { label: `Semester ${endSem}`, value: String(endSem) }
+        ]);
+
+        // Reset semester selection when year changes
+        setSemester('');
+    }, [selectedYear]);
+
     const filteredSubjectsList = subjectsList.filter(s => {
         const matchesDept = !selectedDept || s.dept === selectedDept;
-        const matchesYear = !selectedYear || s.year === selectedYear;
-        const matchesSem = !semester || parseInt(s.semester) === parseInt(semester);
-        return matchesDept && matchesYear && matchesSem;
+
+        // Filter based on Year -> Semester Range (e.g. Year 1 shows Sems 1 & 2)
+        // We ignore strict 'semester' equality so user can pick subjects from the other semester of the same year if needed.
+        let matchesYearRange = true;
+        if (selectedYear) {
+            const y = parseInt(selectedYear);
+            const minSem = (y - 1) * 2 + 1;
+            const maxSem = minSem + 1;
+            const sSem = parseInt(s.semester);
+            matchesYearRange = (sSem === minSem || sSem === maxSem);
+        }
+
+        return matchesDept && matchesYearRange;
     });
 
     // Reset current subject if filters change and it's no longer in the list
@@ -277,6 +314,49 @@ const TimeTableGenerator = ({ navigation }) => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleNext = async () => {
+        if (!selectedDept || !selectedYear || !semester || addedSubjects.length === 0) {
+            Alert.alert('Error', 'Please fill class details and add subjects');
+            return;
+        }
+
+        Alert.alert(
+            'Save & Continue',
+            'This will generate and save the timetable, then clear the form for the next entry.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Proceed',
+                    onPress: async () => {
+                        setLoading(true);
+                        try {
+                            const res = await api.post('/timetable/generate', {
+                                subjects: addedSubjects,
+                                days: 5,
+                                slotsPerDay: 7
+                            });
+
+                            await api.post('/timetable/save', {
+                                department: selectedDept,
+                                semester: `${selectedYear} Year - Sem ${semester}`,
+                                section: section || 'A',
+                                schedule: res.data
+                            });
+
+                            resetForm();
+                            Alert.alert('Success', 'Timetable saved. Ready for next entry.');
+                        } catch (error) {
+                            console.error(error);
+                            Alert.alert('Error', 'Failed to complete operation');
+                        } finally {
+                            setLoading(false);
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     const resetForm = () => {
@@ -451,7 +531,7 @@ const TimeTableGenerator = ({ navigation }) => {
                             />
 
                             <View style={styles.row}>
-                                <View style={{ flex: 1, marginRight: 10 }}>
+                                <View style={{ flex: 1.4, marginRight: 8 }}>
                                     <CustomDropdown
                                         label="Year"
                                         value={selectedYear}
@@ -460,14 +540,23 @@ const TimeTableGenerator = ({ navigation }) => {
                                         placeholder="Year"
                                     />
                                 </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.inputLabel}>Semester</Text>
-                                    <TextInput
-                                        style={styles.textInput}
-                                        placeholder="e.g. 5"
+                                <View style={{ flex: 2, marginRight: 8 }}>
+                                    <CustomDropdown
+                                        label="Semester"
                                         value={semester}
-                                        onChangeText={setSemester}
-                                        keyboardType="numeric"
+                                        options={semesterOptions}
+                                        onSelect={setSemester}
+                                        placeholder="Semester"
+                                        disabled={!selectedYear}
+                                    />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <CustomDropdown
+                                        label="Section"
+                                        value={section}
+                                        options={sectionOptions}
+                                        onSelect={setSection}
+                                        placeholder="Sec"
                                     />
                                 </View>
                             </View>
@@ -540,10 +629,7 @@ const TimeTableGenerator = ({ navigation }) => {
                         <View style={styles.bottomActions}>
                             <TouchableOpacity
                                 style={styles.nextBtn}
-                                onPress={() => {
-                                    if (addedSubjects.length > 0) generateTimeTable();
-                                    else Alert.alert('Error', 'Add at least one subject');
-                                }}
+                                onPress={handleNext}
                             >
                                 <Text style={styles.nextBtnText}>Next</Text>
                             </TouchableOpacity>

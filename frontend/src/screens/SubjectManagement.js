@@ -150,6 +150,7 @@ const SubjectManagement = ({ navigation }) => {
     const [department, setDepartment] = useState('');
     const [year, setYear] = useState('');
     const [semester, setSemester] = useState('');
+    const [semesterOptions, setSemesterOptions] = useState([]);
 
     const years = [
         { label: '1st Year', value: '1' },
@@ -189,6 +190,28 @@ const SubjectManagement = ({ navigation }) => {
             if (hDept) setDepartment(hDept._id);
         }
     }, [user, departments, modalVisible]);
+
+    // Update semester options based on selected year
+    useEffect(() => {
+        if (!year) {
+            setSemesterOptions([]);
+            return;
+        }
+
+        const yearInt = parseInt(year);
+        const startSem = (yearInt - 1) * 2 + 1;
+        const endSem = startSem + 1;
+
+        setSemesterOptions([
+            { label: `Semester ${startSem}`, value: String(startSem) },
+            { label: `Semester ${endSem}`, value: String(endSem) }
+        ]);
+
+        // If current semester is invalid for new year, clear it (unless we are editing and it was set initially)
+        if (semester && semester !== String(startSem) && semester !== String(endSem)) {
+            setSemester('');
+        }
+    }, [year]);
 
     const onRefresh = async () => {
         setRefreshing(true);
@@ -455,13 +478,13 @@ const SubjectManagement = ({ navigation }) => {
                                     />
                                 </View>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={styles.label}>Semester</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="e.g. 5"
+                                    <CustomDropdown
+                                        label="Semester"
                                         value={semester}
-                                        onChangeText={setSemester}
-                                        keyboardType="numeric"
+                                        options={semesterOptions}
+                                        onSelect={setSemester}
+                                        placeholder="Select Semester"
+                                        disabled={!year}
                                     />
                                 </View>
                             </View>
