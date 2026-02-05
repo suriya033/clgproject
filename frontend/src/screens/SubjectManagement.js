@@ -147,6 +147,7 @@ const SubjectManagement = ({ navigation, route }) => {
 
     // Form State
     const [name, setName] = useState('');
+    const [shortName, setShortName] = useState('');
     const [code, setCode] = useState('');
     const [credits, setCredits] = useState('');
     const [department, setDepartment] = useState('');
@@ -245,7 +246,7 @@ const SubjectManagement = ({ navigation, route }) => {
     }, [searchQuery, subjects]);
 
     const handleCreateOrUpdate = async () => {
-        if (!name || !code || !credits || !department || !year || !semester) {
+        if (!name || !shortName || !code || !credits || !department || !year || !semester) {
             Alert.alert('Error', 'Please fill all fields');
             return;
         }
@@ -254,6 +255,7 @@ const SubjectManagement = ({ navigation, route }) => {
         try {
             const subjectData = {
                 name,
+                shortName,
                 code,
                 credits: parseInt(credits),
                 department,
@@ -282,6 +284,7 @@ const SubjectManagement = ({ navigation, route }) => {
     const handleEdit = (sub) => {
         setEditId(sub._id);
         setName(sub.name);
+        setShortName(sub.shortName || '');
         setCode(sub.code);
         setCredits(sub.credits.toString());
         setDepartment(sub.department?._id || sub.department);
@@ -324,6 +327,7 @@ const SubjectManagement = ({ navigation, route }) => {
 
     const resetForm = () => {
         setName('');
+        setShortName('');
         setCode('');
         setCredits('');
         if (user?.role !== 'HOD') setDepartment('');
@@ -349,7 +353,7 @@ const SubjectManagement = ({ navigation, route }) => {
                 </View>
             </View>
 
-            <Text style={styles.subjectName}>{item.name}</Text>
+            <Text style={styles.subjectName}>{item.name} {item.shortName ? `(${item.shortName})` : ''}</Text>
 
             <View style={styles.infoGrid}>
                 <View style={styles.infoItem}>
@@ -444,6 +448,16 @@ const SubjectManagement = ({ navigation, route }) => {
                                     placeholder="e.g. Data Analysis"
                                     value={name}
                                     onChangeText={setName}
+                                />
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Short Name (Abbreviation)</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="e.g. DA"
+                                    value={shortName}
+                                    onChangeText={setShortName}
                                 />
                             </View>
 

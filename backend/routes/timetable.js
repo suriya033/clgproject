@@ -189,6 +189,45 @@ router.post('/save', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
 });
 
 // Get Timetable
+// Get classes for logged-in Staff
+router.get('/staff-classes', auth(['Staff', 'HOD']), async (req, res) => {
+    try {
+        const staffName = req.user.name;
+        // Fetch all timetables and populate department
+        const allTimetables = await TimeTable.find().populate('department', 'name');
+
+        const classesMap = new Map();
+
+        allTimetables.forEach(tt => {
+            if (!tt.schedule) return;
+
+            Object.values(tt.schedule).forEach(daySlots => {
+                daySlots.forEach(slot => {
+                    // Check if staff matches
+                    if (slot.staff === staffName) {
+                        const classKey = `${tt.department._id}-${tt.semester}-${tt.section}-${slot.subject}`;
+                        if (!classesMap.has(classKey)) {
+                            classesMap.set(classKey, {
+                                departmentId: tt.department._id,
+                                departmentName: tt.department.name,
+                                semester: tt.semester,
+                                section: tt.section,
+                                subjectName: slot.subject
+                            });
+                        }
+                    }
+                });
+            });
+        });
+
+        const classes = Array.from(classesMap.values());
+        res.json(classes);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 router.get('/:department/:semester/:section', auth(), async (req, res) => {
     try {
         const { department, semester, section } = req.params;

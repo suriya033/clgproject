@@ -5,6 +5,10 @@ const SubjectSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    shortName: {
+        type: String,
+        required: true
+    },
     code: {
         type: String,
         required: true,

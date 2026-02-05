@@ -195,9 +195,10 @@ const TimeTableGenerator = ({ navigation }) => {
 
             setDepartments(deptRes.data.map(d => ({ label: d.name, value: d._id })));
             setSubjectsList(subRes.data.map(s => ({
-                label: `${s.code} - ${s.name}`,
+                label: `${s.code} - ${s.name} ${s.shortName ? `(${s.shortName})` : ''}`,
                 value: s._id,
                 name: s.name,
+                shortName: s.shortName,
                 dept: s.department?._id || s.department,
                 year: s.year,
                 semester: s.semester
@@ -281,7 +282,7 @@ const TimeTableGenerator = ({ navigation }) => {
         const newEntry = {
             id: Date.now().toString(),
             subjectId: currentSubject.subjectId,
-            name: subObj.name,
+            name: subObj.shortName || subObj.name,
             staffId: currentSubject.staffId,
             staffName: staffObj.label,
             hoursPerWeek: currentSubject.hoursPerWeek

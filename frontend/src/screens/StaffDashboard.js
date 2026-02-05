@@ -38,7 +38,7 @@ const StaffDashboard = ({ navigation }) => {
     const managementLinks = [
         { id: '1', title: 'Mark Attendance', sub: 'Daily student logs', icon: <CheckSquare size={24} color="#800000" />, bg: '#ffe4e6' },
         { id: '2', title: 'Upload Notes', sub: 'Share study materials', icon: <FileText size={24} color="#0284c7" />, bg: '#e0f2fe' },
-        { id: '3', title: 'Internal Marks', sub: 'Manage grades', icon: <Award size={24} color="#f59e0b" />, bg: '#fffbeb' },
+        { id: '3', title: 'CIA Marks', sub: 'Manage grades', icon: <Award size={24} color="#f59e0b" />, bg: '#fffbeb' },
         { id: '4', title: 'Faculty Lounge', sub: 'Staff discussions', icon: <Users size={24} color="#7c3aed" />, bg: '#f5f3ff' },
     ];
 
@@ -110,7 +110,16 @@ const StaffDashboard = ({ navigation }) => {
                     <Text style={styles.sectionTitle}>Management</Text>
                     <View style={styles.menuList}>
                         {managementLinks.map(link => (
-                            <TouchableOpacity key={link.id} style={styles.menuItem} activeOpacity={0.7}>
+                            <TouchableOpacity
+                                key={link.id}
+                                style={styles.menuItem}
+                                activeOpacity={0.7}
+                                onPress={() => {
+                                    if (link.title === 'CIA Marks') {
+                                        navigation.navigate('StaffCIAMarks');
+                                    }
+                                }}
+                            >
                                 <View style={[styles.menuIconWrapper, { backgroundColor: link.bg }]}>
                                     {link.icon}
                                 </View>

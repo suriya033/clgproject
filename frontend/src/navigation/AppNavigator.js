@@ -30,6 +30,7 @@ import ClassManagement from '../screens/ClassManagement';
 import SubjectManagement from '../screens/SubjectManagement';
 import TimeTableGenerator from '../screens/TimeTableGenerator';
 import HODDashboard from '../screens/HODDashboard';
+import StaffCIAMarks from '../screens/StaffCIAMarks';
 
 const Stack = createStackNavigator();
 
@@ -75,7 +76,10 @@ const AppNavigator = () => {
                             <Stack.Screen name="StudentDashboard" component={StudentDashboard} />
                         )}
                         {user.role === 'Staff' && (
-                            <Stack.Screen name="StaffDashboard" component={StaffDashboard} />
+                            <>
+                                <Stack.Screen name="StaffDashboard" component={StaffDashboard} />
+                                <Stack.Screen name="StaffCIAMarks" component={StaffCIAMarks} />
+                            </>
                         )}
                         {user.role === 'HOD' && (
                             <>
@@ -85,7 +89,9 @@ const AppNavigator = () => {
                                 <Stack.Screen name="StaffManagement" component={StaffManagement} />
                                 <Stack.Screen name="StudentManagement" component={StudentManagement} />
                                 <Stack.Screen name="SubjectManagement" component={SubjectManagement} />
+                                <Stack.Screen name="SubjectManagement" component={SubjectManagement} />
                                 <Stack.Screen name="Announcements" component={NoticeManagement} />
+                                <Stack.Screen name="StaffCIAMarks" component={StaffCIAMarks} />
                             </>
                         )}
                         {user.role === 'Transport' && (
