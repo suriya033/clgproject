@@ -40,8 +40,9 @@ const app = express();
 const path = require('path');
 app.use(cors({
     origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'x-auth-token']
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'x-auth-token', 'Authorization'],
+    credentials: true
 }));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -51,6 +52,19 @@ app.get('/', (req, res) => {
     res.send('College Management API is running...');
 });
 
+// Health check endpoint for testing connectivity
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'OK',
+        message: 'Server is running',
+        timestamp: new Date().toISOString(),
+        port: PORT,
+        database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
+        dbState: mongoose.connection.readyState
+    });
+});
+
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
@@ -59,16 +73,32 @@ app.use('/api/sports', require('./routes/sports'));
 app.use('/api/hostel', require('./routes/hostel'));
 app.use('/api/transport', require('./routes/transport'));
 app.use('/api/timetable', require('./routes/timetable'));
+app.use('/api/marks', require('./routes/marks'));
+app.use('/api/attendance', require('./routes/attendance'));
+app.use('/api/requests', require('./routes/requests'));
+app.use('/api/bulk-leave', require('./routes/bulkLeave'));
 
 const PORT = process.env.PORT || 5002;
 const HOST = '0.0.0.0';
 
 console.log(`Attempting to start server on ${HOST}:${PORT}...`);
 
+const os = require('os');
 const server = app.listen(PORT, HOST, () => {
     console.log(`✅ Server running on port ${PORT}`);
     console.log(`   - Local:   http://localhost:${PORT}`);
-    console.log(`   - Network: http://10.18.126.88:${PORT}`);
+
+    // Get local network IP
+    const interfaces = os.networkInterfaces();
+    for (const devName in interfaces) {
+        const iface = interfaces[devName];
+        for (let i = 0; i < iface.length; i++) {
+            const alias = iface[i];
+            if (alias.family === 'IPv4' && alias.address !== '127.0.0.1' && !alias.internal) {
+                console.log(`   - Network: http://${alias.address}:${PORT}`);
+            }
+        }
+    }
 });
 
 server.on('error', (e) => {

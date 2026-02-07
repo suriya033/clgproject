@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
     StyleSheet,
     Text,
@@ -15,7 +15,8 @@ import {
     Platform,
     ScrollView
 } from 'react-native';
-import { ArrowLeft, Search, Plus, Trash2, X, ChevronRight, UserPlus, Camera, Image as ImageIcon, Edit2, Save, ChevronDown, Check } from 'lucide-react-native';
+import { AuthContext } from '../context/AuthContext';
+import { ArrowLeft, Search, Plus, Trash2, X, ChevronRight, UserPlus, Camera, Image as ImageIcon, Edit2, Save, ChevronDown, Check, TrendingUp } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import api from '../api/api';
 
@@ -135,8 +136,9 @@ const CustomDropdown = ({ label, value, options = [], onSelect, placeholder, ico
 };
 
 const UserManagement = ({ navigation, route }) => {
+    const { user: currentUser } = useContext(AuthContext);
     const roleFilter = route?.params?.roleFilter;
-    const departmentFilter = route?.params?.departmentFilter;
+    const departmentFilter = route?.params?.departmentFilter || (currentUser?.role === 'HOD' ? currentUser?.department : '');
     const yearFilter = route?.params?.yearFilter;
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -166,7 +168,9 @@ const UserManagement = ({ navigation, route }) => {
         community: '',
         address: '',
         bloodGroup: '',
-        admissionType: 'Counselling'
+        admissionType: 'Counselling',
+        section: '',
+        semester: ''
     });
 
     useEffect(() => {
@@ -363,16 +367,32 @@ const UserManagement = ({ navigation, route }) => {
                         <View style={[styles.roleBadgeSmall, { backgroundColor: item.role === 'Student' ? '#ffe4e6' : '#f0fdf4' }]}>
                             <Text style={[styles.roleBadgeTextSmall, { color: item.role === 'Student' ? '#800000' : '#10b981' }]}>{item.role}</Text>
                         </View>
+                        {item.isCoordinator && (
+                            <View style={[styles.roleBadgeSmall, { backgroundColor: '#fef3c7', marginLeft: 4 }]}>
+                                <Text style={[styles.roleBadgeTextSmall, { color: '#d97706' }]}>Coordinator</Text>
+                            </View>
+                        )}
                     </View>
                     <Text style={styles.userIdText}>ID: {item.userId}</Text>
                     {item.department && (
                         <Text style={styles.userDeptText}>{item.department}</Text>
                     )}
                     <Text style={styles.userEmail}>{item.email}</Text>
+
+                    <TouchableOpacity
+                        style={styles.viewDetailsButton}
+                        onPress={() => handleUserClick(item)}
+                        activeOpacity={0.6}
+                    >
+                        <Text style={styles.viewDetailsText}>View Full Details</Text>
+                        <ChevronRight size={14} color="#800000" />
+                    </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={() => handleDeleteUser(item._id)} style={styles.deleteButton}>
-                    <Trash2 size={20} color="#ef4444" />
-                </TouchableOpacity>
+                {(currentUser?.role === 'Admin' || (currentUser?.role === 'HOD' && item.department === currentUser.department)) && (
+                    <TouchableOpacity onPress={() => handleDeleteUser(item._id)} style={styles.deleteButton}>
+                        <Trash2 size={20} color="#ef4444" />
+                    </TouchableOpacity>
+                )}
             </View>
         </TouchableOpacity>
     );
@@ -450,7 +470,7 @@ const UserManagement = ({ navigation, route }) => {
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>{isEditing ? 'Edit Details' : 'User Details'}</Text>
                             <View style={styles.headerActions}>
-                                {!isEditing && (
+                                {!isEditing && selectedUser && (currentUser?.role === 'Admin' || (currentUser?.role === 'HOD' && selectedUser?.department === currentUser?.department)) && (
                                     <TouchableOpacity onPress={handleEditToggle} style={styles.editButton}>
                                         <Edit2 size={20} color="#800000" />
                                     </TouchableOpacity>
@@ -460,6 +480,7 @@ const UserManagement = ({ navigation, route }) => {
                                 </TouchableOpacity>
                             </View>
                         </View>
+
 
                         {selectedUser && (
                             <ScrollView showsVerticalScrollIndicator={false}>
@@ -518,6 +539,7 @@ const UserManagement = ({ navigation, route }) => {
                                                         onSelect={(val) => setEditFormData({ ...editFormData, year: val })}
                                                         placeholder="Select Academic Year"
                                                     />
+                                                    <EditItem label="Section" value={editFormData.section} onChange={(text) => setEditFormData({ ...editFormData, section: text })} />
                                                 </>
                                             )}
                                             <EditItem label="Contact" value={editFormData.contact} onChange={(text) => setEditFormData({ ...editFormData, contact: text })} />
@@ -542,9 +564,23 @@ const UserManagement = ({ navigation, route }) => {
                                                 <>
                                                     <DetailItem label="Branch" value={selectedUser.branch || 'Not specified'} />
                                                     <DetailItem label="Year" value={selectedUser.year || 'Not specified'} />
+                                                    <DetailItem label="Section" value={selectedUser.section || 'Not specified'} />
                                                 </>
                                             )}
                                             <DetailItem label="Contact" value={selectedUser.contact || 'Not specified'} />
+
+                                            {selectedUser.role === 'Student' && (
+                                                <TouchableOpacity
+                                                    style={styles.performanceBtn}
+                                                    onPress={() => {
+                                                        setDetailModalVisible(false);
+                                                        navigation.navigate('StudentProfileView', { studentId: selectedUser._id });
+                                                    }}
+                                                >
+                                                    <TrendingUp size={20} color="#fff" />
+                                                    <Text style={styles.performanceBtnText}>View Detailed Performance</Text>
+                                                </TouchableOpacity>
+                                            )}
                                         </>
                                     )}
                                 </View>
@@ -726,6 +762,28 @@ const UserManagement = ({ navigation, route }) => {
                                         onSelect={(val) => setNewUser({ ...newUser, year: val })}
                                         placeholder="Select Academic Year"
                                     />
+
+                                    <View style={styles.inputGroup}>
+                                        <Text style={styles.label}>Section</Text>
+                                        <TextInput
+                                            style={styles.input}
+                                            value={newUser.section}
+                                            onChangeText={(text) => setNewUser({ ...newUser, section: text })}
+                                            placeholder="Enter Section (e.g., A, B)"
+                                            autoCapitalize="characters"
+                                        />
+                                    </View>
+
+                                    <View style={styles.inputGroup}>
+                                        <Text style={styles.label}>Semester</Text>
+                                        <TextInput
+                                            style={styles.input}
+                                            value={newUser.semester}
+                                            onChangeText={(text) => setNewUser({ ...newUser, semester: text })}
+                                            placeholder="Enter Semester (e.g., 1, 2)"
+                                            keyboardType="numeric"
+                                        />
+                                    </View>
 
                                     <View style={styles.inputGroup}>
                                         <Text style={styles.label}>Residency Type</Text>
@@ -922,9 +980,27 @@ const styles = StyleSheet.create({
         marginBottom: 2,
     },
     deleteButton: {
-        padding: 8,
+        padding: 10,
         borderRadius: 12,
         backgroundColor: '#fee2e2',
+    },
+    viewDetailsButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 10,
+        backgroundColor: '#fff5f5',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 8,
+        alignSelf: 'flex-start',
+        borderWidth: 1,
+        borderColor: '#ffe4e6',
+    },
+    viewDetailsText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#800000',
+        marginRight: 4,
     },
     fab: {
         position: 'absolute',
@@ -1211,6 +1287,26 @@ const styles = StyleSheet.create({
     selectedOptionText: {
         color: '#800000',
         fontWeight: '700',
+    },
+    performanceBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#800000',
+        paddingVertical: 14,
+        borderRadius: 16,
+        marginTop: 25,
+        gap: 10,
+        elevation: 4,
+        shadowColor: '#800000',
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+    },
+    performanceBtnText: {
+        color: '#fff',
+        fontSize: 15,
+        fontWeight: '800',
     },
 });
 

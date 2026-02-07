@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const TimeTable = require('../models/TimeTable');
+const Announcement = require('../models/Announcement');
+const Department = require('../models/Department');
 const auth = require('../middleware/auth');
 
 // Generate Timetable (AI/Algorithmic)
@@ -27,10 +29,11 @@ router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
             '10:40 - 11:00 (Break)',
             '11:00 - 11:50',
             '11:50 - 12:40',
-            '12:40 - 01:30 (Lunch)',
-            '01:30 - 02:20',
-            '02:20 - 03:10',
-            '03:10 - 04:00'
+            '12:40 - 13:30 (Lunch)',
+            '13:30 - 14:20',
+            '14:20 - 15:10',
+            '15:10 - 16:00',
+            '16:00 - 16:50'
         ];
 
         // Initialize structures for each class
@@ -40,7 +43,8 @@ router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
             schedule: {},
             lastSubject: null,
             dailyLimits: {},
-            tasks: []
+            theoryTasks: [],
+            practicalTasks: []
         }));
 
         // Global staff tracker: { day: { slotIndex: Set([staffId/Name]) } }
@@ -48,107 +52,183 @@ router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
         activeDays.forEach(day => {
             globalStaffBusy[day] = timeSlots.map(() => new Set());
             results.forEach(r => {
-                r.schedule[day] = [];
+                r.schedule[day] = timeSlots.map((slotTime, idx) => {
+                    const isFixed = slotTime.includes('Break') || slotTime.includes('Lunch');
+                    return {
+                        startTime: slotTime.split(' - ')[0],
+                        endTime: slotTime.split(' - ')[1],
+                        subject: isFixed ? (slotTime.includes('Break') ? 'Break' : 'Lunch') : null,
+                        staff: isFixed ? '-' : null,
+                        isFixed
+                    };
+                });
                 r.dailyLimits[day] = {};
             });
         });
 
-        // Prepare tasks for each class with priority
+        // Prepare tasks
         results.forEach(r => {
             r.subjects.forEach(sub => {
-                const hours = parseInt(sub.hoursPerWeek) || 3;
-                for (let i = 0; i < hours; i++) {
-                    r.tasks.push({
-                        name: sub.name,
-                        subjectId: sub.subjectId,
-                        staff: sub.staffName || sub.staffId || 'TBD',
-                        staffId: sub.staffId
-                    });
+                const totalHours = parseInt(sub.hoursPerWeek) || 3;
+                const duration = parseInt(sub.duration) || 1;
+
+                if (sub.type === 'Practical' && duration > 1) {
+                    // Create blocks for Practicals
+                    let hoursRemaining = totalHours;
+                    while (hoursRemaining >= duration) {
+                        r.practicalTasks.push({
+                            name: sub.name,
+                            subjectId: sub.subjectId,
+                            staff: sub.staffName || sub.staffId || 'TBD',
+                            staffId: sub.staffId,
+                            duration: duration
+                        });
+                        hoursRemaining -= duration;
+                    }
+                    // Any leftover stays as single hours
+                    for (let i = 0; i < hoursRemaining; i++) {
+                        r.theoryTasks.push({
+                            name: sub.name,
+                            subjectId: sub.subjectId,
+                            staff: sub.staffName || sub.staffId || 'TBD',
+                            staffId: sub.staffId
+                        });
+                    }
+                } else {
+                    for (let i = 0; i < totalHours; i++) {
+                        r.theoryTasks.push({
+                            name: sub.name,
+                            subjectId: sub.subjectId,
+                            staff: sub.staffName || sub.staffId || 'TBD',
+                            staffId: sub.staffId
+                        });
+                    }
                 }
             });
-            // Shuffle tasks initially
-            r.tasks.sort(() => Math.random() - 0.5);
+            // Shuffle initially
+            r.theoryTasks.sort(() => Math.random() - 0.5);
+            r.practicalTasks.sort(() => Math.random() - 0.5);
         });
 
-        // Fill slots day by day, slot by slot across ALL classes
-        for (const day of activeDays) {
-            timeSlots.forEach((slotTime, slotIndex) => {
-                if (slotTime.includes('Break') || slotTime.includes('Lunch')) {
-                    results.forEach(r => {
-                        r.schedule[day].push({
-                            startTime: slotTime.split(' - ')[0],
-                            endTime: slotTime.split(' - ')[1],
-                            subject: slotTime.includes('Break') ? 'Break' : 'Lunch',
-                            staff: '-',
-                            isFixed: true
-                        });
-                        r.lastSubject = null;
-                    });
-                    return;
+        // 1. PLACE PRACTICAL BLOCKS (Strategic Placement)
+        activeDays.forEach(day => {
+            const shuffledResults = [...results].sort(() => Math.random() - 0.5);
+
+            shuffledResults.forEach(r => {
+                if (r.practicalTasks.length === 0) return;
+
+                // Priority: One practical per day per class
+                const taskIdx = r.practicalTasks.findIndex(t => !r.dailyLimits[day][t.name]);
+                if (taskIdx === -1) return;
+
+                const task = r.practicalTasks[taskIdx];
+                const duration = task.duration;
+
+                // Strategic Scan: Prefer afternoon (after lunch) for labs, then morning
+                const preferredStartIndices = [
+                    ...Array.from({ length: timeSlots.length - 6 }, (_, i) => i + 6), // Post-lunch indices
+                    ...Array.from({ length: 6 }, (_, i) => i) // Morning indices
+                ].filter(idx => idx <= timeSlots.length - duration);
+
+                for (const startIdx of preferredStartIndices) {
+                    let canFit = true;
+                    let actualIndices = [];
+                    let currentIndex = startIdx;
+
+                    while (actualIndices.length < duration && currentIndex < timeSlots.length) {
+                        const slot = r.schedule[day][currentIndex];
+                        const staffBusy = globalStaffBusy[day][currentIndex].has(task.staff);
+
+                        if (slot.isFixed) {
+                            if (slot.subject === 'Lunch') {
+                                canFit = false;
+                                break;
+                            }
+                            currentIndex++;
+                            continue;
+                        }
+
+                        if (slot.subject || staffBusy) {
+                            canFit = false;
+                            break;
+                        }
+
+                        actualIndices.push(currentIndex);
+                        currentIndex++;
+                    }
+
+                    if (canFit && actualIndices.length === duration) {
+                        const finalEndIdx = actualIndices[actualIndices.length - 1];
+                        for (let i = startIdx; i <= finalEndIdx; i++) {
+                            const currentSlot = r.schedule[day][i];
+                            if (currentSlot.isFixed) {
+                                globalStaffBusy[day][i].add(task.staff);
+                                continue;
+                            }
+                            currentSlot.subject = task.name;
+                            currentSlot.staff = task.staff;
+                            currentSlot.room = 'Lab';
+                            globalStaffBusy[day][i].add(task.staff);
+                        }
+                        r.dailyLimits[day][task.name] = (r.dailyLimits[day][task.name] || 0) + 1;
+                        r.practicalTasks.splice(taskIdx, 1);
+                        break;
+                    }
                 }
+            });
+        });
 
-                const busyInThisSlot = globalStaffBusy[day][slotIndex];
+        // 2. FILL THEORY (Balanced Distribution Across Remaining Slots)
+        for (const day of activeDays) {
+            // Process slots sequentially
+            for (let slotIndex = 0; slotIndex < timeSlots.length; slotIndex++) {
+                if (results[0].schedule[day][slotIndex].isFixed) continue;
 
-                // Shuffle results order each slot to give each class a fair chance at staff
                 const shuffledIndices = results.map((_, i) => i).sort(() => Math.random() - 0.5);
-
                 shuffledIndices.forEach(idx => {
                     const r = results[idx];
+                    if (r.schedule[day][slotIndex].subject) return;
 
-                    // Filter tasks that satisfy STRICT constraints:
-                    // 1. Staff not already busy in ANOTHER class this slot
-                    // 2. Not same as last subject (STRICTLY no back-to-back)
-                    // 3. Not already scheduled more than twice this day (STRICTLY max 2)
+                    const busyInThisSlot = globalStaffBusy[day][slotIndex];
 
-                    const validCandidateIndices = [];
-                    r.tasks.forEach((t, tIdx) => {
+                    // Priority: Theory subjects with THE MOST remaining tasks first
+                    r.theoryTasks.sort((a, b) => {
+                        const countA = r.theoryTasks.filter(t => t.name === a.name).length;
+                        const countB = r.theoryTasks.filter(t => t.name === b.name).length;
+                        return countB - countA;
+                    });
+
+                    const taskIdx = r.theoryTasks.findIndex(t => {
                         const isConsecutive = t.name === r.lastSubject;
                         const dailyCount = r.dailyLimits[day][t.name] || 0;
                         const staffBusy = busyInThisSlot.has(t.staff);
-
-                        if (!isConsecutive && dailyCount < 2 && !staffBusy) {
-                            validCandidateIndices.push(tIdx);
-                        }
+                        return !isConsecutive && dailyCount < 2 && !staffBusy;
                     });
 
-                    if (validCandidateIndices.length > 0) {
-                        // Pick a random task from pool of valid candidates
-                        const randomIndex = Math.floor(Math.random() * validCandidateIndices.length);
-                        const taskIdx = validCandidateIndices[randomIndex];
-                        const task = r.tasks[taskIdx];
-
-                        r.schedule[day].push({
-                            startTime: slotTime.split(' - ')[0],
-                            endTime: slotTime.split(' - ')[1],
-                            subject: task.name,
-                            staff: task.staff,
-                            room: 'Room 101'
-                        });
+                    if (taskIdx !== -1) {
+                        const task = r.theoryTasks[taskIdx];
+                        r.schedule[day][slotIndex].subject = task.name;
+                        r.schedule[day][slotIndex].staff = task.staff;
+                        r.schedule[day][slotIndex].room = 'Room 101';
 
                         r.lastSubject = task.name;
                         r.dailyLimits[day][task.name] = (r.dailyLimits[day][task.name] || 0) + 1;
                         busyInThisSlot.add(task.staff);
-                        r.tasks.splice(taskIdx, 1);
+                        r.theoryTasks.splice(taskIdx, 1);
                     } else {
-                        // If no subject meets strict criteria, assign a Free period
-                        r.schedule[day].push({
-                            startTime: slotTime.split(' - ')[0],
-                            endTime: slotTime.split(' - ')[1],
-                            subject: 'Free',
-                            staff: '-',
-                            room: '-'
-                        });
-                        r.lastSubject = 'Free';
+                        r.schedule[day][slotIndex].subject = 'Free';
+                        r.schedule[day][slotIndex].staff = '-';
+                        r.schedule[day][slotIndex].room = '-';
                     }
                 });
-            });
+            }
         }
 
         if (classes) {
             res.json(results.map(r => ({
                 metadata: r.metadata,
                 schedule: r.schedule,
-                subjects: r.subjects // Return subjects for display
+                subjects: r.subjects
             })));
         } else {
             res.json(results[0].schedule);
@@ -160,6 +240,7 @@ router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
     }
 });
 
+
 // Save Timetable
 router.post('/save', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
     try {
@@ -170,15 +251,32 @@ router.post('/save', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
 
         if (timetable) {
             timetable.schedule = schedule;
+            timetable.createdBy = req.user.id;
             await timetable.save();
         } else {
             timetable = new TimeTable({
                 department,
                 semester,
                 section,
-                schedule
+                schedule,
+                createdBy: req.user.id
             });
             await timetable.save();
+        }
+
+        // Create an announcement for the staff
+        try {
+            const deptObj = await Department.findById(department);
+            const announcement = new Announcement({
+                title: 'Timetable Updated',
+                content: `New timetable published for ${deptObj?.name || 'Department'}, ${semester} - Sec ${section}.`,
+                targetRoles: ['Staff', 'HOD'],
+                department: deptObj?.name || 'All',
+                createdBy: req.user.id
+            });
+            await announcement.save();
+        } catch (noticeErr) {
+            console.error('Failed to create announcement:', noticeErr);
         }
 
         res.json({ message: 'Timetable saved successfully', timetable });
@@ -188,12 +286,10 @@ router.post('/save', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
     }
 });
 
-// Get Timetable
-// Get classes for logged-in Staff
+// Get classes for logged-in Staff (used for CIA marks etc)
 router.get('/staff-classes', auth(['Staff', 'HOD']), async (req, res) => {
     try {
         const staffName = req.user.name;
-        // Fetch all timetables and populate department
         const allTimetables = await TimeTable.find().populate('department', 'name');
 
         const classesMap = new Map();
@@ -203,13 +299,12 @@ router.get('/staff-classes', auth(['Staff', 'HOD']), async (req, res) => {
 
             Object.values(tt.schedule).forEach(daySlots => {
                 daySlots.forEach(slot => {
-                    // Check if staff matches
                     if (slot.staff === staffName) {
-                        const classKey = `${tt.department._id}-${tt.semester}-${tt.section}-${slot.subject}`;
+                        const classKey = `${tt.department?._id}-${tt.semester}-${tt.section}-${slot.subject}`;
                         if (!classesMap.has(classKey)) {
                             classesMap.set(classKey, {
-                                departmentId: tt.department._id,
-                                departmentName: tt.department.name,
+                                departmentId: tt.department?._id,
+                                departmentName: tt.department?.name || 'Unknown',
                                 semester: tt.semester,
                                 section: tt.section,
                                 subjectName: slot.subject
@@ -222,6 +317,50 @@ router.get('/staff-classes', auth(['Staff', 'HOD']), async (req, res) => {
 
         const classes = Array.from(classesMap.values());
         res.json(classes);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+// Get consolidated weekly schedule for logged-in Staff
+router.get('/my-schedule', auth(['Staff', 'HOD']), async (req, res) => {
+    try {
+        const staffName = req.user.name;
+        const allTimetables = await TimeTable.find().populate('department', 'name');
+
+        const schedule = {
+            Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [], Saturday: []
+        };
+
+        allTimetables.forEach(tt => {
+            if (!tt.schedule) return;
+            Object.keys(tt.schedule).forEach(day => {
+                if (schedule[day]) {
+                    tt.schedule[day].forEach(slot => {
+                        if (slot.staff === staffName) {
+                            schedule[day].push({
+                                ...slot.toObject ? slot.toObject() : slot,
+                                department: tt.department?.name || 'Unknown',
+                                semester: tt.semester,
+                                section: tt.section
+                            });
+                        }
+                    });
+                }
+            });
+        });
+
+        // Sort each day's slots by startTime
+        Object.keys(schedule).forEach(day => {
+            schedule[day].sort((a, b) => {
+                const timeA = a.startTime || "";
+                const timeB = b.startTime || "";
+                return timeA.localeCompare(timeB);
+            });
+        });
+
+        res.json(schedule);
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server Error' });

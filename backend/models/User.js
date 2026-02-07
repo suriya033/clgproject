@@ -40,6 +40,14 @@ const UserSchema = new mongoose.Schema({
     mobileNo: String,
     branch: String,
     year: String,
+    semester: {
+        type: String,
+        default: '1'
+    },
+    section: {
+        type: String,
+        default: 'A'
+    },
     residencyType: {
         type: String,
         enum: ['Day Scholar', 'Hosteller'],
@@ -57,6 +65,15 @@ const UserSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+    isCoordinator: {
+        type: Boolean,
+        default: false
+    },
+    coordinatorDetails: {
+        department: String,
+        semester: String,
+        section: String
     }
 }, { timestamps: true });
 

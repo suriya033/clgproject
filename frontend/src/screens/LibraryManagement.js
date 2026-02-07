@@ -15,7 +15,7 @@ import {
     ScrollView,
     Image
 } from 'react-native';
-import { ArrowLeft, Search, Plus, Trash2, X, BookOpen, Library, Users, LogOut, RotateCcw, Calendar, CheckCircle, Edit2 } from 'lucide-react-native';
+import { ArrowLeft, Search, Plus, Trash2, X, BookOpen, Library, Users, LogOut, RotateCcw, Calendar, CheckCircle, Edit2, Menu } from 'lucide-react-native';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/api';
 
@@ -356,7 +356,9 @@ const LibraryManagement = ({ navigation }) => {
                             <ArrowLeft size={24} color="#fff" />
                         </TouchableOpacity>
                     ) : (
-                        <View style={{ width: 40 }} />
+                        <TouchableOpacity onPress={() => navigation.openDrawer()} style={styles.backButton}>
+                            <Menu size={24} color="#fff" />
+                        </TouchableOpacity>
                     )}
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Image
@@ -380,14 +382,6 @@ const LibraryManagement = ({ navigation }) => {
                                 style={[styles.backButton, { marginRight: 10 }]}
                             >
                                 <Users size={22} color="#fff" />
-                            </TouchableOpacity>
-                        )}
-                        {currentUser?.role === 'Library' && (
-                            <TouchableOpacity
-                                onPress={logout}
-                                style={[styles.backButton, { marginRight: 10 }]}
-                            >
-                                <LogOut size={22} color="#fff" />
                             </TouchableOpacity>
                         )}
                     </View>

@@ -30,6 +30,15 @@ const SubjectSchema = new mongoose.Schema({
     credits: {
         type: Number,
         default: 3
+    },
+    type: {
+        type: String,
+        enum: ['Theory', 'Practical'],
+        default: 'Theory'
+    },
+    duration: {
+        type: Number,
+        default: 1 // Default to 1 period
     }
 }, { timestamps: true });
 

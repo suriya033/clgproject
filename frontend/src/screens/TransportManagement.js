@@ -31,7 +31,8 @@ import {
 
     UserPlus,
     Edit2,
-    RefreshCw
+    RefreshCw,
+    Menu
 } from 'lucide-react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -78,7 +79,9 @@ const TransportManagement = ({ navigation }) => {
 
     useEffect(() => {
         fetchBuses();
-        fetchDrivers();
+        if (currentUser?.role === 'Admin' || currentUser?.role === 'Transport') {
+            fetchDrivers();
+        }
     }, []);
 
     const fetchDrivers = async () => {
@@ -403,7 +406,9 @@ const TransportManagement = ({ navigation }) => {
                             <ChevronLeft size={24} color="#fff" />
                         </TouchableOpacity>
                     ) : (
-                        <View style={{ width: 40 }} />
+                        <TouchableOpacity onPress={() => navigation.openDrawer()} style={styles.iconButton}>
+                            <Menu size={24} color="#fff" />
+                        </TouchableOpacity>
                     )}
                     <Text style={styles.headerTitle}>Transport Portal</Text>
                     <View style={{ flexDirection: 'row' }}>
@@ -415,37 +420,33 @@ const TransportManagement = ({ navigation }) => {
                                 <Users size={22} color="#fff" />
                             </TouchableOpacity>
                         )}
-                        {currentUser?.role === 'Transport' && (
+                        {(currentUser?.role === 'Admin' || currentUser?.role === 'Transport') && (
                             <TouchableOpacity
-                                style={[styles.iconButton, { marginRight: 10 }]}
-                                onPress={logout}
+                                style={styles.iconButton}
+                                onPress={() => activeTab === 'buses' ? openCreateModal() : setDriverModalVisible(true)}
                             >
-                                <LogOut size={22} color="#fff" />
+                                <Plus size={24} color="#fff" />
                             </TouchableOpacity>
                         )}
-                        <TouchableOpacity
-                            style={styles.iconButton}
-                            onPress={() => activeTab === 'buses' ? openCreateModal() : setDriverModalVisible(true)}
-                        >
-                            <Plus size={24} color="#fff" />
-                        </TouchableOpacity>
                     </View>
                 </View>
 
-                <View style={styles.tabContainer}>
-                    <TouchableOpacity
-                        style={[styles.tab, activeTab === 'buses' && styles.activeTab]}
-                        onPress={() => setActiveTab('buses')}
-                    >
-                        <Text style={[styles.tabText, activeTab === 'buses' && styles.activeTabText]}>Buses</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.tab, activeTab === 'drivers' && styles.activeTab]}
-                        onPress={() => setActiveTab('drivers')}
-                    >
-                        <Text style={[styles.tabText, activeTab === 'drivers' && styles.activeTabText]}>Drivers</Text>
-                    </TouchableOpacity>
-                </View>
+                {(currentUser?.role === 'Admin' || currentUser?.role === 'Transport') && (
+                    <View style={styles.tabContainer}>
+                        <TouchableOpacity
+                            style={[styles.tab, activeTab === 'buses' && styles.activeTab]}
+                            onPress={() => setActiveTab('buses')}
+                        >
+                            <Text style={[styles.tabText, activeTab === 'buses' && styles.activeTabText]}>Buses</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.tab, activeTab === 'drivers' && styles.activeTab]}
+                            onPress={() => setActiveTab('drivers')}
+                        >
+                            <Text style={[styles.tabText, activeTab === 'drivers' && styles.activeTabText]}>Drivers</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
 
                 <View style={styles.searchContainer}>
                     <Search size={20} color="rgba(255,255,255,0.6)" style={styles.searchIcon} />

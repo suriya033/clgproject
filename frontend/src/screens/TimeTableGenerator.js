@@ -164,7 +164,8 @@ const TimeTableGenerator = ({ navigation }) => {
     const [currentSubject, setCurrentSubject] = useState({
         subjectId: '',
         staffId: '',
-        hoursPerWeek: '4'
+        hoursPerWeek: '4',
+        duration: '1'
     });
 
     // Added subjects list
@@ -201,7 +202,9 @@ const TimeTableGenerator = ({ navigation }) => {
                 shortName: s.shortName,
                 dept: s.department?._id || s.department,
                 year: s.year,
-                semester: s.semester
+                semester: s.semester,
+                type: s.type || 'Theory',
+                duration: s.duration || 1
             })));
             setStaffList(staffRes.data
                 .filter(u => u.role === 'Staff' || u.role === 'HOD')
@@ -266,7 +269,7 @@ const TimeTableGenerator = ({ navigation }) => {
     // Reset current subject if filters change and it's no longer in the list
     useEffect(() => {
         if (currentSubject.subjectId && !filteredSubjectsList.find(s => s.value === currentSubject.subjectId)) {
-            setCurrentSubject(prev => ({ ...prev, subjectId: '' }));
+            setCurrentSubject(prev => ({ ...prev, subjectId: '', duration: '1' }));
         }
     }, [selectedDept, selectedYear, semester]);
 
@@ -285,11 +288,13 @@ const TimeTableGenerator = ({ navigation }) => {
             name: subObj.shortName || subObj.name,
             staffId: currentSubject.staffId,
             staffName: staffObj.label,
-            hoursPerWeek: currentSubject.hoursPerWeek
+            hoursPerWeek: currentSubject.hoursPerWeek,
+            type: subObj.type,
+            duration: parseInt(currentSubject.duration)
         };
 
         setAddedSubjects([...addedSubjects, newEntry]);
-        setCurrentSubject({ subjectId: '', staffId: '', hoursPerWeek: '4' });
+        setCurrentSubject({ subjectId: '', staffId: '', hoursPerWeek: '4', duration: '1' });
     };
 
     const removeSubject = (id) => {
@@ -374,7 +379,7 @@ const TimeTableGenerator = ({ navigation }) => {
         setSelectedYear('');
         setSemester('');
         setSection('');
-        setCurrentSubject({ subjectId: '', staffId: '', hoursPerWeek: '4' });
+        setCurrentSubject({ subjectId: '', staffId: '', hoursPerWeek: '4', duration: '1' });
 
         Alert.alert('Success', 'Class added to batch. You can enter another or click Submit to generate all.');
     };
@@ -500,16 +505,87 @@ const TimeTableGenerator = ({ navigation }) => {
         </TouchableOpacity>
     );
 
-    const renderDaySchedule = (day, slots) => (
-        <View key={day} style={styles.daySection}>
-            <LinearGradient colors={['#f8fafc', '#f1f5f9']} style={styles.dayHeader}>
-                <Text style={styles.dayTitle}>{day}</Text>
-            </LinearGradient>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.slotsRow}>
-                {slots.map((slot, index) => renderSlot(slot, index, day))}
-            </ScrollView>
-        </View>
-    );
+    const groupSlots = (slots) => {
+        if (!slots || slots.length === 0) return [];
+        const groups = [];
+        let currentGroup = null;
+
+        slots.forEach((slot, idx) => {
+            // Determine if this slot should be merged with the previous one
+            const isPracticalBlock = slot.subject !== 'Free' && !slot.isFixed &&
+                currentGroup &&
+                currentGroup.subject === slot.subject &&
+                currentGroup.staff === slot.staff;
+
+            // Also check for Breaks in between the same subject
+            const isBreakInsideBlock = slot.subject === 'Break' &&
+                idx > 0 && idx < slots.length - 1 &&
+                slots[idx - 1].subject === slots[idx + 1].subject &&
+                slots[idx - 1].staff === slots[idx + 1].staff &&
+                slots[idx - 1].subject !== 'Free' && !slots[idx - 1].isFixed;
+
+            if (isPracticalBlock || isBreakInsideBlock) {
+                currentGroup.endTime = slot.endTime;
+                currentGroup.slots.push({ ...slot, originalIndex: idx });
+                if (isBreakInsideBlock) currentGroup.hasBreak = true;
+            } else {
+                currentGroup = {
+                    ...slot,
+                    slots: [{ ...slot, originalIndex: idx }],
+                    hasBreak: false
+                };
+                groups.push(currentGroup);
+            }
+        });
+        return groups;
+    };
+
+    const renderDaySchedule = (day, slots) => {
+        const groupedSlots = groupSlots(slots);
+        return (
+            <View key={day} style={styles.daySection}>
+                <LinearGradient colors={['#f8fafc', '#f1f5f9']} style={styles.dayHeader}>
+                    <Text style={styles.dayTitle}>{day}</Text>
+                </LinearGradient>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.slotsRow}>
+                    {groupedSlots.map((group, index) => (
+                        <TouchableOpacity
+                            key={index}
+                            style={[
+                                styles.slotCard,
+                                group.isFixed && styles.fixedSlot,
+                                group.slots.length > 1 && { width: 145 + (group.slots.length - 1) * 40, borderColor: '#800000', borderWidth: 1.5, backgroundColor: '#fffcfc' }
+                            ]}
+                            onPress={() => !group.isFixed && openEditSlot(day, group.slots[0].originalIndex, group)}
+                            activeOpacity={group.isFixed ? 1 : 0.7}
+                        >
+                            <View style={styles.slotHeader}>
+                                <Clock size={12} color={group.slots.length > 1 ? "#800000" : "#64748b"} />
+                                <Text style={[styles.timeText, group.slots.length > 1 && { color: '#800000' }]}>
+                                    {group.startTime} - {group.endTime}
+                                </Text>
+                            </View>
+                            <Text style={[styles.subjectText, group.isFixed && { color: '#94a3b8' }]} numberOfLines={1}>
+                                {group.subject}
+                            </Text>
+                            {group.staff !== '-' && (
+                                <View style={styles.staffRow}>
+                                    <Users size={12} color="#94a3b8" />
+                                    <Text style={styles.staffText} numberOfLines={1}>{group.staff}</Text>
+                                </View>
+                            )}
+                            {group.slots.length > 1 && (
+                                <View style={styles.spanBadge}>
+                                    <Text style={styles.spanBadgeText}>{group.slots.filter(s => !s.isFixed).length} Periods</Text>
+                                </View>
+                            )}
+                            {!group.isFixed && <Edit3 size={12} color="#cbd5e1" style={{ position: 'absolute', bottom: 8, right: 8 }} />}
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
+        );
+    };
 
     // Options for edit modal
     const editOptions = [
@@ -591,7 +667,16 @@ const TimeTableGenerator = ({ navigation }) => {
                                     label="Subject"
                                     value={currentSubject.subjectId}
                                     options={filteredSubjectsList}
-                                    onSelect={(val) => setCurrentSubject({ ...currentSubject, subjectId: val })}
+                                    onSelect={(val) => {
+                                        const sub = subjectsList.find(s => s.value === val);
+                                        const defaultDur = sub?.duration || 2;
+                                        setCurrentSubject({
+                                            ...currentSubject,
+                                            subjectId: val,
+                                            duration: sub?.type === 'Practical' ? String(defaultDur) : '1',
+                                            hoursPerWeek: sub?.type === 'Practical' ? String(defaultDur) : currentSubject.hoursPerWeek
+                                        });
+                                    }}
                                     placeholder={selectedDept && selectedYear && semester ? "Select Subject" : "Fill class info details"}
                                     icon={BookOpen}
                                 />
@@ -599,10 +684,42 @@ const TimeTableGenerator = ({ navigation }) => {
                                     label="Staff"
                                     value={currentSubject.staffId}
                                     options={staffList}
-                                    onSelect={(val) => setCurrentSubject({ ...currentSubject, staffId: val })}
+                                    onSelect={(val) => {
+                                        setCurrentSubject({ ...currentSubject, staffId: val });
+                                    }}
                                     placeholder="Select Staff"
                                     icon={Users}
                                 />
+                                {currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical' && (
+                                    <View style={{ marginBottom: 15 }}>
+                                        <CustomDropdown
+                                            label="Continuous Periods (Practical)"
+                                            value={currentSubject.duration}
+                                            options={[
+                                                { label: '2 Periods', value: '2' },
+                                                { label: '3 Periods', value: '3' },
+                                                { label: '4 Periods', value: '4' }
+                                            ]}
+                                            onSelect={(val) => setCurrentSubject({
+                                                ...currentSubject,
+                                                duration: val,
+                                                hoursPerWeek: val // Auto-sync hours with duration for typical lab use
+                                            })}
+                                            placeholder="Select Duration"
+                                            icon={Clock}
+                                        />
+                                        <View style={styles.practicalInfo}>
+                                            <Sparkles size={16} color="#0891b2" />
+                                            <Text style={styles.practicalInfoText}>
+                                                {parseInt(currentSubject.hoursPerWeek) >= parseInt(currentSubject.duration) ? (
+                                                    `Logic: ${Math.floor(parseInt(currentSubject.hoursPerWeek) / parseInt(currentSubject.duration))} Block(s) of ${currentSubject.duration} continuous periods will be scheduled.`
+                                                ) : (
+                                                    `Warning: Total hours (${currentSubject.hoursPerWeek}) is less than block duration (${currentSubject.duration}).`
+                                                )}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                )}
                                 <View style={styles.row}>
                                     <View style={{ flex: 1 }}>
                                         <Text style={styles.inputLabel}>Total Hours / Week</Text>
@@ -631,10 +748,18 @@ const TimeTableGenerator = ({ navigation }) => {
                                     {addedSubjects.map((item) => (
                                         <View key={item.id} style={styles.subjectItem}>
                                             <View style={{ flex: 1 }}>
-                                                <Text style={styles.subItemName}>{item.name}</Text>
-                                                <Text style={styles.subItemDetail}>{item.staffName} • {item.hoursPerWeek} hrs</Text>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                                    <Text style={styles.subItemName}>{item.name}</Text>
+                                                    <View style={[styles.typeBadge, item.type === 'Practical' ? styles.practicalBadge : styles.theoryBadge]}>
+                                                        <Clock size={10} color={item.type === 'Practical' ? '#0891b2' : '#64748b'} />
+                                                        <Text style={styles.typeBadgeText}>{item.type}</Text>
+                                                    </View>
+                                                </View>
+                                                <Text style={styles.subItemDetail}>
+                                                    {item.staffName} • {item.hoursPerWeek} hrs {item.type === 'Practical' ? `(${item.duration} periods block)` : ''}
+                                                </Text>
                                             </View>
-                                            <TouchableOpacity onPress={() => removeSubject(item.id)}>
+                                            <TouchableOpacity onPress={() => removeSubject(item.id)} style={styles.removeBtn}>
                                                 <X size={18} color="#ef4444" />
                                             </TouchableOpacity>
                                         </View>
@@ -907,7 +1032,12 @@ const styles = StyleSheet.create({
         borderColor: '#f1f5f9'
     },
     subItemName: { fontSize: 15, fontWeight: '700', color: '#1e293b' },
-    subItemDetail: { fontSize: 12, color: '#64748b', marginTop: 2 },
+    subItemDetail: { fontSize: 13, color: '#64748b', marginTop: 4, fontWeight: '500' },
+    removeBtn: { padding: 8, backgroundColor: '#fee2e2', borderRadius: 10 },
+    typeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+    theoryBadge: { backgroundColor: '#f1f5f9' },
+    practicalBadge: { backgroundColor: '#ecfeff' },
+    typeBadgeText: { fontSize: 10, fontWeight: '800', color: '#64748b', textTransform: 'uppercase' },
 
     bottomActions: {
         flexDirection: 'row',
@@ -1072,7 +1202,57 @@ const styles = StyleSheet.create({
     activeTab: { backgroundColor: '#800000', borderColor: '#800000' },
     tabText: { fontSize: 14, fontWeight: '600', color: '#64748b' },
     activeTabText: { color: '#fff' },
-    classDetailHeader: { fontSize: 16, fontWeight: '800', color: '#1e293b', marginBottom: 15, textAlign: 'center' }
+    activeTabText: { color: '#fff' },
+    classDetailHeader: { fontSize: 16, fontWeight: '800', color: '#1e293b', marginBottom: 15, textAlign: 'center' },
+    spanBadge: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        backgroundColor: '#800000',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6
+    },
+    spanBadgeText: {
+        color: '#fff',
+        fontSize: 8,
+        fontWeight: '900',
+        textTransform: 'uppercase'
+    },
+    practicalInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#ecfeff',
+        padding: 12,
+        borderRadius: 12,
+        marginBottom: 15,
+        borderWidth: 1,
+        borderColor: '#cffafe'
+    },
+    practicalInfoText: {
+        fontSize: 12,
+        color: '#0891b2',
+        fontWeight: '700',
+        marginLeft: 8,
+        flex: 1
+    },
+    typeBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 6,
+    },
+    theoryBadge: {
+        backgroundColor: '#f1f5f9',
+    },
+    practicalBadge: {
+        backgroundColor: '#ecfeff',
+    },
+    typeBadgeText: {
+        fontSize: 10,
+        fontWeight: '800',
+        color: '#475569',
+        textTransform: 'uppercase'
+    }
 });
 
 export default TimeTableGenerator;

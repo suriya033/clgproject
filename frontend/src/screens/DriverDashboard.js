@@ -26,14 +26,15 @@ import {
     Bell,
     Settings,
     ChevronRight,
-    Shield
+    Shield,
+    Menu
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/api';
 
-const DriverDashboard = () => {
+const DriverDashboard = ({ navigation }) => {
     const { user, logout } = useContext(AuthContext);
     const [assignedBus, setAssignedBus] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -175,13 +176,14 @@ const DriverDashboard = () => {
                     style={styles.header}
                 >
                     <View style={styles.headerTop}>
-                        <View>
+                        <TouchableOpacity onPress={() => navigation.openDrawer()} style={styles.logoutButton}>
+                            <Menu size={22} color="#fff" />
+                        </TouchableOpacity>
+                        <View style={{ flex: 1, marginLeft: 15 }}>
                             <Text style={styles.welcomeText}>Welcome back,</Text>
                             <Text style={styles.userName}>{user?.name}</Text>
                         </View>
-                        <TouchableOpacity onPress={logout} style={styles.logoutButton}>
-                            <LogOut size={20} color="#fff" />
-                        </TouchableOpacity>
+                        <View style={{ width: 40 }} />
                     </View>
 
                     <View style={styles.timeCard}>

@@ -14,13 +14,27 @@ import {
     ScrollView
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
-import { User, Lock, ArrowRight } from 'lucide-react-native';
+import { User, Lock, ArrowRight, Wifi } from 'lucide-react-native';
+import { testAPIConnection } from '../utils/testAPI';
 
 const LoginScreen = () => {
     const [userId, setUserId] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [testing, setTesting] = useState(false);
     const { login } = useContext(AuthContext);
+
+    const handleTestConnection = async () => {
+        setTesting(true);
+        const result = await testAPIConnection();
+        setTesting(false);
+
+        if (result.success) {
+            Alert.alert('✅ Connection Test', 'Server is reachable! You can now login.');
+        } else {
+            Alert.alert('❌ Connection Failed', 'Cannot reach server. Check console for details.');
+        }
+    };
 
     const handleLogin = async () => {
         if (!userId || !password) {
@@ -102,6 +116,22 @@ const LoginScreen = () => {
                                 <>
                                     <Text style={styles.loginButtonText}>Sign In</Text>
                                     <ArrowRight size={20} color="#fff" />
+                                </>
+                            )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.testButton}
+                            onPress={handleTestConnection}
+                            disabled={testing}
+                            activeOpacity={0.8}
+                        >
+                            {testing ? (
+                                <ActivityIndicator color="#800000" size="small" />
+                            ) : (
+                                <>
+                                    <Wifi size={18} color="#800000" />
+                                    <Text style={styles.testButtonText}>Test Connection</Text>
                                 </>
                             )}
                         </TouchableOpacity>
@@ -239,6 +269,23 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: '700',
         marginRight: 8,
+    },
+    testButton: {
+        backgroundColor: '#f8fafc',
+        borderRadius: 16,
+        height: 48,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 12,
+        borderWidth: 1.5,
+        borderColor: '#800000',
+    },
+    testButtonText: {
+        color: '#800000',
+        fontSize: 14,
+        fontWeight: '700',
+        marginLeft: 8,
     },
     footer: {
         marginTop: 32,

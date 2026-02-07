@@ -36,17 +36,17 @@ export const AuthProvider = ({ children }) => {
             return { success: true };
         } catch (error) {
             console.error('Login Error:', error);
-            let errorMessage = 'Login failed. Please check your network connection.';
+            let errorMessage = 'Login failed.';
 
             if (error.response) {
-                console.error('Response Data:', error.response.data);
-                console.error('Response Status:', error.response.status);
-                errorMessage = error.response.data.message || 'Server error occurred.';
+                // Server responded with an error
+                errorMessage = error.response.data.message || 'Invalid userId or password.';
+            } else if (error.code === 'ECONNABORTED') {
+                errorMessage = 'Connection timeout. The server is taking too long to respond.';
             } else if (error.request) {
-                console.error('No response received:', error.request);
-                errorMessage = 'Network error. Cannot reach server. Check if your phone is on the same Wi-Fi as the PC.';
+                // Request was made but no response received
+                errorMessage = `Network error. Cannot reach server at ${api.defaults.baseURL}. \n\n1. Ensure backend is running.\n2. Check if your phone/emulator is on the same network.\n3. Verify the IP address in src/api/api.js.`;
             } else {
-                console.error('Error Message:', error.message);
                 errorMessage = error.message;
             }
 

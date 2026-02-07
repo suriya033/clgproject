@@ -31,8 +31,11 @@ import {
     User,
     Mail,
     Phone,
-    Briefcase
+    Briefcase,
+    Hash,
+    MessageSquare
 } from 'lucide-react-native';
+
 import { LinearGradient } from 'expo-linear-gradient';
 import { Modal } from 'react-native';
 import api from '../api/api';
@@ -42,15 +45,24 @@ const HODDashboard = ({ navigation }) => {
     const [refreshing, setRefreshing] = useState(false);
     const [yearModalVisible, setYearModalVisible] = useState(false);
     const [bioModalVisible, setBioModalVisible] = useState(false);
-    const [stats, setStats] = useState({ students: 0, staff: 0, courses: 0 });
+    const [stats, setStats] = useState({ students: 0, staff: 0, courses: 0, studentsByYear: [] });
 
     useEffect(() => {
+        const unsubscribe = navigation.addListener('focus', () => {
+            if (user?.department) {
+                fetchStats();
+            }
+        });
+
         if (user?.department) {
             fetchStats();
         }
-    }, [user]);
+
+        return unsubscribe;
+    }, [navigation, user]);
 
     const fetchStats = async () => {
+        if (!user?.department) return;
         try {
             const response = await api.get(`/admin/hod-stats/${user.department}`);
             setStats(response.data);
@@ -66,12 +78,19 @@ const HODDashboard = ({ navigation }) => {
     };
 
     const gridItems = [
-        { id: '1', title: 'Time Table', icon: <Calendar size={24} color="#800000" />, route: 'TimeTableGenerator', bg: '#ffe4e6' },
-        { id: '2', title: 'Staff', icon: <Users size={24} color="#ec4899" />, route: 'StaffManagement', bg: '#fdf2f8', params: { departmentFilter: user?.department } },
-        { id: '3', title: 'Students', icon: <GraduationCap size={24} color="#6366f1" />, action: 'openYears', bg: '#e0e7ff' },
-        { id: '4', title: 'Subjects', icon: <BookOpen size={24} color="#10b981" />, route: 'SubjectManagement', bg: '#d1fae5', params: { departmentFilter: user?.department } },
-        { id: '5', title: 'Classes', icon: <LayoutDashboard size={24} color="#f59e0b" />, route: 'ClassManagement', bg: '#ffedd5', params: { departmentFilter: user?.department } },
+        { id: '1', title: 'Generator', icon: <Calendar size={24} color="#800000" />, route: 'TimeTableGenerator', bg: '#ffe4e6' },
+        { id: '1b', title: 'My Schedule', icon: <BookOpen size={24} color="#800000" />, route: 'StaffTimetable', bg: '#fee2e2' },
+        { id: '1c', title: 'View All', icon: <Search size={24} color="#06b6d4" />, route: 'TimetableViewer', bg: '#cffafe' },
+        { id: '1d', title: 'Attendance', icon: <ClipboardList size={24} color="#059669" />, route: 'StaffAttendance', bg: '#d1fae5' },
+        { id: '1e', title: 'CIA Marks', icon: <Hash size={24} color="#f59e0b" />, route: 'StaffCIAMarks', bg: '#ffedd5' },
+        { id: '2', title: 'Staff', icon: <Users size={24} color="#ec4899" />, route: 'StaffManagement', bg: '#fdf2f8', params: { departmentFilter: user?.department }, subtitle: `${stats.staff} Members` },
+        { id: '3', title: 'Students', icon: <GraduationCap size={24} color="#6366f1" />, action: 'openYears', bg: '#e0e7ff', subtitle: `${stats.students} Students` },
+        { id: '4', title: 'Subjects', icon: <BookOpen size={24} color="#10b981" />, route: 'SubjectManagement', bg: '#d1fae5', params: { departmentFilter: user?.department }, subtitle: `${stats.courses} Subjects` },
+
         { id: '6', title: 'Notice', icon: <Megaphone size={24} color="#06b6d4" />, route: 'Announcements', bg: '#cffafe' },
+        { id: 'hod-leave', title: 'Approvals', icon: <ClipboardList size={24} color="#800000" />, route: 'HODRequests', bg: '#fee2e2' },
+        { id: 'complaints', title: 'Complaints', icon: <MessageSquare size={24} color="#ef4444" />, route: 'ComplaintViewer', bg: '#fee2e2' },
+        { id: 'bulk-leave', title: 'Bulk Leave', icon: <Calendar size={24} color="#db2777" />, route: 'BulkLeaveManagement', bg: '#fdf2f8' },
         { id: '7', title: 'Department', icon: <Building2 size={24} color="#8b5cf6" />, action: 'openYears', bg: '#f5f3ff' },
     ];
 
@@ -102,16 +121,16 @@ const HODDashboard = ({ navigation }) => {
                 style={styles.headerContainer}
             >
                 <View style={styles.headerTop}>
-                    <TouchableOpacity style={styles.menuButton} onPress={() => navigation.toggleDrawer?.()}>
+                    <TouchableOpacity style={styles.menuButton} onPress={() => navigation.openDrawer()}>
                         <Menu size={24} color="#fff" />
                     </TouchableOpacity>
                     <View style={styles.headerActions}>
-                        <TouchableOpacity style={styles.iconButton}>
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('Announcements')}
+                            style={styles.iconButton}
+                        >
                             <Bell size={24} color="#fff" />
                             <View style={styles.badge} />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.iconButton, { marginLeft: 12 }]} onPress={logout}>
-                            <LogOut size={24} color="#fff" />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -127,7 +146,7 @@ const HODDashboard = ({ navigation }) => {
                             style={styles.viewBioBtn}
                             onPress={() => setBioModalVisible(true)}
                         >
-                            <Text style={styles.viewBioText}>View More</Text>
+                            <Text style={styles.viewBioText}>View Details</Text>
                             <ChevronRight size={14} color="rgba(255,255,255,0.7)" />
                         </TouchableOpacity>
                     </View>
@@ -168,6 +187,10 @@ const HODDashboard = ({ navigation }) => {
                         <TouchableOpacity key={item.id} style={styles.gridItem} onPress={() => handleNavigation(item)} activeOpacity={0.7}>
                             <View style={[styles.iconWrapper, { backgroundColor: item.bg }]}>{item.icon}</View>
                             <Text style={styles.gridLabel}>{item.title}</Text>
+                            {/* Proactively display counts on grid items if enabled */}
+                            {item.subtitle && (
+                                <Text style={styles.gridSubtitle}>{item.subtitle}</Text>
+                            )}
                         </TouchableOpacity>
                     ))}
                 </View>
@@ -199,23 +222,29 @@ const HODDashboard = ({ navigation }) => {
                         </View>
 
                         <View style={styles.yearList}>
-                            {['1', '2', '3', '4'].map((year) => (
-                                <TouchableOpacity
-                                    key={year}
-                                    style={styles.yearItem}
-                                    onPress={() => handleYearSelection(year)}
-                                >
-                                    <View style={styles.yearInfo}>
-                                        <View style={styles.yearIconWrapper}>
-                                            <Calendar size={20} color="#800000" />
+                            {['1', '2', '3', '4'].map((year) => {
+                                const yearCount = stats.studentsByYear?.find(s => String(s._id) === String(year))?.count || 0;
+                                return (
+                                    <TouchableOpacity
+                                        key={year}
+                                        style={styles.yearItem}
+                                        onPress={() => handleYearSelection(year)}
+                                    >
+                                        <View style={styles.yearInfo}>
+                                            <View style={styles.yearIconWrapper}>
+                                                <Calendar size={20} color="#800000" />
+                                            </View>
+                                            <View>
+                                                <Text style={styles.yearText}>
+                                                    {year === '1' ? '1st' : year === '2' ? '2nd' : year === '3' ? '3rd' : '4th'} Year
+                                                </Text>
+                                                <Text style={styles.studentCountText}>{yearCount} Students</Text>
+                                            </View>
                                         </View>
-                                        <Text style={styles.yearText}>
-                                            {year === '1' ? '1st' : year === '2' ? '2nd' : year === '3' ? '3rd' : '4th'} Year
-                                        </Text>
-                                    </View>
-                                    <ChevronRight size={20} color="#94a3b8" />
-                                </TouchableOpacity>
-                            ))}
+                                        <ChevronRight size={20} color="#94a3b8" />
+                                    </TouchableOpacity>
+                                );
+                            })}
                         </View>
                     </View>
                 </TouchableOpacity>
@@ -295,6 +324,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#f8fafc',
     },
     headerContainer: {
+        zIndex: 100,
         paddingTop: Platform.OS === 'ios' ? 60 : 40,
         paddingBottom: 80,
         paddingHorizontal: 24,
@@ -442,6 +472,13 @@ const styles = StyleSheet.create({
         color: '#334155',
         textAlign: 'center',
     },
+    gridSubtitle: {
+        fontSize: 12,
+        color: '#64748b',
+        fontWeight: '500',
+        marginTop: 4,
+        textAlign: 'center',
+    },
     // Modal Styles
     modalOverlay: {
         flex: 1,
@@ -513,6 +550,12 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '700',
         color: '#1e293b',
+    },
+    studentCountText: {
+        fontSize: 12,
+        color: '#64748b',
+        fontWeight: '500',
+        marginTop: 2
     },
     // New Styles for Department prominence and Bio Modal
     deptRow: {

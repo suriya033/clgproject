@@ -89,6 +89,7 @@ const OfficeDashboard = ({ navigation }) => {
         { id: '12', title: 'Exam Cell', icon: <ClipboardList size={24} color="#14b8a6" />, route: 'ExamCell', bg: '#f0fdfa' },
         { id: '13', title: 'Placements', icon: <Briefcase size={24} color="#64748b" />, route: 'Placements', bg: '#f8fafc' },
         { id: '14', title: 'Start AI Gen', icon: <Calendar size={24} color="#800000" />, route: 'TimeTableGenerator', bg: '#ffe4e6' },
+        { id: '15', title: 'View Timetable', icon: <BookOpen size={24} color="#0284c7" />, route: 'TimetableViewer', bg: '#e0f2fe' },
     ];
 
     const handleNavigation = (item) => {
@@ -103,16 +104,13 @@ const OfficeDashboard = ({ navigation }) => {
                 style={styles.headerContainer}
             >
                 <View style={styles.headerTop}>
-                    <TouchableOpacity style={styles.menuButton} onPress={() => navigation.toggleDrawer?.()}>
+                    <TouchableOpacity style={styles.menuButton} onPress={() => navigation.openDrawer()}>
                         <Menu size={24} color="#fff" />
                     </TouchableOpacity>
                     <View style={styles.headerActions}>
                         <TouchableOpacity style={styles.iconButton}>
                             <Bell size={24} color="#fff" />
                             <View style={styles.badge} />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.iconButton, { marginLeft: 12 }]} onPress={logout}>
-                            <LogOut size={24} color="#fff" />
                         </TouchableOpacity>
                     </View>
                 </View>

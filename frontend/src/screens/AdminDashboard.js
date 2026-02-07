@@ -32,7 +32,8 @@ import {
     Bell,
     LogOut,
     BookOpen,
-    Calendar
+    Calendar,
+    MessageSquare
 } from 'lucide-react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -92,6 +93,8 @@ const AdminDashboard = ({ navigation }) => {
         { id: '15', title: 'Office Incharge', icon: <UserCog size={24} color="#f59e0b" />, route: 'OfficeManagement', bg: '#fffbeb' },
         { id: '16', title: 'Classes', icon: <BookOpen size={24} color="#0284c7" />, route: 'ClassManagement', bg: '#e0f2fe' },
         { id: '17', title: 'Start AI Gen', icon: <Calendar size={24} color="#800000" />, route: 'TimeTableGenerator', bg: '#ffe4e6' },
+        { id: '18', title: 'View Timetable', icon: <BookOpen size={24} color="#800000" />, route: 'TimetableViewer', bg: '#fee2e2' },
+        { id: '19', title: 'Complaints', icon: <MessageSquare size={24} color="#ef4444" />, route: 'ComplaintViewer', bg: '#fee2e2' },
     ];
 
     const stats = [
@@ -119,16 +122,16 @@ const AdminDashboard = ({ navigation }) => {
                     style={styles.headerContainer}
                 >
                     <View style={styles.headerTop}>
-                        <TouchableOpacity style={styles.menuButton} onPress={() => navigation.toggleDrawer?.()}>
+                        <TouchableOpacity style={styles.menuButton} onPress={() => navigation.openDrawer()}>
                             <Menu size={24} color="#fff" />
                         </TouchableOpacity>
                         <View style={styles.headerActions}>
-                            <TouchableOpacity style={styles.iconButton}>
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Announcements')}
+                                style={styles.iconButton}
+                            >
                                 <Bell size={24} color="#fff" />
                                 <View style={styles.badge} />
-                            </TouchableOpacity>
-                            <TouchableOpacity style={[styles.iconButton, { marginLeft: 12 }]} onPress={logout}>
-                                <LogOut size={24} color="#fff" />
                             </TouchableOpacity>
                         </View>
                     </View>

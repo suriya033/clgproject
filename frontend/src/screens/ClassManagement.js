@@ -24,22 +24,21 @@ import {
     Search,
     Edit2,
     UserCog,
-    ChevronDown
+    ChevronDown,
+    ChevronRight
 } from 'lucide-react-native';
 import api from '../api/api';
 
 const ClassManagement = ({ navigation, route }) => {
     const departmentFilter = route?.params?.departmentFilter;
-    const [classes, setClasses] = useState([
-        { id: '1', name: 'Computer Science', section: 'A', year: '1st Year', students: [], advisor: null },
-        { id: '2', name: 'Computer Science', section: 'B', year: '1st Year', students: [], advisor: null },
-    ]);
+    const [classes, setClasses] = useState([]);
     const [loading, setLoading] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
 
     // Form State
     const [className, setClassName] = useState('');
     const [section, setSection] = useState('');
+    const [semester, setSemester] = useState('');
     const [academicYear, setAcademicYear] = useState('');
     const [advisor, setAdvisor] = useState(null);
     const [showAdvisorDropdown, setShowAdvisorDropdown] = useState(false);
@@ -55,22 +54,28 @@ const ClassManagement = ({ navigation, route }) => {
 
     useEffect(() => {
         fetchData();
+        fetchClasses();
     }, []);
+
+    const fetchClasses = async () => {
+        try {
+            const response = await api.get('/admin/classes');
+            setClasses(response.data);
+        } catch (error) {
+            console.error('Fetch classes error:', error);
+        }
+    };
 
     const fetchData = async () => {
         try {
             const response = await api.get('/admin/users');
             let students = response.data.filter(u => u.role === 'Student');
-            let teachers = response.data.filter(u => u.role === 'Staff' || u.role === 'HOD');
+            let teachers = response.data.filter(u => (u.role === 'Staff' || u.role === 'HOD'));
 
             if (departmentFilter) {
                 const deptLower = departmentFilter.toLowerCase();
                 students = students.filter(s => s.department?.toLowerCase() === deptLower);
                 teachers = teachers.filter(t => t.department?.toLowerCase() === deptLower);
-
-                // Also filter initial hardcoded classes as an example, 
-                // though in a real app these would come from an API
-                setClasses(prev => prev.filter(c => c.name.toLowerCase().includes(deptLower)));
             }
 
             setAllStudents(students);
@@ -80,44 +85,44 @@ const ClassManagement = ({ navigation, route }) => {
         }
     };
 
-    const handleCreateClass = () => {
+    const handleCreateClass = async () => {
         if (!className || !section || !academicYear) {
             Alert.alert('Error', 'Please fill all fields');
             return;
         }
 
-        if (editId) {
-            setClasses(classes.map(c => c.id === editId ? {
-                ...c,
+        setLoading(true);
+        try {
+            const classData = {
                 name: className,
                 section,
-                year: academicYear,
-                advisor: advisor
-            } : c));
-            Alert.alert('Success', 'Class updated successfully');
-        } else {
-            const newClass = {
-                id: Date.now().toString(),
-                name: className,
-                section,
-                year: academicYear,
-                advisor: advisor,
-                students: []
+                semester: semester,
+                academicYear: academicYear,
+                coordinatorId: advisor?._id,
+                id: editId
             };
-            setClasses([...classes, newClass]);
-            Alert.alert('Success', 'Class created successfully');
-        }
 
-        setModalVisible(false);
-        resetForm();
+            await api.post('/admin/classes', classData);
+
+            Alert.alert('Success', editId ? 'Class updated successfully' : 'Class created successfully');
+            setModalVisible(false);
+            resetForm();
+            fetchClasses();
+        } catch (error) {
+            console.error('Save class error:', error);
+            Alert.alert('Error', 'Failed to save class');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleEdit = (cls) => {
-        setEditId(cls.id);
+        setEditId(cls._id);
         setClassName(cls.name);
         setSection(cls.section);
-        setAcademicYear(cls.year);
-        setAdvisor(cls.advisor);
+        setSemester(cls.semester);
+        setAcademicYear(cls.academicYear);
+        setAdvisor(cls.coordinator);
         setModalVisible(true);
     };
 
@@ -130,6 +135,7 @@ const ClassManagement = ({ navigation, route }) => {
     const resetForm = () => {
         setClassName('');
         setSection('');
+        setSemester('');
         setAcademicYear('');
         setAdvisor(null);
         setShowAdvisorDropdown(false);
@@ -138,7 +144,14 @@ const ClassManagement = ({ navigation, route }) => {
 
     const openAssignModal = (cls) => {
         setSelectedClass(cls);
-        setSelectedStudents(cls.students.map(s => s._id)); // Assuming student objects have _id
+        // Find students who are currently in this class (matching dept, sem, sec)
+        const currentlyInClass = allStudents.filter(s =>
+            s.department === cls.department &&
+            s.semester === cls.semester &&
+            s.section === cls.section
+        ).map(s => s._id);
+
+        setSelectedStudents(currentlyInClass);
         setStudentModalVisible(true);
     };
 
@@ -150,24 +163,74 @@ const ClassManagement = ({ navigation, route }) => {
         }
     };
 
-    const handleAssignStudents = () => {
+    const handleAssignStudents = async () => {
         if (!selectedClass) return;
 
-        const updatedStudents = allStudents.filter(s => selectedStudents.includes(s._id));
+        setLoading(true);
+        try {
+            await api.post('/admin/classes/assign-students', {
+                studentIds: selectedStudents,
+                semester: selectedClass.semester,
+                section: selectedClass.section,
+                department: selectedClass.department
+            });
 
-        setClasses(classes.map(c => c.id === selectedClass.id ? {
-            ...c,
-            students: updatedStudents
-        } : c));
-
-        setStudentModalVisible(false);
-        Alert.alert('Success', `Assigned ${updatedStudents.length} students to ${selectedClass.name} - ${selectedClass.section}`);
+            setStudentModalVisible(false);
+            Alert.alert('Success', `Assigned ${selectedStudents.length} students to ${selectedClass.name} - ${selectedClass.section}`);
+            fetchClasses(); // Refresh
+        } catch (error) {
+            console.error('Assign students error:', error);
+            Alert.alert('Error', 'Failed to assign students');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const filteredStudents = allStudents.filter(s =>
         s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         s.userId.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    // Advisor Assignment State
+    const [assignAdvisorModalVisible, setAssignAdvisorModalVisible] = useState(false);
+    const [selectedClassForAdvisor, setSelectedClassForAdvisor] = useState(null);
+    const [selectedAdvisor, setSelectedAdvisor] = useState(null);
+
+    const openAdvisorModal = (cls) => {
+        setSelectedClassForAdvisor(cls);
+        setSelectedAdvisor(cls.coordinator);
+        setAssignAdvisorModalVisible(true);
+    };
+
+    const handleAssignAdvisor = async () => {
+        if (!selectedClassForAdvisor) return;
+
+        setLoading(true);
+        try {
+            // Reusing the update class endpoint but only sending necessary data
+            // Or better, trigger the save from here, effectively updating the class with new coordinator
+            const classData = {
+                id: selectedClassForAdvisor._id,
+                name: selectedClassForAdvisor.name,
+                section: selectedClassForAdvisor.section,
+                semester: selectedClassForAdvisor.semester,
+                academicYear: selectedClassForAdvisor.academicYear,
+                coordinatorId: selectedAdvisor?._id,
+                department: selectedClassForAdvisor.department
+            };
+
+            await api.post('/admin/classes', classData);
+
+            Alert.alert('Success', 'Class Coordinator updated successfully');
+            setAssignAdvisorModalVisible(false);
+            fetchClasses();
+        } catch (error) {
+            console.error('Save advisor error:', error);
+            Alert.alert('Error', 'Failed to update coordinator');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const renderClassCard = ({ item }) => (
         <View style={styles.card}>
@@ -177,7 +240,7 @@ const ClassManagement = ({ navigation, route }) => {
                 </View>
                 <View style={styles.cardContent}>
                     <Text style={styles.classTitle}>{item.name}</Text>
-                    <Text style={styles.classSub}>{item.year} • Section {item.section}</Text>
+                    <Text style={styles.classSub}>Semester {item.semester} • Section {item.section}</Text>
                 </View>
                 <TouchableOpacity onPress={() => handleEdit(item)} style={styles.editButton}>
                     <Edit2 size={16} color="#0284c7" />
@@ -185,17 +248,34 @@ const ClassManagement = ({ navigation, route }) => {
             </View>
 
             <View style={styles.statsRow}>
-                <View style={styles.statItem}>
+                <View style={[styles.statItem, { marginRight: 16 }]}>
                     <Users size={16} color="#64748b" />
-                    <Text style={styles.statText}>{item.students.length} Students</Text>
+                    <Text style={styles.statText}>
+                        {allStudents.filter(s =>
+                            s.department === item.department &&
+                            s.semester === item.semester &&
+                            s.section === item.section
+                        ).length} Students
+                    </Text>
+                </View>
+                <View style={styles.statItem}>
+                    <Briefcase size={16} color="#64748b" />
+                    <Text style={styles.statText}>{item.academicYear}</Text>
                 </View>
             </View>
 
             <View style={styles.advisorSection}>
-                <Text style={styles.advisorLabel}>Class Advisor</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={styles.advisorLabel}>Class Coordinator</Text>
+                    <TouchableOpacity onPress={() => openAdvisorModal(item)}>
+                        <Text style={{ color: '#800000', fontWeight: '600', fontSize: 12 }}>
+                            {item.coordinator ? 'Change' : 'Assign'}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
                 <View style={styles.advisorInfo}>
                     <UserCog size={16} color="#800000" />
-                    <Text style={styles.advisorName}>{item.advisor ? item.advisor.name : 'Not Assigned'}</Text>
+                    <Text style={styles.advisorName}>{item.coordinator ? item.coordinator.name : 'Not Assigned'}</Text>
                 </View>
             </View>
 
@@ -208,6 +288,50 @@ const ClassManagement = ({ navigation, route }) => {
         </View>
     );
 
+    const [selectedYear, setSelectedYear] = useState(null);
+
+    const handleYearSelect = (year) => {
+        setSelectedYear(year);
+    };
+
+    const handleBackPress = () => {
+        if (selectedYear) {
+            setSelectedYear(null);
+        } else {
+            navigation.goBack();
+        }
+    };
+
+    const renderYearCard = (year) => {
+        const yearClasses = classes.filter(c => c.semester && Math.ceil(c.semester / 2).toString() === year);
+
+        return (
+            <TouchableOpacity
+                key={year}
+                style={styles.yearCard}
+                onPress={() => handleYearSelect(year)}
+            >
+                <View style={styles.yearIconContainer}>
+                    <Text style={styles.yearIconText}>{year}</Text>
+                </View>
+                <View style={styles.yearInfo}>
+                    <Text style={styles.yearTitle}>
+                        {year === '1' ? 'First' : year === '2' ? 'Second' : year === '3' ? 'Third' : 'Fourth'} Year
+                    </Text>
+                    <Text style={styles.yearSub}>
+                        {classes.filter(c => Math.ceil(parseInt(c.semester || 0) / 2).toString() === year).length} Classes
+                    </Text>
+                </View>
+                <ChevronRight size={24} color="#cbd5e1" />
+            </TouchableOpacity>
+        );
+    };
+
+    // Filter classes for the selected year
+    const displayedClasses = selectedYear
+        ? classes.filter(c => Math.ceil(parseInt(c.semester || 0) / 2).toString() === selectedYear)
+        : [];
+
     return (
         <SafeAreaView style={styles.container}>
             <LinearGradient
@@ -215,28 +339,110 @@ const ClassManagement = ({ navigation, route }) => {
                 style={styles.headerGradient}
             >
                 <View style={styles.headerTop}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
+                    <TouchableOpacity onPress={handleBackPress} style={styles.iconButton}>
                         <ChevronLeft size={24} color="#fff" />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Class Management</Text>
+                    <Text style={styles.headerTitle}>
+                        {selectedYear ? `${selectedYear === '1' ? '1st' : selectedYear === '2' ? '2nd' : selectedYear === '3' ? '3rd' : '4th'} Year Classes` : 'Class Management'}
+                    </Text>
                     <TouchableOpacity onPress={openCreateModal} style={styles.iconButton}>
                         <Plus size={24} color="#fff" />
                     </TouchableOpacity>
                 </View>
             </LinearGradient>
 
-            <FlatList
-                data={classes}
-                renderItem={renderClassCard}
-                keyExtractor={item => item.id}
-                contentContainerStyle={styles.listContent}
-                ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        <BookOpen size={50} color="#cbd5e1" />
-                        <Text style={styles.emptyText}>No classes found</Text>
+            {!selectedYear ? (
+                <ScrollView contentContainerStyle={styles.listContent}>
+                    <View style={styles.yearGrid}>
+                        {['1', '2', '3', '4'].map(year => renderYearCard(year))}
                     </View>
-                }
-            />
+                </ScrollView>
+            ) : (
+                <FlatList
+                    data={displayedClasses}
+                    renderItem={renderClassCard}
+                    keyExtractor={item => item._id}
+                    contentContainerStyle={styles.listContent}
+                    ListEmptyComponent={
+                        <View style={styles.emptyContainer}>
+                            <BookOpen size={50} color="#cbd5e1" />
+                            <Text style={styles.emptyText}>No classes found for this year</Text>
+                        </View>
+                    }
+                />
+            )}
+
+            {/* Advisor Assignment Modal (Dedicated) */}
+            <Modal
+                animationType="face"
+                transparent={true}
+                visible={assignAdvisorModalVisible}
+                onRequestClose={() => setAssignAdvisorModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { height: 'auto', maxHeight: '60%' }]}>
+                        <View style={styles.modalHeader}>
+                            <View>
+                                <Text style={styles.modalTitle}>Assign Coordinator</Text>
+                                <Text style={styles.modalSubtitle}>{selectedClassForAdvisor?.name}</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setAssignAdvisorModalVisible(false)} style={styles.closeButton}>
+                                <X size={20} color="#64748b" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={[styles.inputGroup, { marginBottom: 30 }]}>
+                            <Text style={styles.label}>Select Staff Member</Text>
+                            <TouchableOpacity
+                                style={styles.dropdownButton}
+                                onPress={() => setShowAdvisorDropdown(!showAdvisorDropdown)}
+                            >
+                                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                                    <UserCog size={20} color="#64748b" style={{ marginRight: 10 }} />
+                                    <Text style={[styles.dropdownText, !selectedAdvisor && { color: '#94a3b8' }]}>
+                                        {selectedAdvisor ? selectedAdvisor.name : 'Select a Teacher'}
+                                    </Text>
+                                </View>
+                                <ChevronDown size={20} color="#64748b" />
+                            </TouchableOpacity>
+
+                            {showAdvisorDropdown && (
+                                <View style={styles.dropdownList}>
+                                    <ScrollView nestedScrollEnabled={true} style={{ maxHeight: 200 }}>
+                                        {allStaff.length === 0 ? (
+                                            <Text style={styles.emptyDropdownText}>No teachers found</Text>
+                                        ) : (
+                                            allStaff.map(staff => (
+                                                <TouchableOpacity
+                                                    key={staff._id}
+                                                    style={[
+                                                        styles.dropdownItem,
+                                                        selectedAdvisor?._id === staff._id && styles.dropdownItemActive
+                                                    ]}
+                                                    onPress={() => {
+                                                        setSelectedAdvisor(staff);
+                                                        setShowAdvisorDropdown(false);
+                                                    }}
+                                                >
+                                                    <Text style={[
+                                                        styles.dropdownItemText,
+                                                        selectedAdvisor?._id === staff._id && styles.dropdownItemTextActive
+                                                    ]}>{staff.name}</Text>
+                                                    {selectedAdvisor?._id === staff._id && <CheckCircle2 size={16} color="#800000" />}
+                                                </TouchableOpacity>
+                                            ))
+                                        )}
+                                    </ScrollView>
+                                </View>
+                            )}
+                        </View>
+
+                        <TouchableOpacity style={styles.submitButton} onPress={handleAssignAdvisor}>
+                            <Text style={styles.submitButtonText}>Confirm & Assign</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
 
             {/* Create/Edit Class Modal */}
             <Modal
@@ -271,6 +477,15 @@ const ClassManagement = ({ navigation, route }) => {
                                     placeholder="e.g. A"
                                     value={section}
                                     onChangeText={setSection}
+                                />
+                            </View>
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Semester</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="e.g. 1"
+                                    value={semester}
+                                    onChangeText={setSemester}
                                 />
                             </View>
                             <View style={styles.inputGroup}>
@@ -714,6 +929,54 @@ const styles = StyleSheet.create({
     studentTextActive: {
         color: '#800000',
     },
+    yearGrid: {
+        gap: 16
+    },
+    yearCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        padding: 20,
+        borderRadius: 20,
+        marginBottom: 16,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        borderWidth: 1,
+        borderColor: '#f1f5f9'
+    },
+    yearIconContainer: {
+        width: 50,
+        height: 50,
+        borderRadius: 16,
+        backgroundColor: '#ffe4e6',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 20,
+        borderWidth: 1,
+        borderColor: '#fecdd3'
+    },
+    yearIconText: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#800000'
+    },
+    yearInfo: {
+        flex: 1
+    },
+    yearTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#1e293b'
+    },
+    yearSub: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#64748b',
+        marginTop: 4
+    }
 });
 
 export default ClassManagement;

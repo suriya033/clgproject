@@ -8,8 +8,10 @@ import {
     ActivityIndicator,
     TouchableOpacity,
     StatusBar,
-    Alert
+    Alert,
+    TextInput
 } from 'react-native';
+
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, BookOpen, Layers, Users, Hash } from 'lucide-react-native';
 import api from '../api/api';
@@ -19,6 +21,11 @@ const StaffCIAMarks = ({ navigation }) => {
     const { user } = useContext(AuthContext);
     const [classes, setClasses] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [selectedClass, setSelectedClass] = useState(null);
+    const [examType, setExamType] = useState('CIA 1');
+    const [students, setStudents] = useState([]);
+    const [entryVisible, setEntryVisible] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
         fetchClasses();
@@ -26,7 +33,7 @@ const StaffCIAMarks = ({ navigation }) => {
 
     const fetchClasses = async () => {
         try {
-            const res = await api.get('/timetable/staff-classes');
+            const res = await api.get('/marks/staff-classes');
             setClasses(res.data);
         } catch (error) {
             console.error(error);
@@ -36,12 +43,54 @@ const StaffCIAMarks = ({ navigation }) => {
         }
     };
 
+    const fetchStudents = async (cls) => {
+        setLoading(true);
+        try {
+            const res = await api.get('/marks/students', {
+                params: {
+                    department: cls.department,
+                    semester: cls.semester,
+                    section: cls.section,
+                    subject: cls.subject,
+                    examType
+                }
+            });
+            setStudents(res.data);
+            setSelectedClass(cls);
+            setEntryVisible(true);
+        } catch (error) {
+            console.error(error);
+            Alert.alert('Error', 'Failed to fetch student list');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleMarkUpdate = async (studentId, marks) => {
+        try {
+            // Update local state first for immediate feedback
+            setStudents(prev => prev.map(s => s._id === studentId ? { ...s, marks } : s));
+
+            await api.post('/marks/update', {
+                studentId,
+                department: selectedClass.department,
+                semester: selectedClass.semester,
+                section: selectedClass.section,
+                subject: selectedClass.subject,
+                examType,
+                marks: parseInt(marks) || 0
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
     const renderClassItem = ({ item }) => (
         <View style={styles.card}>
             <View style={styles.cardHeader}>
                 <View style={styles.deptBadge}>
                     <Layers size={14} color="#800000" />
-                    <Text style={styles.deptText}>{item.departmentName}</Text>
+                    <Text style={styles.deptText}>{item.department}</Text>
                 </View>
                 <View style={styles.sectionBadge}>
                     <Users size={14} color="#059669" />
@@ -49,7 +98,7 @@ const StaffCIAMarks = ({ navigation }) => {
                 </View>
             </View>
 
-            <Text style={styles.subjectName}>{item.subjectName}</Text>
+            <Text style={styles.subjectName}>{item.subject}</Text>
 
             <View style={styles.infoRow}>
                 <View style={styles.infoItem}>
@@ -60,7 +109,7 @@ const StaffCIAMarks = ({ navigation }) => {
 
             <TouchableOpacity
                 style={styles.enterMarksBtn}
-                onPress={() => Alert.alert('Info', 'Marks Entry Feature Coming Soon')}
+                onPress={() => fetchStudents(item)}
             >
                 <Text style={styles.btnText}>Enter CIA Marks</Text>
             </TouchableOpacity>
@@ -84,23 +133,74 @@ const StaffCIAMarks = ({ navigation }) => {
             </LinearGradient>
 
             <View style={styles.content}>
-                {loading ? (
-                    <View style={styles.loaderContainer}>
-                        <ActivityIndicator size="large" color="#800000" />
-                    </View>
-                ) : (
-                    <FlatList
-                        data={classes}
-                        renderItem={renderClassItem}
-                        keyExtractor={(item, index) => index.toString()}
-                        contentContainerStyle={styles.listContent}
-                        ListEmptyComponent={
-                            <View style={styles.emptyContainer}>
-                                <BookOpen size={50} color="#cbd5e1" />
-                                <Text style={styles.emptyText}>No classes allotted in timetable</Text>
+                {!entryVisible ? (
+                    <>
+                        <View style={styles.examSelector}>
+                            {['CIA 1', 'CIA 2', 'CIA 3'].map(type => (
+                                <TouchableOpacity
+                                    key={type}
+                                    style={[styles.examBtn, examType === type && styles.examBtnActive]}
+                                    onPress={() => setExamType(type)}
+                                >
+                                    <Text style={[styles.examBtnText, examType === type && styles.examBtnTextActive]}>{type}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                        {loading ? (
+                            <View style={styles.loaderContainer}>
+                                <ActivityIndicator size="large" color="#800000" />
                             </View>
-                        }
-                    />
+                        ) : (
+                            <FlatList
+                                data={classes}
+                                renderItem={renderClassItem}
+                                keyExtractor={(item, index) => index.toString()}
+                                contentContainerStyle={styles.listContent}
+                                ListEmptyComponent={
+                                    <View style={styles.emptyContainer}>
+                                        <BookOpen size={50} color="#cbd5e1" />
+                                        <Text style={styles.emptyText}>No classes allotted in timetable</Text>
+                                    </View>
+                                }
+                            />
+                        )}
+                    </>
+                ) : (
+                    <View style={styles.entryContainer}>
+                        <View style={styles.entryHeader}>
+                            <View>
+                                <Text style={styles.entrySubject}>{selectedClass.subject}</Text>
+                                <Text style={styles.entrySub}>Sec {selectedClass.section} • {examType}</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setEntryVisible(false)} style={styles.closeEntryBtn}>
+                                <Text style={styles.closeBtnText}>Done</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <FlatList
+                            data={students}
+                            renderItem={({ item }) => (
+                                <View style={styles.studentMarkCard}>
+                                    <View style={styles.studentMarkInfo}>
+                                        <Text style={styles.studentMarkName}>{item.name}</Text>
+                                        <Text style={styles.studentMarkId}>{item.regNo}</Text>
+                                    </View>
+                                    <View style={styles.markInputContainer}>
+                                        <TextInput
+                                            style={styles.markInput}
+                                            value={String(item.marks)}
+                                            onChangeText={(val) => handleMarkUpdate(item._id, val)}
+                                            keyboardType="numeric"
+                                            placeholder="0"
+                                            maxLength={3}
+                                        />
+                                        <Text style={styles.maxMarks}>/ 100</Text>
+                                    </View>
+                                </View>
+                            )}
+                            keyExtractor={item => item._id}
+                            contentContainerStyle={styles.entryList}
+                        />
+                    </View>
                 )}
             </View>
         </SafeAreaView>
@@ -190,7 +290,119 @@ const styles = StyleSheet.create({
     },
     btnText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
     emptyContainer: { alignItems: 'center', marginTop: 50 },
-    emptyText: { marginTop: 15, color: '#94a3b8', fontSize: 16 }
+    emptyText: { marginTop: 15, color: '#94a3b8', fontSize: 16 },
+    examSelector: {
+        flexDirection: 'row',
+        padding: 20,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#f1f5f9'
+    },
+    examBtn: {
+        flex: 1,
+        paddingVertical: 10,
+        alignItems: 'center',
+        borderRadius: 10,
+        backgroundColor: '#f8fafc',
+        marginHorizontal: 5,
+        borderWidth: 1,
+        borderColor: '#e2e8f0'
+    },
+    examBtnActive: {
+        backgroundColor: '#800000',
+        borderColor: '#800000'
+    },
+    examBtnText: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#64748b'
+    },
+    examBtnTextActive: {
+        color: '#fff'
+    },
+    entryContainer: {
+        flex: 1,
+        backgroundColor: '#f8fafc'
+    },
+    entryHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 20,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#f1f5f9'
+    },
+    entrySubject: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#1e293b'
+    },
+    entrySub: {
+        fontSize: 13,
+        color: '#800000',
+        fontWeight: '600'
+    },
+    closeEntryBtn: {
+        paddingHorizontal: 15,
+        paddingVertical: 8,
+        backgroundColor: '#f1f5f9',
+        borderRadius: 10
+    },
+    closeBtnText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#64748b'
+    },
+    entryList: {
+        padding: 15
+    },
+    studentMarkCard: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        padding: 15,
+        borderRadius: 15,
+        marginBottom: 10,
+        borderWidth: 1,
+        borderColor: '#f1f5f9'
+    },
+    studentMarkInfo: {
+        flex: 1
+    },
+    studentMarkName: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#1e293b'
+    },
+    studentMarkId: {
+        fontSize: 12,
+        color: '#94a3b8'
+    },
+    markInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8
+    },
+    markInput: {
+        width: 60,
+        height: 40,
+        backgroundColor: '#f8fafc',
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        borderRadius: 8,
+        textAlign: 'center',
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1e293b'
+    },
+    maxMarks: {
+        fontSize: 13,
+        color: '#94a3b8',
+        fontWeight: '600'
+    }
 });
+
 
 export default StaffCIAMarks;

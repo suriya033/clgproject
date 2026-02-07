@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, ScrollView, StatusBar, Platform } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
-import { LogOut, Info, Bell, Settings, Users, ArrowLeft, BookOpen } from 'lucide-react-native';
+import { LogOut, Info, Bell, Settings, Users, ArrowLeft, BookOpen, Menu, FileText, MessageSquare, ShieldCheck, HelpCircle } from 'lucide-react-native';
 
 const GenericDashboard = ({ navigation, route }) => {
     const { user, logout } = useContext(AuthContext);
@@ -21,9 +21,13 @@ const GenericDashboard = ({ navigation, route }) => {
             <View style={styles.headerContainer}>
                 <View style={styles.headerTop}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        {user?.role === 'Admin' && (
+                        {user?.role === 'Admin' && title !== 'User' ? (
                             <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 15 }}>
                                 <ArrowLeft size={24} color="#fff" />
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity onPress={() => navigation.openDrawer()} style={{ marginRight: 15 }}>
+                                <Menu size={24} color="#fff" />
                             </TouchableOpacity>
                         )}
                         <View>
@@ -33,13 +37,10 @@ const GenericDashboard = ({ navigation, route }) => {
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         {user?.role === 'Admin' && (
-                            <TouchableOpacity onPress={handleManageUsers} style={[styles.logoutButton, { marginRight: 10 }]}>
+                            <TouchableOpacity onPress={handleManageUsers} style={styles.logoutButton}>
                                 <Users size={22} color="#fff" />
                             </TouchableOpacity>
                         )}
-                        <TouchableOpacity onPress={logout} style={styles.logoutButton}>
-                            <LogOut size={22} color="#fff" />
-                        </TouchableOpacity>
                     </View>
                 </View>
             </View>
@@ -50,54 +51,103 @@ const GenericDashboard = ({ navigation, route }) => {
             >
                 <View style={styles.infoBox}>
                     <View style={styles.infoIconWrapper}>
-                        <Info size={24} color="#800000" />
+                        {title === 'Notes' ? <FileText size={24} color="#800000" /> :
+                            title === 'Feedback' ? <MessageSquare size={24} color="#800000" /> :
+                                title === 'Settings' ? <Settings size={24} color="#800000" /> :
+                                    <Info size={24} color="#800000" />}
                     </View>
                     <View style={styles.infoTextContainer}>
-                        <Text style={styles.infoTitle}>Welcome!</Text>
+                        <Text style={styles.infoTitle}>
+                            {title === 'Notes' ? 'Your Study Materials' :
+                                title === 'Feedback' ? 'We Value Your Input' :
+                                    title === 'Settings' ? 'Account Preferences' :
+                                        'Welcome!'}
+                        </Text>
                         <Text style={styles.infoText}>
-                            The {title} module is currently being optimized for your experience.
+                            {title === 'Notes' ? 'Access and organize all your semester notes and reference materials in one place.' :
+                                title === 'Feedback' ? 'Help us improve your college experience. Share your thoughts or report issues directly to us.' :
+                                    title === 'Settings' ? 'Customize your notification preferences, security settings, and profile information.' :
+                                        `The ${title} module is currently being optimized for your experience.`}
                         </Text>
                     </View>
                 </View>
 
-                <Text style={styles.sectionTitle}>Quick Links</Text>
-                <TouchableOpacity
-                    style={styles.menuItem}
-                    onPress={() => navigation.navigate('Announcements')}
-                >
-                    <View style={[styles.menuIconWrapper, { backgroundColor: '#ffe4e6' }]}>
-                        <Bell size={24} color="#800000" />
+                {title === 'Settings' && (
+                    <View style={styles.settingsGroup}>
+                        <TouchableOpacity style={styles.menuItem}>
+                            <View style={[styles.menuIconWrapper, { backgroundColor: '#f0fdf4' }]}>
+                                <ShieldCheck size={24} color="#166534" />
+                            </View>
+                            <View style={styles.menuContent}>
+                                <Text style={styles.menuText}>Security & Privacy</Text>
+                                <Text style={styles.menuSub}>Update password and 2FA</Text>
+                            </View>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.menuItem}>
+                            <View style={[styles.menuIconWrapper, { backgroundColor: '#eff6ff' }]}>
+                                <Bell size={24} color="#1e40af" />
+                            </View>
+                            <View style={styles.menuContent}>
+                                <Text style={styles.menuText}>Notification Settings</Text>
+                                <Text style={styles.menuSub}>Control what updates you receive</Text>
+                            </View>
+                        </TouchableOpacity>
                     </View>
-                    <View style={styles.menuContent}>
-                        <Text style={styles.menuText}>Announcements</Text>
-                        <Text style={styles.menuSub}>View and manage notices</Text>
-                    </View>
-                </TouchableOpacity>
-
-                {(user?.role === 'HOD' || user?.role === 'Admin') && (
-                    <TouchableOpacity
-                        style={styles.menuItem}
-                        onPress={() => navigation.navigate('ClassManagement')}
-                    >
-                        <View style={[styles.menuIconWrapper, { backgroundColor: '#e0f2fe' }]}>
-                            <BookOpen size={24} color="#0284c7" />
-                        </View>
-                        <View style={styles.menuContent}>
-                            <Text style={styles.menuText}>Class Management</Text>
-                            <Text style={styles.menuSub}>Assign classes & students</Text>
-                        </View>
-                    </TouchableOpacity>
                 )}
 
-                <TouchableOpacity style={styles.menuItem}>
-                    <View style={[styles.menuIconWrapper, { backgroundColor: '#f8fafc' }]}>
-                        <Settings size={24} color="#64748b" />
+                {title === 'Feedback' && (
+                    <View style={styles.feedbackContainer}>
+                        <TouchableOpacity style={[styles.menuItem, { backgroundColor: '#800000' }]}>
+                            <View style={styles.menuContent}>
+                                <Text style={[styles.menuText, { color: '#fff' }]}>Write a Review</Text>
+                                <Text style={[styles.menuSub, { color: 'rgba(255,255,255,0.7)' }]}>Tell us what you like or dislike</Text>
+                            </View>
+                            <MessageSquare size={20} color="#fff" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.menuItem}>
+                            <View style={[styles.menuIconWrapper, { backgroundColor: '#f8fafc' }]}>
+                                <HelpCircle size={24} color="#64748b" />
+                            </View>
+                            <View style={styles.menuContent}>
+                                <Text style={styles.menuText}>Support Center</Text>
+                                <Text style={styles.menuSub}>Get help from technical team</Text>
+                            </View>
+                        </TouchableOpacity>
                     </View>
-                    <View style={styles.menuContent}>
-                        <Text style={styles.menuText}>Profile Settings</Text>
-                        <Text style={styles.menuSub}>Manage your account</Text>
-                    </View>
-                </TouchableOpacity>
+                )}
+
+                {title !== 'Settings' && title !== 'Feedback' && (
+                    <>
+                        <Text style={styles.sectionTitle}>Quick Links</Text>
+                        <TouchableOpacity
+                            style={styles.menuItem}
+                            onPress={() => navigation.navigate('Announcements')}
+                        >
+                            <View style={[styles.menuIconWrapper, { backgroundColor: '#ffe4e6' }]}>
+                                <Bell size={24} color="#800000" />
+                            </View>
+                            <View style={styles.menuContent}>
+                                <Text style={styles.menuText}>Announcements</Text>
+                                <Text style={styles.menuSub}>View and manage notices</Text>
+                            </View>
+                        </TouchableOpacity>
+
+                        {(user?.role === 'HOD' || user?.role === 'Admin') && (
+                            <TouchableOpacity
+                                style={styles.menuItem}
+                                onPress={() => navigation.navigate('ClassManagement')}
+                            >
+                                <View style={[styles.menuIconWrapper, { backgroundColor: '#e0f2fe' }]}>
+                                    <BookOpen size={24} color="#0284c7" />
+                                </View>
+                                <View style={styles.menuContent}>
+                                    <Text style={styles.menuText}>Class Management</Text>
+                                    <Text style={styles.menuSub}>Assign classes & students</Text>
+                                </View>
+                            </TouchableOpacity>
+                        )}
+                    </>
+                )}
             </ScrollView>
         </SafeAreaView>
     );

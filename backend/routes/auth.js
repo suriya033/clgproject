@@ -11,10 +11,12 @@ router.post('/login', async (req, res) => {
 
     try {
         console.log(`Login attempt for userId: ${userId}`);
-        const user = await User.findOne({ userId });
+        // Case-insensitive search
+        const user = await User.findOne({ userId: { $regex: new RegExp(`^${userId}$`, 'i') } });
+
         if (!user) {
             console.log(`User not found: ${userId}`);
-            return res.status(400).json({ message: 'Invalid Credentials' });
+            return res.status(400).json({ message: 'User not found. Check your User ID.' });
         }
 
         console.log(`User found: ${user.userId}, comparing password...`);
@@ -32,7 +34,8 @@ router.post('/login', async (req, res) => {
             user: {
                 id: user.id,
                 role: user.role,
-                name: user.name
+                name: user.name,
+                department: user.department
             }
         };
 
@@ -51,7 +54,12 @@ router.post('/login', async (req, res) => {
                         role: user.role,
                         email: user.email,
                         department: user.department,
-                        mobileNo: user.mobileNo
+                        mobileNo: user.mobileNo,
+                        branch: user.branch,
+                        year: user.year,
+                        semester: user.semester,
+                        section: user.section,
+                        photo: user.photo
                     }
                 });
             }

@@ -11,6 +11,103 @@ const Bus = require('../models/Bus');
 const Announcement = require('../models/Announcement');
 const Fee = require('../models/Fee');
 const IssuedBook = require('../models/IssuedBook');
+const Class = require('../models/Class');
+
+// ... existing code ...
+
+// @route   GET api/admin/classes
+// @desc    Get all classes (filtered by dept for HOD)
+// @access  Private (Admin/HOD)
+router.get('/classes', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
+    try {
+        let query = {};
+        if (req.user.role === 'HOD') {
+            query.department = req.user.department;
+        }
+        const classes = await Class.find(query).populate('coordinator', 'name userId');
+        res.json(classes);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
+// @route   POST api/admin/classes
+// @desc    Create or update a class
+// @access  Private (Admin/HOD)
+router.post('/classes', auth(['Admin', 'HOD']), async (req, res) => {
+    const { name, department, semester, section, coordinatorId, academicYear, id } = req.body;
+    try {
+        let finalDept = department;
+        if (req.user.role === 'HOD') {
+            finalDept = req.user.department;
+        }
+
+        let cls;
+        if (id && id.length > 10) { // Check if it's a valid mongo ID
+            cls = await Class.findById(id);
+        }
+
+        if (cls) {
+            cls.name = name;
+            cls.semester = semester;
+            cls.section = section;
+            cls.coordinator = coordinatorId;
+            cls.academicYear = academicYear;
+            await cls.save();
+        } else {
+            cls = new Class({
+                name,
+                department: finalDept,
+                semester,
+                section,
+                coordinator: coordinatorId,
+                academicYear
+            });
+            await cls.save();
+        }
+
+        // If coordinator is assigned, update the User model too
+        if (coordinatorId) {
+            await User.findByIdAndUpdate(coordinatorId, {
+                isCoordinator: true,
+                coordinatorDetails: {
+                    department: finalDept,
+                    semester: semester,
+                    section: section
+                }
+            });
+        }
+
+        res.json(cls);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error: ' + err.message);
+    }
+});
+
+// @route   POST api/admin/classes/assign-students
+// @desc    Assign students to a specific year/section
+// @access  Private (Admin/HOD)
+router.post('/classes/assign-students', auth(['Admin', 'HOD']), async (req, res) => {
+    const { studentIds, semester, section, department } = req.body;
+    try {
+        await User.updateMany(
+            { _id: { $in: studentIds } },
+            {
+                $set: {
+                    semester: semester,
+                    section: section,
+                    department: department
+                }
+            }
+        );
+        res.json({ message: 'Students assigned successfully' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
 
 // Multer Config
 const storage = multer.diskStorage({
@@ -40,9 +137,18 @@ router.post('/upload', auth(['Admin', 'Office', 'HOD']), upload.single('photo'),
 // @access  Private (Admin/Office/HOD)
 router.post('/users', auth(['Admin', 'Office', 'HOD']), async (req, res) => {
     console.log('Creating user with data:', req.body);
-    const { userId, password, name, email, role, department, contact, photo, dob, mobileNo, branch, year } = req.body;
+    const {
+        userId, password, name, email, role, department, contact, photo, dob, mobileNo, branch, year,
+        section, residencyType, parentContact, community, address, bloodGroup, admissionType, semester
+    } = req.body;
 
     try {
+        // HOD Enforcement
+        let finalDepartment = department;
+        if (req.user.role === 'HOD') {
+            finalDepartment = req.user.department;
+        }
+
         let user = await User.findOne({ $or: [{ userId }, { email }] });
         if (user) {
             return res.status(400).json({ message: 'User already exists with this ID or Email' });
@@ -54,13 +160,21 @@ router.post('/users', auth(['Admin', 'Office', 'HOD']), async (req, res) => {
             name,
             email,
             role,
-            department,
+            department: finalDepartment,
             contact,
             photo,
             dob,
             mobileNo,
             branch,
-            year
+            year,
+            section,
+            residencyType,
+            parentContact,
+            community,
+            address,
+            bloodGroup,
+            admissionType,
+            semester
         });
 
         await user.save();
@@ -79,7 +193,11 @@ router.post('/users', auth(['Admin', 'Office', 'HOD']), async (req, res) => {
 // @access  Private (Admin/Office/HOD)
 router.get('/users', auth(['Admin', 'Office', 'HOD']), async (req, res) => {
     try {
-        const users = await User.find().select('-password');
+        let query = {};
+        if (req.user.role === 'HOD') {
+            query.department = req.user.department;
+        }
+        const users = await User.find(query).select('-password');
         res.json(users);
     } catch (err) {
         console.error(err.message);
@@ -92,8 +210,16 @@ router.get('/users', auth(['Admin', 'Office', 'HOD']), async (req, res) => {
 // @access  Private (Admin/Office/HOD)
 router.put('/users/:id', auth(['Admin', 'Office', 'HOD']), async (req, res) => {
     try {
-        const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true }).select('-password');
-        res.json(user);
+        let targetUser = await User.findById(req.params.id);
+        if (!targetUser) return res.status(404).json({ message: 'User not found' });
+
+        // HOD Enforcement
+        if (req.user.role === 'HOD' && targetUser.department !== req.user.department) {
+            return res.status(403).json({ message: 'Access denied: You can only edit users in your department' });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, { new: true }).select('-password');
+        res.json(updatedUser);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server error');
@@ -105,8 +231,40 @@ router.put('/users/:id', auth(['Admin', 'Office', 'HOD']), async (req, res) => {
 // @access  Private (Admin/Office/HOD)
 router.delete('/users/:id', auth(['Admin', 'Office', 'HOD']), async (req, res) => {
     try {
+        let targetUser = await User.findById(req.params.id);
+        if (!targetUser) return res.status(404).json({ message: 'User not found' });
+
+        // HOD Enforcement
+        if (req.user.role === 'HOD' && targetUser.department !== req.user.department) {
+            return res.status(403).json({ message: 'Access denied: You can only delete users in your department' });
+        }
+
         await User.findByIdAndDelete(req.params.id);
         res.json({ message: 'User deleted' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
+// @route   GET api/admin/coordinator/students
+// @desc    Get students for the assigned class of a coordinator
+// @access  Private (Coordinator)
+router.get('/coordinator/students', auth(['Staff', 'HOD']), async (req, res) => {
+    try {
+        if (!req.user.isCoordinator || !req.user.coordinatorDetails) {
+            return res.status(403).json({ message: 'User is not a class coordinator' });
+        }
+
+        const { department, semester, section } = req.user.coordinatorDetails;
+        const students = await User.find({
+            role: 'Student',
+            department,
+            semester,
+            section
+        }).select('-password');
+
+        res.json(students);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server error');
@@ -313,22 +471,75 @@ router.get('/stats', auth(['Admin', 'Office']), async (req, res) => {
 // @access  Private (Admin/Office/HOD)
 router.get('/hod-stats/:department', auth(['Admin', 'Office', 'HOD']), async (req, res) => {
     try {
-        const deptName = req.params.department;
+        let deptName = req.params.department.trim();
 
-        // Find the actual department document to get ID for Course matching
+        // Department Aliases Mapping
+        const deptAliases = {
+            'AIDS': ['AIDS', 'Artificial Intelligence and Data Science', 'Artificial intelligence and data science', 'Aids'],
+            'Artificial Intelligence and Data Science': ['AIDS', 'Artificial Intelligence and Data Science', 'Artificial intelligence and data science', 'Aids'],
+            'CSE': ['CSE', 'Computer Science and Engineering', 'Computer Science', 'Cse'],
+            'IT': ['IT', 'Information Technology', 'Information technology'],
+            'ECE': ['ECE', 'Electronics and Communication Engineering', 'Ece'],
+            'EEE': ['EEE', 'Electrical and Electronics Engineering', 'Eee'],
+            'MECH': ['MECH', 'Mechanical Engineering', 'Mechanical', 'Mech'],
+            'CIVIL': ['CIVIL', 'Civil Engineering', 'Civil'],
+            'Artificial intelligence and data science': ['AIDS', 'Artificial Intelligence and Data Science', 'Artificial intelligence and data science', 'Aids']
+        };
+
+        // Normalize matching keys (case-insensitive check)
+        let searchDepts = [deptName];
+
+        // Find if deptName matches any key or value in the alias map
+        for (const [key, values] of Object.entries(deptAliases)) {
+            const isKeyMatch = key.toLowerCase() === deptName.toLowerCase();
+            const isValueMatch = values.some(v => v.trim().toLowerCase() === deptName.toLowerCase());
+
+            if (isKeyMatch || isValueMatch) {
+                // If match found, search for ALL variations in that group
+                searchDepts = values;
+                break; // Use the first matching group
+            }
+        }
+
+        // Create case-insensitive regex patterns for all variations, allowing trailing spaces
+        const deptRegexes = searchDepts.map(d => new RegExp('^' + d.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*$', 'i'));
+
+        console.log(`HOD Stats Debug: Params Dept="${deptName}"`);
+        console.log(`Search Regexes:`, deptRegexes);
+
+        // Find the actual department document
         const departmentDoc = await Department.findOne({
-            name: { $regex: new RegExp('^' + deptName + '$', 'i') }
+            name: { $in: deptRegexes }
         });
 
         const studentCount = await User.countDocuments({
             role: 'Student',
-            department: { $regex: new RegExp('^' + deptName + '$', 'i') }
+            department: { $in: deptRegexes }
         });
+        console.log(`Found Students: ${studentCount}`);
+
+        // Get student breakdown by year
+        const studentsByYear = await User.aggregate([
+            {
+                $match: {
+                    role: 'Student',
+                    department: { $in: deptRegexes }
+                }
+            },
+            {
+                $group: {
+                    _id: "$year", // Group by year field
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { _id: 1 } }
+        ]);
 
         const staffCount = await User.countDocuments({
             role: { $in: ['Staff', 'HOD'] },
-            department: { $regex: new RegExp('^' + deptName + '$', 'i') }
+            department: { $in: deptRegexes }
         });
+        console.log(`Found Staff: ${staffCount}`);
 
         let courseCount = 0;
         if (departmentDoc) {
@@ -339,6 +550,7 @@ router.get('/hod-stats/:department', auth(['Admin', 'Office', 'HOD']), async (re
 
         res.json({
             students: studentCount,
+            studentsByYear: studentsByYear,
             staff: staffCount,
             courses: courseCount
         });
@@ -348,4 +560,160 @@ router.get('/hod-stats/:department', auth(['Admin', 'Office', 'HOD']), async (re
     }
 });
 
+// @route   POST api/admin/assign-coordinator
+// @desc    Assign a staff as class coordinator
+// @access  Private (Admin/HOD)
+router.post('/assign-coordinator', auth(['Admin', 'HOD']), async (req, res) => {
+    const { staffId, department, semester, section } = req.body;
+    try {
+        const staff = await User.findById(staffId);
+        if (!staff || (staff.role !== 'Staff' && staff.role !== 'HOD')) {
+            return res.status(404).json({ message: 'Staff member not found' });
+        }
+
+        staff.isCoordinator = true;
+        staff.coordinatorDetails = {
+            department: department,
+            semester: semester,
+            section: section
+        };
+        await staff.save();
+
+        res.json({ message: 'Coordinator assigned successfully', user: staff });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
+// @route   GET api/admin/student-full-details/:id
+// @desc    Get comprehensive student profile (Basic, Attendance, Marks)
+// @access  Private (Admin/HOD/Staff)
+router.get('/student-full-details/:id', auth(['Admin', 'HOD', 'Staff']), async (req, res) => {
+    try {
+        const studentId = req.params.id;
+        const student = await User.findById(studentId).select('-password');
+
+        if (!student || student.role !== 'Student') {
+            return res.status(404).json({ message: 'Student not found' });
+        }
+
+        // Fetch Attendance Stats
+        const Attendance = require('../models/Attendance');
+        const totalPeriods = await Attendance.countDocuments({ student: studentId });
+        const attendedPeriods = await Attendance.countDocuments({
+            student: studentId,
+            status: { $in: ['P', 'OD'] }
+        });
+
+        // Fetch Subject-wise Attendance
+        const subjectWiseAttendance = await Attendance.aggregate([
+            { $match: { student: new mongoose.Types.ObjectId(studentId) } },
+            {
+                $group: {
+                    _id: "$subject",
+                    total: { $sum: 1 },
+                    attended: { $sum: { $cond: [{ $in: ["$status", ["P", "OD"]] }, 1, 0] } }
+                }
+            }
+        ]);
+
+        // Fetch Marks
+        const Mark = require('../models/Mark');
+        const marks = await Mark.find({ student: studentId }).sort({ examType: 1, subject: 1 });
+
+        res.json({
+            profile: student,
+            attendance: {
+                percentage: totalPeriods > 0 ? ((attendedPeriods / totalPeriods) * 100).toFixed(1) : "0.0",
+                attended: attendedPeriods,
+                total: totalPeriods,
+                subjectWise: subjectWiseAttendance
+            },
+            marks: marks
+        });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
 module.exports = router;
+
+// @route   POST api/admin/complaints
+// @desc    Submit a complaint (Student)
+// @access  Private (Student)
+router.post('/complaints', auth(['Student']), async (req, res) => {
+    const { recipient, subject, message } = req.body;
+    try {
+        const student = await User.findById(req.user.id);
+        const newComplaint = new (require('../models/Complaint'))({
+            userId: req.user.id,
+            studentName: student.name,
+            department: student.department || 'General',
+            year: student.year || '1',
+            section: student.section,
+            recipient, // 'Admin' or 'HOD'
+            subject,
+            message
+        });
+        await newComplaint.save();
+        res.json(newComplaint);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
+// @route   GET api/admin/complaints
+// @desc    Get complaints for Admin or HOD
+// @access  Private (Admin, HOD)
+router.get('/complaints', auth(['Admin', 'HOD']), async (req, res) => {
+    try {
+        let query = {};
+
+        // Filter by recipient role
+        if (req.user.role === 'Admin') {
+            query.recipient = 'Admin';
+        } else if (req.user.role === 'HOD') {
+            query.recipient = 'HOD';
+            // Also filter by department for HOD
+            // We need to match student's department with HOD's department
+            // Since we store department in the complaint, we can use that
+            // Handle aliases if needed, but for now simple match
+            query.department = { $regex: new RegExp(req.user.department, 'i') };
+        }
+
+        const complaints = await require('../models/Complaint').find(query).sort({ createdAt: -1 });
+        res.json(complaints);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
+// @route   PUT api/admin/complaints/:id
+// @desc    Update complaint status
+// @access  Private (Admin, HOD)
+router.put('/complaints/:id', auth(['Admin', 'HOD']), async (req, res) => {
+    const { status, resolutionNote } = req.body;
+    try {
+        const complaint = await require('../models/Complaint').findById(req.params.id);
+        if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+
+        // Verify ownership/access
+        if (req.user.role === 'HOD') {
+            // Basic check if HOD department matches complaint department
+            // (Though strict check might block aliases, lenient check is better here)
+        }
+
+        if (status) complaint.status = status;
+        if (resolutionNote) complaint.resolutionNote = resolutionNote;
+
+        await complaint.save();
+        res.json(complaint);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});

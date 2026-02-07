@@ -154,6 +154,19 @@ const SubjectManagement = ({ navigation, route }) => {
     const [year, setYear] = useState('');
     const [semester, setSemester] = useState('');
     const [semesterOptions, setSemesterOptions] = useState([]);
+    const [type, setType] = useState('Theory');
+    const [duration, setDuration] = useState('1');
+
+    const subjectTypes = [
+        { label: 'Theory', value: 'Theory' },
+        { label: 'Practical', value: 'Practical' }
+    ];
+
+    const durationOptions = [
+        { label: '2 Periods', value: '2' },
+        { label: '3 Periods', value: '3' },
+        { label: '4 Periods', value: '4' }
+    ];
 
     const years = [
         { label: '1st Year', value: '1' },
@@ -260,7 +273,9 @@ const SubjectManagement = ({ navigation, route }) => {
                 credits: parseInt(credits),
                 department,
                 year,
-                semester: semester.toString()
+                semester: semester.toString(),
+                type,
+                duration: parseInt(duration)
             };
 
             if (editId) {
@@ -290,6 +305,8 @@ const SubjectManagement = ({ navigation, route }) => {
         setDepartment(sub.department?._id || sub.department);
         setYear(sub.year);
         setSemester(sub.semester);
+        setType(sub.type || 'Theory');
+        setDuration(String(sub.duration || '1'));
         setModalVisible(true);
     };
 
@@ -333,6 +350,8 @@ const SubjectManagement = ({ navigation, route }) => {
         if (user?.role !== 'HOD') setDepartment('');
         setYear('');
         setSemester('');
+        setType('Theory');
+        setDuration('1');
         setEditId(null);
     };
 
@@ -356,17 +375,25 @@ const SubjectManagement = ({ navigation, route }) => {
             <Text style={styles.subjectName}>{item.name} {item.shortName ? `(${item.shortName})` : ''}</Text>
 
             <View style={styles.infoGrid}>
-                <View style={styles.infoItem}>
-                    <Layers size={14} color="#64748b" />
-                    <Text style={styles.infoText} numberOfLines={1}>{item.department?.name || 'N/A'}</Text>
+                <View style={styles.infoRow}>
+                    <View style={styles.infoItem}>
+                        <Layers size={14} color="#64748b" />
+                        <Text style={styles.infoText} numberOfLines={1}>{item.department?.name || 'N/A'}</Text>
+                    </View>
+                    <View style={[styles.typeTag, item.type === 'Practical' ? styles.practicalTag : styles.theoryTag]}>
+                        <Clock size={12} color={item.type === 'Practical' ? '#0891b2' : '#64748b'} />
+                        <Text style={[styles.tagText, item.type === 'Practical' && { color: '#0891b2' }]}>
+                            {item.type || 'Theory'} {item.type === 'Practical' ? `(${item.duration} Periods)` : ''}
+                        </Text>
+                    </View>
                 </View>
-                <View style={[styles.infoItem, { justifyContent: 'space-between', width: '100%' }]}>
+                <View style={[styles.infoItem, { justifyContent: 'space-between', width: '100%', marginTop: 4 }]}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <Calendar size={14} color="#64748b" />
                         <Text style={styles.infoText}>{item.year} Yr • Sem {item.semester}</Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Clock size={14} color="#64748b" />
+                        <BookOpen size={14} color="#64748b" />
                         <Text style={styles.infoText}>{item.credits} Credits</Text>
                     </View>
                 </View>
@@ -515,12 +542,38 @@ const SubjectManagement = ({ navigation, route }) => {
                                 </View>
                             </View>
 
-                            <TouchableOpacity style={styles.submitButton} onPress={handleCreateOrUpdate} activeOpacity={0.8}>
-                                {loading ? (
-                                    <ActivityIndicator color="#fff" />
-                                ) : (
-                                    <Text style={styles.submitButtonText}>{editId ? 'Update Subject' : 'Create Subject'}</Text>
+                            <View style={styles.rowInputs}>
+                                <View style={{ flex: 1, marginRight: type === 'Practical' ? 10 : 0 }}>
+                                    <CustomDropdown
+                                        label="Subject Type"
+                                        value={type}
+                                        options={subjectTypes}
+                                        onSelect={(val) => {
+                                            setType(val);
+                                            if (val === 'Theory') setDuration('1');
+                                            else if (duration === '1') setDuration('2'); // Default to 2 for practical
+                                        }}
+                                        placeholder="Type"
+                                    />
+                                </View>
+                                {type === 'Practical' && (
+                                    <View style={{ flex: 1 }}>
+                                        <CustomDropdown
+                                            label="Duration (Periods)"
+                                            value={duration}
+                                            options={durationOptions}
+                                            onSelect={setDuration}
+                                            placeholder="Periods"
+                                        />
+                                    </View>
                                 )}
+                            </View>
+
+                            <TouchableOpacity style={styles.submitButton} onPress={handleCreateOrUpdate} activeOpacity={0.8}>
+                                {loading ?
+                                    <ActivityIndicator color="#fff" /> :
+                                    <Text style={styles.submitButtonText}>{editId ? 'Update Subject' : 'Create Subject'}</Text>
+                                }
                             </TouchableOpacity>
                             <View style={{ height: 40 }} />
                         </ScrollView>
@@ -629,15 +682,33 @@ const styles = StyleSheet.create({
         borderTopColor: '#f1f5f9',
         paddingTop: 12,
     },
+    infoRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        width: '100%'
+    },
     infoItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8
+        gap: 8,
+        flex: 1
     },
+    typeTag: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 8,
+        gap: 5
+    },
+    theoryTag: { backgroundColor: '#f1f5f9' },
+    practicalTag: { backgroundColor: '#ecfeff' },
+    tagText: { fontSize: 11, fontWeight: '800', color: '#64748b', textTransform: 'uppercase' },
     infoText: {
         fontSize: 13,
         color: '#64748b',
-        fontWeight: '500'
+        fontWeight: '600'
     },
     emptyContainer: {
         alignItems: 'center',

@@ -1,11 +1,13 @@
 import React, { useContext, useState, useEffect } from 'react';
-import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, ScrollView, ActivityIndicator, StatusBar, Platform, Image } from 'react-native';
+import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, ScrollView, ActivityIndicator, StatusBar, Platform, Image, Dimensions, RefreshControl } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/api';
-import { LogOut, Users, FileText, CheckSquare, Bell, Calendar, Megaphone, GraduationCap, Eye, X, ImageIcon, Award } from 'lucide-react-native';
+import { LogOut, Users, FileText, CheckSquare, Bell, Calendar, Megaphone, GraduationCap, Eye, X, ImageIcon, Award, BookOpen, Clock, ChevronRight, ClipboardList, Menu } from 'lucide-react-native';
 import { Modal } from 'react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
+
+const { width } = Dimensions.get('window');
 
 const StaffDashboard = ({ navigation }) => {
     const { user, logout } = useContext(AuthContext);
@@ -13,176 +15,259 @@ const StaffDashboard = ({ navigation }) => {
     const [loading, setLoading] = useState(true);
     const [viewImageModal, setViewImageModal] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
+    const [classesCount, setClassesCount] = useState('00');
+    const [nextClassInfo, setNextClassInfo] = useState('No classes');
+    const [bioModalVisible, setBioModalVisible] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
-        fetchAnnouncements();
+        fetchAllData();
     }, []);
+
+    const fetchAllData = async () => {
+        setLoading(true);
+        try {
+            await Promise.all([
+                fetchAnnouncements(),
+                fetchScheduleStats()
+            ]);
+        } catch (error) {
+            console.error('Initial fetch failed', error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    const fetchScheduleStats = async () => {
+        try {
+            const res = await api.get('/timetable/my-schedule');
+            const day = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+            const todayClasses = res.data[day] || [];
+
+            // Handle null/undefined gracefully
+            if (todayClasses) {
+                setClassesCount(String(todayClasses.length).padStart(2, '0'));
+
+                // Find next class
+                const now = new Date();
+                const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+                // Sort just in case
+                const sorted = [...todayClasses].sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+                const upcoming = sorted.find(c => c.startTime > currentTime);
+                if (upcoming) {
+                    setNextClassInfo(`Next: ${upcoming.startTime} (${upcoming.subject})`);
+                } else if (todayClasses.length > 0) {
+                    setNextClassInfo('All classes done');
+                } else {
+                    setNextClassInfo('No classes today');
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching schedule stats:', error);
+            setNextClassInfo('Schedule unavailable');
+        }
+    };
 
     const fetchAnnouncements = async () => {
         try {
             const res = await api.get('/college/announcements');
             // Show only latest 3
-            setAnnouncements(res.data.slice(0, 3));
+            if (res.data && Array.isArray(res.data)) {
+                setAnnouncements(res.data.slice(0, 3));
+            }
         } catch (error) {
             console.error('Error fetching announcements', error);
-        } finally {
-            setLoading(false);
         }
     };
 
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchAllData();
+    };
+
     const stats = [
-        { id: '1', title: 'Classes Today', value: '04', icon: <Calendar size={22} color="#fff" />, colors: ['#800000', '#a52a2a'], sub: 'Next: 10:00 AM' },
-        { id: '2', title: 'Students', value: '120+', icon: <Users size={22} color="#fff" />, colors: ['#0891b2', '#06b6d4'], sub: '3 Sections' },
+        { id: '1', title: 'Classes Today', value: classesCount, icon: <Calendar size={24} color="#800000" />, bg: '#fee2e2', sub: nextClassInfo },
+        { id: '2', title: 'Students', value: '120+', icon: <Users size={24} color="#0891b2" />, bg: '#cffafe', sub: 'Total Active' },
     ];
 
     const managementLinks = [
-        { id: '1', title: 'Mark Attendance', sub: 'Daily student logs', icon: <CheckSquare size={24} color="#800000" />, bg: '#ffe4e6' },
-        { id: '2', title: 'Upload Notes', sub: 'Share study materials', icon: <FileText size={24} color="#0284c7" />, bg: '#e0f2fe' },
-        { id: '3', title: 'CIA Marks', sub: 'Manage grades', icon: <Award size={24} color="#f59e0b" />, bg: '#fffbeb' },
-        { id: '4', title: 'Faculty Lounge', sub: 'Staff discussions', icon: <Users size={24} color="#7c3aed" />, bg: '#f5f3ff' },
+        { id: '0', title: 'My Timetable', icon: <Calendar size={24} color="#fff" />, startColor: '#800000', endColor: '#b91c1c', route: 'StaffTimetable' },
+        ...(user?.isCoordinator ? [
+            { id: 'my-class', title: 'My Class', icon: <GraduationCap size={24} color="#fff" />, startColor: '#4f46e5', endColor: '#6366f1', route: 'CoordinatorClassView' },
+            { id: 'approvals', title: 'Leave Approvals', icon: <ClipboardList size={24} color="#fff" />, startColor: '#db2777', endColor: '#f472b6', route: 'CoordinatorRequests' }
+        ] : []),
+        ...(user?.role === 'HOD' ? [
+            { id: 'hod-approvals', title: 'HOD Approvals', icon: <CheckSquare size={24} color="#fff" />, startColor: '#800000', endColor: '#b91c1c', route: 'HODRequests' }
+        ] : []),
+        { id: '0b', title: 'Class Search', icon: <BookOpen size={24} color="#fff" />, startColor: '#0f172a', endColor: '#334155', route: 'TimetableViewer' },
+        { id: '1', title: 'Attendance', icon: <CheckSquare size={24} color="#fff" />, startColor: '#059669', endColor: '#10b981', route: 'StaffAttendance' },
+        { id: '3', title: 'CIA Marks', icon: <Award size={24} color="#fff" />, startColor: '#d97706', endColor: '#f59e0b', route: 'StaffCIAMarks' },
+        { id: '2', title: 'Upload Notes', icon: <FileText size={24} color="#fff" />, startColor: '#2563eb', endColor: '#3b82f6', route: null },
+        { id: '4', title: 'Faculty Lounge', icon: <Users size={24} color="#fff" />, startColor: '#7c3aed', endColor: '#8b5cf6', route: null },
     ];
+
+    const getDateString = () => {
+        const date = new Date();
+        return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    };
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar barStyle="light-content" backgroundColor="#800000" />
 
             <ScrollView
                 style={{ flex: 1 }}
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: 30 }}
+                contentContainerStyle={{ paddingBottom: 40 }}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#800000" />
+                }
             >
-                {/* Header Section */}
-                <LinearGradient
-                    colors={['#800000', '#5a0000']}
-                    style={styles.headerContainer}
-                >
-                    <View style={styles.headerTop}>
-                        <View style={styles.userInfoRow}>
-                            {user?.photo ? (
-                                <Image source={{ uri: user.photo }} style={styles.profilePic} />
-                            ) : (
-                                <View style={styles.profilePlaceholder}>
-                                    <Text style={styles.profileInitial}>{user?.name?.charAt(0)}</Text>
+                {/* Modern Header */}
+                <View style={styles.headerWrapper}>
+                    <LinearGradient
+                        colors={['#800000', '#600000', '#400000']}
+                        style={styles.headerContainer}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                    >
+                        <View style={styles.headerTop}>
+                            <TouchableOpacity onPress={() => navigation.openDrawer()} style={styles.menuButton}>
+                                <Menu size={26} color="#fff" />
+                            </TouchableOpacity>
+                            <View style={{ flex: 1, marginLeft: 15 }}>
+                                <Text style={styles.dateText}>{getDateString()}</Text>
+                                <Text style={styles.welcomeText}>Welcome back,</Text>
+                                <Text style={styles.userName}>{user?.name?.split(' ')[0] || 'Staff'}</Text>
+                            </View>
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Announcements')}
+                                style={styles.headerIconButton}
+                            >
+                                <Bell size={22} color="#fff" />
+                                <View style={styles.notifBadge} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.profileCard}>
+                            <View style={styles.profileRow}>
+                                {user?.photo ? (
+                                    <Image source={{ uri: user.photo }} style={styles.profilePic} />
+                                ) : (
+                                    <View style={styles.profilePlaceholder}>
+                                        <Text style={styles.profileInitial}>{user?.name?.charAt(0)}</Text>
+                                    </View>
+                                )}
+                                <View style={styles.profileInfo}>
+                                    <View style={styles.roleTag}>
+                                        <Text style={styles.roleText}>{user?.role || 'Staff'}</Text>
+                                    </View>
+                                    <Text style={styles.deptText}>{user?.department || 'Department'}</Text>
+                                    <TouchableOpacity
+                                        style={styles.viewProfileBtn}
+                                        onPress={() => setBioModalVisible(true)}
+                                    >
+                                        <Text style={styles.viewProfileText}>View Full Profile</Text>
+                                        <ChevronRight size={12} color="#fff" />
+                                    </TouchableOpacity>
                                 </View>
-                            )}
-                            <View>
-                                <Text style={styles.welcomeText}>Staff Portal,</Text>
-                                <Text style={styles.userName}>{user?.name}</Text>
                             </View>
                         </View>
-                        <TouchableOpacity onPress={logout} style={styles.logoutButton}>
-                            <LogOut size={20} color="#fff" />
-                        </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.headerBadgeRow}>
-                        <View style={styles.headerBadge}>
-                            <Users size={14} color="rgba(255,255,255,0.8)" />
-                            <Text style={styles.headerBadgeText}>{user?.department || 'General Dept'}</Text>
-                        </View>
-                        <View style={[styles.headerBadge, { backgroundColor: 'rgba(74,222,128,0.2)' }]}>
-                            <Text style={[styles.headerBadgeText, { color: '#4ade80' }]}>On Duty</Text>
-                        </View>
-                    </View>
-                </LinearGradient>
+                    </LinearGradient>
+                </View>
 
                 <View style={styles.content}>
                     {/* Stats Overview */}
                     <View style={styles.statsRow}>
                         {stats.map(stat => (
-                            <TouchableOpacity key={stat.id} style={styles.statCard} activeOpacity={0.9}>
-                                <LinearGradient colors={stat.colors} style={styles.statGradient}>
-                                    <View style={styles.statIconHeader}>
-                                        <View style={styles.statIconBg}>{stat.icon}</View>
-                                        <Text style={styles.statValueText}>{stat.value}</Text>
-                                    </View>
-                                    <Text style={styles.statLabelText}>{stat.title}</Text>
-                                    <View style={styles.statStatusRow}>
-                                        <View style={styles.statStatusDot} />
-                                        <Text style={styles.statSubText}>{stat.sub}</Text>
-                                    </View>
-                                </LinearGradient>
-                            </TouchableOpacity>
+                            <View key={stat.id} style={styles.statCard}>
+                                <View style={[styles.statIconBox, { backgroundColor: stat.bg }]}>
+                                    {stat.icon}
+                                </View>
+                                <View style={styles.statInfo}>
+                                    <Text style={styles.statValue}>{stat.value}</Text>
+                                    <Text style={styles.statTitle}>{stat.title}</Text>
+                                    <Text style={styles.statSub} numberOfLines={1}>{stat.sub}</Text>
+                                </View>
+                            </View>
                         ))}
                     </View>
 
-                    {/* Quick Access List */}
-                    <Text style={styles.sectionTitle}>Management</Text>
-                    <View style={styles.menuList}>
+                    {/* Management Grid */}
+                    <Text style={styles.sectionTitle}>Quick Actions</Text>
+                    <View style={styles.gridContainer}>
                         {managementLinks.map(link => (
                             <TouchableOpacity
                                 key={link.id}
-                                style={styles.menuItem}
-                                activeOpacity={0.7}
+                                style={styles.gridItem}
+                                activeOpacity={0.9}
                                 onPress={() => {
-                                    if (link.title === 'CIA Marks') {
-                                        navigation.navigate('StaffCIAMarks');
-                                    }
+                                    if (link.route) navigation.navigate(link.route);
                                 }}
                             >
-                                <View style={[styles.menuIconWrapper, { backgroundColor: link.bg }]}>
-                                    {link.icon}
-                                </View>
-                                <View style={styles.menuContent}>
-                                    <Text style={styles.menuText}>{link.title}</Text>
-                                    <Text style={styles.menuSub}>{link.sub}</Text>
-                                </View>
-                                <View style={styles.chevron}>
-                                    <View style={styles.chevronDot} />
-                                </View>
+                                <LinearGradient
+                                    colors={[link.startColor, link.endColor]}
+                                    style={styles.gridGradient}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                >
+                                    <View style={styles.gridIconBg}>
+                                        {link.icon}
+                                    </View>
+                                    <Text style={styles.gridTitle}>{link.title}</Text>
+                                </LinearGradient>
                             </TouchableOpacity>
                         ))}
                     </View>
 
                     {/* Campus Updates Section */}
                     <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Campus Updates</Text>
+                        <Text style={styles.sectionTitle}>Announcements</Text>
                         <TouchableOpacity onPress={() => navigation.navigate('Announcements')}>
-                            <Text style={styles.seeAllText}>See All</Text>
+                            <Text style={styles.seeAllText}>View All</Text>
                         </TouchableOpacity>
                     </View>
 
                     {loading ? (
                         <View style={styles.loaderContainer}>
-                            <ActivityIndicator color="#800000" />
+                            <ActivityIndicator color="#800000" size="large" />
                         </View>
                     ) : (
                         <View style={styles.announcementsList}>
                             {announcements.length > 0 ? announcements.map(item => (
                                 <View key={item._id} style={styles.announcementCard}>
-                                    <View style={styles.cardIndicator} />
-                                    <View style={styles.announcementCardContent}>
-                                        <View style={styles.announcementHeader}>
+                                    <View style={styles.announcementHeader}>
+                                        <View style={styles.announcementIcon}>
+                                            <Bell size={18} color="#800000" />
+                                        </View>
+                                        <View style={{ flex: 1 }}>
                                             <Text style={styles.announcementTitle} numberOfLines={1}>{item.title}</Text>
                                             <Text style={styles.announcementDate}>
-                                                {new Date(item.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                {new Date(item.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                             </Text>
                                         </View>
-                                        <Text style={styles.announcementDesc} numberOfLines={2}>{item.content}</Text>
-
-                                        {item.attachmentUrl && item.attachmentType === 'image' && (
-                                            <TouchableOpacity
-                                                style={styles.imagePreviewContainer}
-                                                onPress={() => {
-                                                    setSelectedImage(item.attachmentUrl);
-                                                    setViewImageModal(true);
-                                                }}
-                                            >
-                                                <Image source={{ uri: item.attachmentUrl }} style={styles.imagePreview} resizeMode="cover" />
-                                                <View style={styles.imageOverlay}>
-                                                    <Eye size={14} color="#fff" />
-                                                    <Text style={styles.imageOverlayText}>View</Text>
-                                                </View>
-                                            </TouchableOpacity>
-                                        )}
-
-                                        <View style={styles.announcementFooter}>
-                                            <View style={styles.tagBadge}>
-                                                <Megaphone size={12} color="#64748b" />
-                                                <Text style={styles.tagText}>Notice</Text>
-                                            </View>
-                                        </View>
                                     </View>
+
+                                    <Text style={styles.announcementDesc} numberOfLines={3}>{item.content}</Text>
+
+                                    {item.attachmentUrl && item.attachmentType === 'image' && (
+                                        <TouchableOpacity
+                                            style={styles.imagePreviewContainer}
+                                            onPress={() => {
+                                                setSelectedImage(item.attachmentUrl);
+                                                setViewImageModal(true);
+                                            }}
+                                        >
+                                            <Image source={{ uri: item.attachmentUrl }} style={styles.imagePreview} resizeMode="cover" />
+                                            <View style={styles.imageOverlay}>
+                                                <Eye size={12} color="#fff" />
+                                                <Text style={styles.imageOverlayText}>Preview</Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             )) : (
                                 <View style={styles.emptyState}>
@@ -218,131 +303,216 @@ const StaffDashboard = ({ navigation }) => {
                     )}
                 </View>
             </Modal>
+            {/* Profile Details Modal */}
+            <Modal
+                visible={bioModalVisible}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setBioModalVisible(false)}
+            >
+                <View style={styles.fullImageOverlay}>
+                    <View style={styles.bioModalContent}>
+                        <View style={styles.bioHeader}>
+                            <View style={styles.bioAvatar}>
+                                {user?.photo ? (
+                                    <Image source={{ uri: user.photo }} style={styles.fullBioPic} />
+                                ) : (
+                                    <Text style={styles.avatarText}>{user?.name?.charAt(0)}</Text>
+                                )}
+                            </View>
+                            <TouchableOpacity onPress={() => setBioModalVisible(false)} style={styles.closeBioBtn}>
+                                <X size={20} color="#64748b" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={styles.bioName}>{user?.name}</Text>
+                        <Text style={styles.bioRole}>{user?.role || 'Faculty Member'}</Text>
+
+                        <View style={styles.bioInfoSection}>
+                            <View style={styles.bioItem}>
+                                <View style={styles.bioIconBg}><Calendar size={18} color="#800000" /></View>
+                                <View>
+                                    <Text style={styles.bioLabel}>User ID</Text>
+                                    <Text style={styles.bioValue}>{user?.userId}</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.bioItem}>
+                                <View style={styles.bioIconBg}><Bell size={18} color="#800000" /></View>
+                                <View>
+                                    <Text style={styles.bioLabel}>Email Address</Text>
+                                    <Text style={styles.bioValue}>{user?.email}</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.bioItem}>
+                                <View style={styles.bioIconBg}><Users size={18} color="#800000" /></View>
+                                <View>
+                                    <Text style={styles.bioLabel}>Department</Text>
+                                    <Text style={styles.bioValue}>{user?.department}</Text>
+                                </View>
+                            </View>
+                        </View>
+
+                        <TouchableOpacity
+                            style={styles.closeProfileBtn}
+                            onPress={() => setBioModalVisible(false)}
+                        >
+                            <Text style={styles.closeProfileText}>Close Profile</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f8fafc' },
+    container: { flex: 1, backgroundColor: '#f9f9f9' },
+    headerWrapper: {
+        backgroundColor: '#800000',
+        borderBottomLeftRadius: 30,
+        borderBottomRightRadius: 30,
+        elevation: 10,
+        zIndex: 10,
+        overflow: 'hidden'
+    },
     headerContainer: {
-        paddingTop: (Platform?.OS === 'android') ? 50 : 30,
-        paddingBottom: 40,
+        paddingTop: Platform.OS === 'android' ? 40 : 20,
+        paddingBottom: 25,
         paddingHorizontal: 24,
-        borderBottomLeftRadius: 40,
-        borderBottomRightRadius: 40,
-        elevation: 15,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.15,
-        shadowRadius: 20,
     },
     headerTop: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 20,
+        alignItems: 'flex-start',
+        marginBottom: 20
     },
-    userInfoRow: { flexDirection: 'row', alignItems: 'center' },
-    profilePic: { width: 55, height: 55, borderRadius: 27, marginRight: 15, borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)' },
-    profilePlaceholder: {
-        width: 55,
-        height: 55,
-        borderRadius: 27,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 15,
+    dateText: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 },
+    welcomeText: { color: 'rgba(255,255,255,0.8)', fontSize: 16, marginTop: 4 },
+    userName: { color: '#fff', fontSize: 26, fontWeight: '800' },
+    menuButton: { backgroundColor: 'rgba(255,255,255,0.15)', padding: 10, borderRadius: 15, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    headerIconButton: { backgroundColor: 'rgba(255,255,255,0.15)', padding: 10, borderRadius: 15, position: 'relative' },
+    notifBadge: { position: 'absolute', top: 12, right: 12, width: 8, height: 8, borderRadius: 4, backgroundColor: '#ef4444', borderWidth: 2, borderColor: '#800000' },
+    profileCard: {
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        borderRadius: 20,
+        padding: 15,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.3)'
+        borderColor: 'rgba(255,255,255,0.15)'
     },
-    profileInitial: { color: '#fff', fontSize: 24, fontWeight: '800' },
-    welcomeText: { fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: '600' },
-    userName: { fontSize: 22, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
-    logoutButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 14,
-        backgroundColor: 'rgba(255,255,255,0.15)',
+    profileRow: { flexDirection: 'row', alignItems: 'center' },
+    profilePic: { width: 50, height: 50, borderRadius: 25, borderWidth: 2, borderColor: '#fff' },
+    profilePlaceholder: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: '#e2e8f0',
         justifyContent: 'center',
-        alignItems: 'center'
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#fff'
     },
-    headerBadgeRow: { flexDirection: 'row', marginTop: 15 },
-    headerBadge: {
+    profileInitial: { fontSize: 22, color: '#800000', fontWeight: 'bold' },
+    profileInfo: { marginLeft: 15 },
+    roleTag: { backgroundColor: '#fcd34d', paddingHorizontal: 10, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start', marginBottom: 4 },
+    roleText: { color: '#78350f', fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
+    deptText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+    viewProfileBtn: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.15)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 10,
-        marginRight: 10
+        marginTop: 6,
+        paddingVertical: 2,
     },
-    headerBadgeText: { color: '#fff', fontSize: 12, fontWeight: '700', marginLeft: 5 },
+    viewProfileText: {
+        color: 'rgba(255,255,255,0.9)',
+        fontSize: 12,
+        fontWeight: '700',
+        textDecorationLine: 'underline',
+        marginRight: 4
+    },
 
     content: { paddingHorizontal: 20, paddingTop: 25 },
+
     statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
-    statCard: { width: '48%', height: 140, borderRadius: 30, overflow: 'hidden', elevation: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 },
-    statGradient: { flex: 1, padding: 20, justifyContent: 'space-between' },
-    statIconHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    statIconBg: { width: 36, height: 36, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
-    statValueText: { fontSize: 24, fontWeight: '900', color: '#fff' },
-    statLabelText: { fontSize: 15, fontWeight: '700', color: 'rgba(255,255,255,0.9)' },
-    statStatusRow: { flexDirection: 'row', alignItems: 'center' },
-    statStatusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#4ade80', marginRight: 6 },
-    statSubText: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.8)' },
-
-    sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, marginTop: 10 },
-    sectionTitle: { fontSize: 20, fontWeight: '800', color: '#0f172a', marginBottom: 15 },
-    seeAllText: { fontSize: 14, color: '#800000', fontWeight: '800' },
-
-    menuList: { gap: 15, marginBottom: 25 },
-    menuItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
+    statCard: {
+        width: '48%',
         backgroundColor: '#fff',
-        padding: 16,
-        borderRadius: 24,
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        borderWidth: 1,
-        borderColor: '#f1f5f9'
-    },
-    menuIconWrapper: { width: 50, height: 50, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-    menuContent: { flex: 1 },
-    menuText: { fontSize: 16, fontWeight: '800', color: '#334155' },
-    menuSub: { fontSize: 12, color: '#64748b', marginTop: 2, fontWeight: '500' },
-    chevron: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#f8fafc', justifyContent: 'center', alignItems: 'center' },
-    chevronDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#cbd5e1' },
-
-    announcementsList: { marginBottom: 20 },
-    announcementCard: {
-        backgroundColor: '#fff',
-        borderRadius: 22,
-        flexDirection: 'row',
-        marginBottom: 15,
+        borderRadius: 20,
+        padding: 15,
         elevation: 4,
         shadowColor: '#000',
         shadowOpacity: 0.05,
-        shadowRadius: 8,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: '#f1f5f9'
+        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: 10
     },
-    cardIndicator: { width: 5, height: '100%', backgroundColor: '#800000' },
-    announcementCardContent: { flex: 1, padding: 18 },
-    announcementHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-    announcementTitle: { fontSize: 16, fontWeight: '800', color: '#1e293b', flex: 1, marginRight: 10 },
-    announcementDate: { fontSize: 12, color: '#94a3b8', fontWeight: '600' },
-    announcementDesc: { fontSize: 14, color: '#64748b', lineHeight: 20, marginBottom: 12 },
+    statIconBox: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+    statValue: { fontSize: 22, fontWeight: '900', color: '#1e293b' },
+    statTitle: { fontSize: 13, color: '#64748b', fontWeight: '600', marginBottom: 4 },
+    statSub: { fontSize: 11, color: '#059669', fontWeight: '700' },
+
+    sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1e293b', marginBottom: 15 },
+
+    gridContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        marginBottom: 25
+    },
+    gridItem: {
+        width: '48%',
+        height: 100,
+        marginBottom: 15,
+        borderRadius: 20,
+        overflow: 'hidden',
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 8
+    },
+    gridGradient: {
+        flex: 1,
+        padding: 15,
+        justifyContent: 'space-between',
+        alignItems: 'flex-start'
+    },
+    gridIconBg: {
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    gridTitle: { color: '#fff', fontSize: 14, fontWeight: '700' },
+
+    sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+    seeAllText: { fontSize: 14, color: '#800000', fontWeight: '700' },
+
+    announcementsList: { gap: 15 },
+    announcementCard: {
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        padding: 16,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowRadius: 5
+    },
+    announcementHeader: { flexDirection: 'row', marginBottom: 10 },
+    announcementIcon: {
+        width: 32, height: 32, borderRadius: 16, backgroundColor: '#fee2e2',
+        justifyContent: 'center', alignItems: 'center', marginRight: 12
+    },
+    announcementTitle: { fontSize: 15, fontWeight: '700', color: '#1e293b' },
+    announcementDate: { fontSize: 11, color: '#94a3b8', marginTop: 2 },
+    announcementDesc: { fontSize: 13, color: '#475569', lineHeight: 20, marginBottom: 10 },
 
     imagePreviewContainer: {
-        width: '100%',
-        height: 120,
+        height: 150,
         borderRadius: 12,
         overflow: 'hidden',
-        marginBottom: 12,
-        backgroundColor: '#f1f5f9',
+        marginTop: 5,
         position: 'relative'
     },
     imagePreview: { width: '100%', height: '100%' },
@@ -351,17 +521,18 @@ const styles = StyleSheet.create({
         bottom: 8,
         right: 8,
         backgroundColor: 'rgba(0,0,0,0.6)',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 12,
         flexDirection: 'row',
         alignItems: 'center'
     },
     imageOverlayText: { color: '#fff', fontSize: 10, fontWeight: '700', marginLeft: 4 },
 
-    announcementFooter: { flexDirection: 'row' },
-    tagBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f1f5f9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-    tagText: { fontSize: 11, fontWeight: '700', color: '#64748b', marginLeft: 5 },
+    emptyState: { alignItems: 'center', padding: 30, backgroundColor: '#fff', borderRadius: 16 },
+    emptyText: { color: '#cbd5e1', fontWeight: 'bold', marginTop: 10 },
+
+    loaderContainer: { padding: 30 },
 
     fullImageOverlay: {
         flex: 1,
@@ -380,9 +551,103 @@ const styles = StyleSheet.create({
     },
     fullImage: { width: '100%', height: '100%' },
 
-    loaderContainer: { padding: 40 },
-    emptyState: { alignItems: 'center', padding: 40 },
-    emptyText: { color: '#94a3b8', fontWeight: '600', marginTop: 10 }
+    // Bio Modal Styles
+    bioModalContent: {
+        backgroundColor: '#fff',
+        borderRadius: 32,
+        width: '90%',
+        padding: 24,
+        elevation: 25,
+    },
+    bioHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 20,
+    },
+    bioAvatar: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#fee2e2',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 4,
+        borderColor: '#fff',
+        elevation: 8,
+        overflow: 'hidden'
+    },
+    fullBioPic: {
+        width: '100%',
+        height: '100%',
+    },
+    avatarText: {
+        fontSize: 36,
+        fontWeight: '900',
+        color: '#800000',
+    },
+    closeBioBtn: {
+        padding: 8,
+        backgroundColor: '#f1f5f9',
+        borderRadius: 14,
+    },
+    bioName: {
+        fontSize: 24,
+        fontWeight: '800',
+        color: '#1e293b',
+        textAlign: 'center',
+    },
+    bioRole: {
+        fontSize: 14,
+        color: '#800000',
+        fontWeight: '700',
+        textAlign: 'center',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginBottom: 24,
+    },
+    bioInfoSection: {
+        gap: 16,
+        backgroundColor: '#f8fafc',
+        padding: 20,
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
+    },
+    bioItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 15,
+    },
+    bioIconBg: {
+        backgroundColor: '#fff',
+        padding: 10,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#f1f5f9'
+    },
+    bioLabel: {
+        fontSize: 12,
+        color: '#64748b',
+        fontWeight: '600',
+    },
+    bioValue: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#1e293b',
+    },
+    closeProfileBtn: {
+        backgroundColor: '#800000',
+        paddingVertical: 16,
+        borderRadius: 16,
+        alignItems: 'center',
+        marginTop: 24,
+    },
+    closeProfileText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '700',
+    },
 });
 
 export default StaffDashboard;
