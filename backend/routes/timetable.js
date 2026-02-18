@@ -180,9 +180,16 @@ router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
 
         // 2. FILL THEORY (Balanced Distribution Across Remaining Slots)
         for (const day of activeDays) {
+            // Reset lastSubject at the start of the day so it doesn't block the first slot based on yesterday
+            results.forEach(r => r.lastSubject = null);
+
             // Process slots sequentially
             for (let slotIndex = 0; slotIndex < timeSlots.length; slotIndex++) {
-                if (results[0].schedule[day][slotIndex].isFixed) continue;
+                if (results[0].schedule[day][slotIndex].isFixed) {
+                    // If fixed slot (Break/Lunch), it breaks the consecutive chain naturally
+                    results.forEach(r => r.lastSubject = null);
+                    continue;
+                }
 
                 const shuffledIndices = results.map((_, i) => i).sort(() => Math.random() - 0.5);
                 shuffledIndices.forEach(idx => {
@@ -202,7 +209,8 @@ router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
                         const isConsecutive = t.name === r.lastSubject;
                         const dailyCount = r.dailyLimits[day][t.name] || 0;
                         const staffBusy = busyInThisSlot.has(t.staff);
-                        return !isConsecutive && dailyCount < 2 && !staffBusy;
+                        // Allow up to 3 periods per day to accommodate 10-15 hour subjects
+                        return !isConsecutive && dailyCount < 3 && !staffBusy;
                     });
 
                     if (taskIdx !== -1) {
@@ -219,6 +227,8 @@ router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
                         r.schedule[day][slotIndex].subject = 'Free';
                         r.schedule[day][slotIndex].staff = '-';
                         r.schedule[day][slotIndex].room = '-';
+                        // IMPORTANT: Reset lastSubject so the next slot isn't blocked by the ghost of the previous subject
+                        r.lastSubject = null;
                     }
                 });
             }

@@ -165,7 +165,8 @@ const TimeTableGenerator = ({ navigation }) => {
         subjectId: '',
         staffId: '',
         hoursPerWeek: '4',
-        duration: '1'
+        duration: '1',
+        sessions: '1'
     });
 
     // Added subjects list
@@ -274,13 +275,34 @@ const TimeTableGenerator = ({ navigation }) => {
     }, [selectedDept, selectedYear, semester]);
 
     const handleAddSubject = () => {
-        if (!currentSubject.subjectId || !currentSubject.staffId || !currentSubject.hoursPerWeek) {
-            Alert.alert('Error', 'Please select a subject, staff and hours');
+        const isPractical = currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical';
+        // Validate
+        if (!currentSubject.subjectId || !currentSubject.staffId) {
+            Alert.alert('Error', 'Please select a subject and staff');
+            return;
+        }
+
+        if (isPractical && !currentSubject.sessions) {
+            Alert.alert('Error', 'Please enter number of sessions');
+            return;
+        }
+        if (!isPractical && !currentSubject.hoursPerWeek) {
+            Alert.alert('Error', 'Please enter hours per week');
             return;
         }
 
         const subObj = subjectsList.find(s => s.value === currentSubject.subjectId);
         const staffObj = staffList.find(s => s.value === currentSubject.staffId);
+
+        // Calculate total hours for practical
+        const finalHours = isPractical
+            ? String(parseInt(currentSubject.sessions) * parseInt(currentSubject.duration))
+            : currentSubject.hoursPerWeek;
+
+        if (parseInt(finalHours) > 5) {
+            Alert.alert('Error', 'Number of hours per week must be 5 or less');
+            return;
+        }
 
         const newEntry = {
             id: Date.now().toString(),
@@ -288,13 +310,13 @@ const TimeTableGenerator = ({ navigation }) => {
             name: subObj.shortName || subObj.name,
             staffId: currentSubject.staffId,
             staffName: staffObj.label,
-            hoursPerWeek: currentSubject.hoursPerWeek,
+            hoursPerWeek: finalHours,
             type: subObj.type,
             duration: parseInt(currentSubject.duration)
         };
 
         setAddedSubjects([...addedSubjects, newEntry]);
-        setCurrentSubject({ subjectId: '', staffId: '', hoursPerWeek: '4', duration: '1' });
+        setCurrentSubject({ subjectId: '', staffId: '', hoursPerWeek: '4', duration: '1', sessions: '1' });
     };
 
     const removeSubject = (id) => {
@@ -379,7 +401,7 @@ const TimeTableGenerator = ({ navigation }) => {
         setSelectedYear('');
         setSemester('');
         setSection('');
-        setCurrentSubject({ subjectId: '', staffId: '', hoursPerWeek: '4', duration: '1' });
+        setCurrentSubject({ subjectId: '', staffId: '', hoursPerWeek: '4', duration: '1', sessions: '1' });
 
         Alert.alert('Success', 'Class added to batch. You can enter another or click Submit to generate all.');
     };
@@ -400,7 +422,7 @@ const TimeTableGenerator = ({ navigation }) => {
         setSelectedYear('');
         setSemester('');
         setSection('');
-        setCurrentSubject({ subjectId: '', staffId: '', hoursPerWeek: '4' });
+        setCurrentSubject({ subjectId: '', staffId: '', hoursPerWeek: '4', duration: '1', sessions: '1' });
 
         // Only clear department if NOT HOD
         // If HOD, the useEffect will keep it locked/set
@@ -674,7 +696,8 @@ const TimeTableGenerator = ({ navigation }) => {
                                             ...currentSubject,
                                             subjectId: val,
                                             duration: sub?.type === 'Practical' ? String(defaultDur) : '1',
-                                            hoursPerWeek: sub?.type === 'Practical' ? String(defaultDur) : currentSubject.hoursPerWeek
+                                            hoursPerWeek: sub?.type === 'Practical' ? String(defaultDur) : currentSubject.hoursPerWeek,
+                                            sessions: '1'
                                         });
                                     }}
                                     placeholder={selectedDept && selectedYear && semester ? "Select Subject" : "Fill class info details"}
@@ -693,7 +716,7 @@ const TimeTableGenerator = ({ navigation }) => {
                                 {currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical' && (
                                     <View style={{ marginBottom: 15 }}>
                                         <CustomDropdown
-                                            label="Continuous Periods (Practical)"
+                                            label="Number of Continuous Periods"
                                             value={currentSubject.duration}
                                             options={[
                                                 { label: '2 Periods', value: '2' },
@@ -703,7 +726,7 @@ const TimeTableGenerator = ({ navigation }) => {
                                             onSelect={(val) => setCurrentSubject({
                                                 ...currentSubject,
                                                 duration: val,
-                                                hoursPerWeek: val // Auto-sync hours with duration for typical lab use
+                                                // hoursPerWeek: val // Auto-sync hours with duration for typical lab use
                                             })}
                                             placeholder="Select Duration"
                                             icon={Clock}
@@ -711,23 +734,32 @@ const TimeTableGenerator = ({ navigation }) => {
                                         <View style={styles.practicalInfo}>
                                             <Sparkles size={16} color="#0891b2" />
                                             <Text style={styles.practicalInfoText}>
-                                                {parseInt(currentSubject.hoursPerWeek) >= parseInt(currentSubject.duration) ? (
-                                                    `Logic: ${Math.floor(parseInt(currentSubject.hoursPerWeek) / parseInt(currentSubject.duration))} Block(s) of ${currentSubject.duration} continuous periods will be scheduled.`
-                                                ) : (
-                                                    `Warning: Total hours (${currentSubject.hoursPerWeek}) is less than block duration (${currentSubject.duration}).`
-                                                )}
+                                                {`Logic: ${currentSubject.sessions} Session(s) of ${currentSubject.duration} continuous periods will be scheduled. (Total: ${parseInt(currentSubject.sessions || 0) * parseInt(currentSubject.duration)} hrs)`}
                                             </Text>
                                         </View>
                                     </View>
                                 )}
                                 <View style={styles.row}>
                                     <View style={{ flex: 1 }}>
-                                        <Text style={styles.inputLabel}>Total Hours / Week</Text>
+                                        <Text style={styles.inputLabel}>
+                                            {currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical'
+                                                ? 'Number of Sessions / Week'
+                                                : 'Total Hours / Week'}
+                                        </Text>
                                         <TextInput
                                             style={styles.textInput}
-                                            placeholder="4"
-                                            value={currentSubject.hoursPerWeek}
-                                            onChangeText={(t) => setCurrentSubject({ ...currentSubject, hoursPerWeek: t })}
+                                            placeholder={currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical' ? "e.g. 2" : "4"}
+                                            value={currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical'
+                                                ? currentSubject.sessions
+                                                : currentSubject.hoursPerWeek}
+                                            onChangeText={(t) => {
+                                                const isPractical = currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical';
+                                                if (isPractical) {
+                                                    setCurrentSubject({ ...currentSubject, sessions: t });
+                                                } else {
+                                                    setCurrentSubject({ ...currentSubject, hoursPerWeek: t });
+                                                }
+                                            }}
                                             keyboardType="numeric"
                                         />
                                     </View>
@@ -853,6 +885,35 @@ const TimeTableGenerator = ({ navigation }) => {
                         </Text>
 
                         <ScrollView showsVerticalScrollIndicator={false}>
+                            {/* Subject Summary Stats */}
+                            <View style={styles.summaryContainer}>
+                                <Text style={styles.summaryTitle}>Allocation Summary</Text>
+                                {batchResults[currentClassIndex].subjects.map((sub, idx) => {
+                                    const expected = parseInt(sub.hoursPerWeek);
+                                    let actual = 0;
+                                    Object.values(batchResults[currentClassIndex].schedule).forEach(daySlots => {
+                                        daySlots.forEach(slot => {
+                                            if (slot.subject === (sub.name || sub.label)) actual++;
+                                        });
+                                    });
+
+                                    const isMatch = actual >= expected;
+                                    return (
+                                        <View key={idx} style={styles.summaryRow}>
+                                            <View style={{ flex: 1 }}>
+                                                <Text style={styles.summarySubName}>{sub.name || sub.label}</Text>
+                                                <Text style={styles.summaryStaff}>{sub.staffName}</Text>
+                                            </View>
+                                            <View style={styles.summaryStats}>
+                                                <Text style={[styles.statValue, isMatch ? { color: '#059669' } : { color: '#dc2626' }]}>
+                                                    {actual}/{expected} hrs
+                                                </Text>
+                                            </View>
+                                        </View>
+                                    );
+                                })}
+                            </View>
+
                             {batchResults[currentClassIndex].schedule &&
                                 Object.entries(batchResults[currentClassIndex].schedule).map(([day, slots]) => renderDaySchedule(day, slots))}
                             <View style={{ height: 100 }} />
@@ -1252,7 +1313,38 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         color: '#475569',
         textTransform: 'uppercase'
-    }
+    },
+    // Summary Styles
+    summaryContainer: {
+        backgroundColor: '#fff',
+        marginHorizontal: 4,
+        marginBottom: 20,
+        padding: 15,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#e2e8f0'
+    },
+    summaryTitle: {
+        fontSize: 16,
+        fontWeight: '800',
+        color: '#1e293b',
+        marginBottom: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f1f5f9',
+        paddingBottom: 8
+    },
+    summaryRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f8fafc'
+    },
+    summarySubName: { fontSize: 13, fontWeight: '700', color: '#334155' },
+    summaryStaff: { fontSize: 11, color: '#64748b' },
+    summaryStats: { backgroundColor: '#f8fafc', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+    statValue: { fontSize: 13, fontWeight: '800' }
 });
 
 export default TimeTableGenerator;

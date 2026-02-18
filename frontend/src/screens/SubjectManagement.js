@@ -543,7 +543,7 @@ const SubjectManagement = ({ navigation, route }) => {
                             </View>
 
                             <View style={styles.rowInputs}>
-                                <View style={{ flex: 1, marginRight: type === 'Practical' ? 10 : 0 }}>
+                                <View style={{ flex: 1 }}>
                                     <CustomDropdown
                                         label="Subject Type"
                                         value={type}
@@ -556,17 +556,6 @@ const SubjectManagement = ({ navigation, route }) => {
                                         placeholder="Type"
                                     />
                                 </View>
-                                {type === 'Practical' && (
-                                    <View style={{ flex: 1 }}>
-                                        <CustomDropdown
-                                            label="Duration (Periods)"
-                                            value={duration}
-                                            options={durationOptions}
-                                            onSelect={setDuration}
-                                            placeholder="Periods"
-                                        />
-                                    </View>
-                                )}
                             </View>
 
                             <TouchableOpacity style={styles.submitButton} onPress={handleCreateOrUpdate} activeOpacity={0.8}>
