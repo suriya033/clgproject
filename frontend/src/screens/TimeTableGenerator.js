@@ -13,7 +13,8 @@ import {
     Dimensions,
     TextInput,
     StatusBar,
-    Platform
+    Platform,
+    Switch
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -166,7 +167,10 @@ const TimeTableGenerator = ({ navigation }) => {
         staffId: '',
         hoursPerWeek: '4',
         duration: '1',
-        sessions: '1'
+        sessions: '1',
+        enableAlt: false,
+        altSubjectId: '',
+        altStaffId: ''
     });
 
     // Added subjects list
@@ -299,8 +303,17 @@ const TimeTableGenerator = ({ navigation }) => {
             ? String(parseInt(currentSubject.sessions) * parseInt(currentSubject.duration))
             : currentSubject.hoursPerWeek;
 
-        if (parseInt(finalHours) > 5) {
-            Alert.alert('Error', 'Number of hours per week must be 5 or less');
+        // Validation for Alternative Lab
+        if (isPractical && currentSubject.enableAlt) {
+            if (!currentSubject.altSubjectId || !currentSubject.altStaffId) {
+                Alert.alert('Error', 'Please select alternative subject and staff');
+                return;
+            }
+        }
+
+        // Limit only for theory subjects
+        if (!isPractical && parseInt(finalHours) > 5) {
+            Alert.alert('Error', 'Number of hours per week must be 5 or less for Theory subjects');
             return;
         }
 
@@ -312,11 +325,22 @@ const TimeTableGenerator = ({ navigation }) => {
             staffName: staffObj.label,
             hoursPerWeek: finalHours,
             type: subObj.type,
-            duration: parseInt(currentSubject.duration)
+            type: subObj.type,
+            duration: parseInt(currentSubject.duration),
+            alternative: currentSubject.enableAlt ? {
+                subjectId: currentSubject.altSubjectId,
+                name: subjectsList.find(s => s.value === currentSubject.altSubjectId)?.shortName || subjectsList.find(s => s.value === currentSubject.altSubjectId)?.name,
+                staffId: currentSubject.altStaffId,
+                staffName: staffList.find(s => s.value === currentSubject.altStaffId)?.label
+            } : null
         };
 
         setAddedSubjects([...addedSubjects, newEntry]);
-        setCurrentSubject({ subjectId: '', staffId: '', hoursPerWeek: '4', duration: '1', sessions: '1' });
+        setAddedSubjects([...addedSubjects, newEntry]);
+        setCurrentSubject({
+            subjectId: '', staffId: '', hoursPerWeek: '4', duration: '1', sessions: '1',
+            enableAlt: false, altSubjectId: '', altStaffId: ''
+        });
     };
 
     const removeSubject = (id) => {
@@ -401,7 +425,10 @@ const TimeTableGenerator = ({ navigation }) => {
         setSelectedYear('');
         setSemester('');
         setSection('');
-        setCurrentSubject({ subjectId: '', staffId: '', hoursPerWeek: '4', duration: '1', sessions: '1' });
+        setCurrentSubject({
+            subjectId: '', staffId: '', hoursPerWeek: '4', duration: '1', sessions: '1',
+            enableAlt: false, altSubjectId: '', altStaffId: ''
+        });
 
         Alert.alert('Success', 'Class added to batch. You can enter another or click Submit to generate all.');
     };
@@ -422,7 +449,10 @@ const TimeTableGenerator = ({ navigation }) => {
         setSelectedYear('');
         setSemester('');
         setSection('');
-        setCurrentSubject({ subjectId: '', staffId: '', hoursPerWeek: '4', duration: '1', sessions: '1' });
+        setCurrentSubject({
+            subjectId: '', staffId: '', hoursPerWeek: '4', duration: '1', sessions: '1',
+            enableAlt: false, altSubjectId: '', altStaffId: ''
+        });
 
         // Only clear department if NOT HOD
         // If HOD, the useEffect will keep it locked/set
@@ -514,13 +544,13 @@ const TimeTableGenerator = ({ navigation }) => {
                 <Clock size={12} color="#64748b" />
                 <Text style={styles.timeText}>{slot.startTime} - {slot.endTime}</Text>
             </View>
-            <Text style={[styles.subjectText, slot.isFixed && { color: '#94a3b8' }]} numberOfLines={1}>
+            <Text style={[styles.subjectText, slot.isFixed && { color: '#94a3b8' }]} numberOfLines={2}>
                 {slot.subject}
             </Text>
             {slot.staff !== '-' && (
                 <View style={styles.staffRow}>
                     <Users size={12} color="#94a3b8" />
-                    <Text style={styles.staffText} numberOfLines={1}>{slot.staff}</Text>
+                    <Text style={styles.staffText} numberOfLines={2}>{slot.staff}</Text>
                 </View>
             )}
             {!slot.isFixed && <Edit3 size={12} color="#cbd5e1" style={{ position: 'absolute', bottom: 8, right: 8 }} />}
@@ -587,13 +617,13 @@ const TimeTableGenerator = ({ navigation }) => {
                                     {group.startTime} - {group.endTime}
                                 </Text>
                             </View>
-                            <Text style={[styles.subjectText, group.isFixed && { color: '#94a3b8' }]} numberOfLines={1}>
+                            <Text style={[styles.subjectText, group.isFixed && { color: '#94a3b8' }]} numberOfLines={2}>
                                 {group.subject}
                             </Text>
                             {group.staff !== '-' && (
                                 <View style={styles.staffRow}>
                                     <Users size={12} color="#94a3b8" />
-                                    <Text style={styles.staffText} numberOfLines={1}>{group.staff}</Text>
+                                    <Text style={styles.staffText} numberOfLines={2}>{group.staff}</Text>
                                 </View>
                             )}
                             {group.slots.length > 1 && (
@@ -739,6 +769,42 @@ const TimeTableGenerator = ({ navigation }) => {
                                         </View>
                                     </View>
                                 )}
+
+                                {/* Alternative Lab Option */}
+                                {currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical' && (
+                                    <View style={styles.altLabContainer}>
+                                        <View style={styles.altLabHeader}>
+                                            <Text style={styles.inputLabel}>Alternative Batch Lab?</Text>
+                                            <Switch
+                                                value={currentSubject.enableAlt}
+                                                onValueChange={(val) => setCurrentSubject({ ...currentSubject, enableAlt: val })}
+                                                trackColor={{ false: "#767577", true: "#800000" }}
+                                                thumbColor={currentSubject.enableAlt ? "#f4f3f4" : "#f4f3f4"}
+                                            />
+                                        </View>
+
+                                        {currentSubject.enableAlt && (
+                                            <View style={styles.altLabFields}>
+                                                <CustomDropdown
+                                                    label="Alternative Subject (Batch 2)"
+                                                    value={currentSubject.altSubjectId}
+                                                    options={filteredSubjectsList.filter(s => s.value !== currentSubject.subjectId && s.type === 'Practical')}
+                                                    onSelect={(val) => setCurrentSubject({ ...currentSubject, altSubjectId: val })}
+                                                    placeholder="Select Alt Subject"
+                                                    icon={BookOpen}
+                                                />
+                                                <CustomDropdown
+                                                    label="Alternative Staff"
+                                                    value={currentSubject.altStaffId}
+                                                    options={staffList.filter(s => s.value !== currentSubject.staffId)}
+                                                    onSelect={(val) => setCurrentSubject({ ...currentSubject, altStaffId: val })}
+                                                    placeholder="Select Alt Staff"
+                                                    icon={Users}
+                                                />
+                                            </View>
+                                        )}
+                                    </View>
+                                )}
                                 <View style={styles.row}>
                                     <View style={{ flex: 1 }}>
                                         <Text style={styles.inputLabel}>
@@ -790,6 +856,13 @@ const TimeTableGenerator = ({ navigation }) => {
                                                 <Text style={styles.subItemDetail}>
                                                     {item.staffName} • {item.hoursPerWeek} hrs {item.type === 'Practical' ? `(${item.duration} periods block)` : ''}
                                                 </Text>
+                                                {item.alternative && (
+                                                    <View style={styles.altBadge}>
+                                                        <Text style={styles.altBadgeText}>
+                                                            Batch 2: {item.alternative.name} ({item.alternative.staffName})
+                                                        </Text>
+                                                    </View>
+                                                )}
                                             </View>
                                             <TouchableOpacity onPress={() => removeSubject(item.id)} style={styles.removeBtn}>
                                                 <X size={18} color="#ef4444" />
@@ -1344,7 +1417,28 @@ const styles = StyleSheet.create({
     summarySubName: { fontSize: 13, fontWeight: '700', color: '#334155' },
     summaryStaff: { fontSize: 11, color: '#64748b' },
     summaryStats: { backgroundColor: '#f8fafc', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-    statValue: { fontSize: 13, fontWeight: '800' }
+    statValue: { fontSize: 13, fontWeight: '800' },
+
+    altBadge: { backgroundColor: '#fcd34d', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start', marginTop: 4 },
+    altBadgeText: { fontSize: 10, color: '#78350f', fontWeight: '800' },
+
+    altLabContainer: {
+        backgroundColor: '#fffbeb',
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 15,
+        borderWidth: 1,
+        borderColor: '#fef3c7'
+    },
+    altLabHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10
+    },
+    altLabFields: {
+        gap: 8
+    }
 });
 
 export default TimeTableGenerator;

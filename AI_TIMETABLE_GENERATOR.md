@@ -67,4 +67,4 @@ The **AI Timetable Generator** is a smart feature designed to automate the compl
 
 ## Future Improvements
 - **Staff Collision Detection**: Ensure a staff member isn't assigned to two different classes at the same time (requires global state/database check).
-- **Lab Sessions**: Support for multi-hour blocks for practical labs.
+- **Smart Lab Scheduling**: Handles multi-hour blocks and **Split-Batch** scheduling (Batch 1 & Batch 2 simultaneous labs).

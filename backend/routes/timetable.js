@@ -82,7 +82,8 @@ router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
                             subjectId: sub.subjectId,
                             staff: sub.staffName || sub.staffId || 'TBD',
                             staffId: sub.staffId,
-                            duration: duration
+                            duration: duration,
+                            alternative: sub.alternative
                         });
                         hoursRemaining -= duration;
                     }
@@ -138,7 +139,15 @@ router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
 
                     while (actualIndices.length < duration && currentIndex < timeSlots.length) {
                         const slot = r.schedule[day][currentIndex];
+
+                        // Check main staff availability
                         const staffBusy = globalStaffBusy[day][currentIndex].has(task.staff);
+
+                        // Check alternative staff availability if exists
+                        let altStaffBusy = false;
+                        if (task.alternative && task.alternative.staffName) {
+                            altStaffBusy = globalStaffBusy[day][currentIndex].has(task.alternative.staffName);
+                        }
 
                         if (slot.isFixed) {
                             if (slot.subject === 'Lunch') {
@@ -149,7 +158,7 @@ router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
                             continue;
                         }
 
-                        if (slot.subject || staffBusy) {
+                        if (slot.subject || staffBusy || altStaffBusy) {
                             canFit = false;
                             break;
                         }
@@ -160,16 +169,28 @@ router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
 
                     if (canFit && actualIndices.length === duration) {
                         const finalEndIdx = actualIndices[actualIndices.length - 1];
+
+                        let subjectText = task.name;
+                        let staffText = task.staff;
+
+                        if (task.alternative) {
+                            subjectText = `${task.name} / ${task.alternative.name}`;
+                            staffText = `${task.staff} / ${task.alternative.staffName}`;
+                        }
+
                         for (let i = startIdx; i <= finalEndIdx; i++) {
                             const currentSlot = r.schedule[day][i];
                             if (currentSlot.isFixed) {
                                 globalStaffBusy[day][i].add(task.staff);
+                                if (task.alternative) globalStaffBusy[day][i].add(task.alternative.staffName);
                                 continue;
                             }
-                            currentSlot.subject = task.name;
-                            currentSlot.staff = task.staff;
+                            currentSlot.subject = subjectText;
+                            currentSlot.staff = staffText;
                             currentSlot.room = 'Lab';
+
                             globalStaffBusy[day][i].add(task.staff);
+                            if (task.alternative) globalStaffBusy[day][i].add(task.alternative.staffName);
                         }
                         r.dailyLimits[day][task.name] = (r.dailyLimits[day][task.name] || 0) + 1;
                         r.practicalTasks.splice(taskIdx, 1);
