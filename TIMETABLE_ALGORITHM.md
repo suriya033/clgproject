@@ -19,7 +19,7 @@ Before assigning any slots, the Task Pool is shuffled randomly.
 
 ## The Algorithm: Step-by-Step
 
-The algorithm iterates through every Day (Mon-Fri) and every Time Slot (09:00 - 04:00). For each slot, it performs the following decision logic:
+The algorithm iterates through every Day (Mon-Fri) and every Time Slot (09:15 - 16:55). For each slot, it performs the following decision logic:
 
 ### Step A: Handle Fixed Constraints
 - Checks if the current slot is a **Break** or **Lunch**.

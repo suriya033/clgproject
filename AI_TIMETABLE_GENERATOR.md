@@ -8,7 +8,7 @@ The **AI Timetable Generator** is a smart feature designed to automate the compl
 - **Constraint Management**:
   - **Single Subject Limit**: A subject cannot be scheduled more than **2 times per day**.
   - **No Consecutive Classes**: Prevents the same subject from being scheduled back-to-back (unless unavoidable).
-- **Standard Timings**: Follows a 7-hour teaching day structure (09:00 AM - 04:00 PM) with fixed **Break** (10:40 AM) and **Lunch** (12:40 PM) intervals.
+- **Standard Timings**: Follows an 8-hour teaching day structure (09:15 AM - 04:55 PM) with fixed **Break** (10:55 AM, 03:15 PM) and **Lunch** (12:55 PM) intervals.
 - **Batch Creation**: "Save & Next" workflow allows rapid creation of timetables for multiple departments.
 - **Edit Capability**: Users can manually tweak individual slots after generation if needed.
 
@@ -42,19 +42,21 @@ The **AI Timetable Generator** is a smart feature designed to automate the compl
 - **Algorithm**:
   1. Creates a pool of "Tasks" based on `hoursPerWeek`.
   2. Shuffles tasks for randomness.
-  3. Iterates through 5 working days (Mon-Fri) and 9 daily slots.
+  3. Iterates through 5 working days (Mon-Fri) and 11 daily slots.
   4. Checks constraints (`!isConsecutive` and `dailyCount < 2`) for every slot.
   5. Backtracks/Soft-relaxes constraints if a perfect slot isn't found (Second Pass).
 - **Time Structure**:
-  - 09:00 - 09:50
-  - 09:50 - 10:40
-  - **10:40 - 11:00 (Break)**
-  - 11:00 - 11:50
-  - 11:50 - 12:40
-  - **12:40 - 01:30 (Lunch)**
-  - 01:30 - 02:20
-  - 02:20 - 03:10
-  - 03:10 - 04:00
+  - 09:15 - 10:05
+  - 10:05 - 10:55
+  - **10:55 - 11:15 (Break)**
+  - 11:15 - 12:05
+  - 12:05 - 12:55
+  - **12:55 - 13:45 (Lunch)**
+  - 13:45 - 14:30
+  - 14:30 - 15:15
+  - **15:15 - 15:25 (Break)**
+  - 15:25 - 16:05
+  - 16:05 - 16:55
 
 ### Frontend (`/frontend/src/screens/TimeTableGenerator.js`)
 - **State Management**: Handles the complex list of added subjects and generated preview.

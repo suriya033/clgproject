@@ -24,16 +24,17 @@ router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
         const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const activeDays = weekDays.slice(0, days);
         const timeSlots = [
-            '09:00 - 09:50',
-            '09:50 - 10:40',
-            '10:40 - 11:00 (Break)',
-            '11:00 - 11:50',
-            '11:50 - 12:40',
-            '12:40 - 13:30 (Lunch)',
-            '13:30 - 14:20',
-            '14:20 - 15:10',
-            '15:10 - 16:00',
-            '16:00 - 16:50'
+            '09:15 - 10:05',
+            '10:05 - 10:55',
+            '10:55 - 11:15 (Break)',
+            '11:15 - 12:05',
+            '12:05 - 12:55',
+            '12:55 - 1:45 (Lunch)',
+            '1:45 - 2:30',
+            '2:30 - 3:15',
+            '3:15 - 3:25 (Break)',
+            '3:25 - 4:05',
+            '4:05 - 4:55'
         ];
 
         // Initialize structures for each class
