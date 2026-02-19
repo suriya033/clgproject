@@ -380,9 +380,11 @@ router.get('/my-schedule', auth(['Staff', 'HOD']), async (req, res) => {
 router.get('/:department/:semester/:section', auth(), async (req, res) => {
     try {
         const { department, semester, section } = req.params;
+        console.log(`FETCH TIMETABLE -> Dept: [${department}], Sem: [${semester}], Sec: [${section}]`);
         const timetable = await TimeTable.findOne({ department, semester, section });
 
         if (!timetable) {
+            console.log('TIMETABLE NOT FOUND IN DB');
             return res.status(404).json({ message: 'Timetable not found' });
         }
         res.json(timetable);

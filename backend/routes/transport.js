@@ -6,7 +6,7 @@ const auth = require('../middleware/auth');
 // @route   PUT api/transport/bus/:busId/location
 // @desc    Update bus location
 // @access  Driver/Admin
-router.put('/bus/:busId/location', auth, async (req, res) => {
+router.put('/bus/:busId/location', auth(), async (req, res) => {
     const { lat, lng } = req.body;
     try {
         const bus = await Bus.findById(req.params.busId);
@@ -34,7 +34,7 @@ router.put('/bus/:busId/location', auth, async (req, res) => {
 // @route   GET api/transport/bus/:busId/location
 // @desc    Get bus location
 // @access  Private
-router.get('/bus/:busId/location', auth, async (req, res) => {
+router.get('/bus/:busId/location', auth(), async (req, res) => {
     try {
         const bus = await Bus.findById(req.params.busId).select('location busNumber route driverName');
         if (!bus) {

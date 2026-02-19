@@ -105,8 +105,9 @@ const StaffDashboard = ({ navigation }) => {
         { id: '0b', title: 'Class Search', icon: <BookOpen size={24} color="#fff" />, startColor: '#0f172a', endColor: '#334155', route: 'TimetableViewer' },
         { id: '1', title: 'Attendance', icon: <CheckSquare size={24} color="#fff" />, startColor: '#059669', endColor: '#10b981', route: 'StaffAttendance' },
         { id: '3', title: 'CIA Marks', icon: <Award size={24} color="#fff" />, startColor: '#d97706', endColor: '#f59e0b', route: 'StaffCIAMarks' },
-        { id: '2', title: 'Upload Notes', icon: <FileText size={24} color="#fff" />, startColor: '#2563eb', endColor: '#3b82f6', route: null },
-        { id: '4', title: 'Faculty Lounge', icon: <Users size={24} color="#fff" />, startColor: '#7c3aed', endColor: '#8b5cf6', route: null },
+        { id: '2', title: 'Upload Notes', icon: <FileText size={24} color="#fff" />, startColor: '#2563eb', endColor: '#3b82f6', route: 'UploadNotes' },
+        { id: '4', title: 'Faculty Lounge', icon: <Users size={24} color="#fff" />, startColor: '#7c3aed', endColor: '#8b5cf6', route: 'FacultyLounge' },
+        { id: '5', title: 'Assignments', icon: <FileText size={24} color="#fff" />, startColor: '#0891b2', endColor: '#06b6d4', route: 'ClassSelection' },
     ];
 
     const getDateString = () => {

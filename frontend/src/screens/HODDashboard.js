@@ -91,6 +91,10 @@ const HODDashboard = ({ navigation }) => {
         { id: 'hod-leave', title: 'Approvals', icon: <ClipboardList size={24} color="#800000" />, route: 'HODRequests', bg: '#fee2e2' },
         { id: 'complaints', title: 'Complaints', icon: <MessageSquare size={24} color="#ef4444" />, route: 'ComplaintViewer', bg: '#fee2e2' },
         { id: 'bulk-leave', title: 'Bulk Leave', icon: <Calendar size={24} color="#db2777" />, route: 'BulkLeaveManagement', bg: '#fdf2f8' },
+        { id: 'notes-up', title: 'Upload Notes', icon: <FileText size={24} color="#2563eb" />, route: 'UploadNotes', bg: '#dbeafe' },
+        { id: 'notes-view', title: 'View Notes', icon: <BookOpen size={24} color="#7c3aed" />, route: 'ViewNotes', bg: '#ede9fe' },
+        { id: 'lounge', title: 'Faculty Lounge', icon: <Users size={24} color="#db2777" />, route: 'FacultyLounge', bg: '#fce7f3' },
+        { id: 'assign', title: 'Assignments', icon: <FileText size={24} color="#0891b2" />, route: 'ClassSelection', bg: '#cffafe' },
         { id: '7', title: 'Department', icon: <Building2 size={24} color="#8b5cf6" />, action: 'openYears', bg: '#f5f3ff' },
     ];
 

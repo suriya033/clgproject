@@ -141,10 +141,11 @@ const StudentDashboard = ({ navigation }) => {
         { id: '2', title: 'CIA Marks', icon: <Percent size={24} color="#fff" />, start: '#2563eb', end: '#3b82f6', route: 'StudentMarks' },
         { id: '3', title: 'Library', icon: <BookOpen size={24} color="#fff" />, start: '#d97706', end: '#f59e0b', route: 'StudentLibrary' },
         { id: '4', title: 'Smart Request', icon: <Zap size={24} color="#fff" />, start: '#7c3aed', end: '#8b5cf6', route: 'SmartRequest' },
-        { id: '5', title: 'Assignment', icon: <FileText size={24} color="#fff" />, start: '#db2777', end: '#ec4899', route: 'Assignments' },
+        { id: '5', title: 'Study Notes', icon: <FileText size={24} color="#fff" />, start: '#db2777', end: '#ec4899', route: 'ViewNotes' },
         { id: '6', title: 'Timetable', icon: <Calendar size={24} color="#fff" />, start: '#800000', end: '#b91c1c', route: 'TimetableViewer' },
         { id: '7', title: 'Complaint', icon: <AlertCircle size={24} color="#fff" />, start: '#dc2626', end: '#ef4444', route: 'Complaints' },
         { id: '8', title: 'Fees', icon: <CreditCard size={24} color="#fff" />, start: '#16a34a', end: '#22c55e', route: 'Fees' },
+        { id: '9', title: 'Assignments', icon: <FileText size={24} color="#fff" />, start: '#0891b2', end: '#06b6d4', route: 'Assignments' },
     ];
 
     const formatYear = (year) => {

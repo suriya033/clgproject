@@ -92,13 +92,17 @@ const TimetableViewer = ({ navigation }) => {
 
             // Auto-select for HOD
             if (user?.role === 'HOD') {
-                const myDept = depts.find(d => d.label === user.department);
+                const myDept = depts.find(d =>
+                    d.label.trim().toLowerCase() === user.department?.trim().toLowerCase()
+                );
                 if (myDept) setSelectedDept(myDept.value);
             }
 
             // Auto-select for Student
             if (user?.role === 'Student') {
-                const myDept = depts.find(d => d.label === user.department);
+                const myDept = depts.find(d =>
+                    d.label.trim().toLowerCase() === user.department?.trim().toLowerCase()
+                );
                 if (myDept) setSelectedDept(myDept.value);
                 setSelectedYear(user.year || '1');
                 setSelectedSem(user.semester || '1');

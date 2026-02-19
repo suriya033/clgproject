@@ -45,6 +45,10 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json());
+app.use((req, res, next) => {
+    console.log(`📡 Incoming Request: ${req.method} ${req.url}`);
+    next();
+});
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Basic Route
@@ -77,6 +81,9 @@ app.use('/api/marks', require('./routes/marks'));
 app.use('/api/attendance', require('./routes/attendance'));
 app.use('/api/requests', require('./routes/requests'));
 app.use('/api/bulk-leave', require('./routes/bulkLeave'));
+app.use('/api/notes', require('./routes/notes'));
+app.use('/api/faculty-lounge', require('./routes/facultyLounge'));
+app.use('/api/assignments', require('./routes/assignments'));
 
 const PORT = process.env.PORT || 5002;
 const HOST = '0.0.0.0';

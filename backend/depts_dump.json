@@ -1,0 +1,20 @@
+[
+  {
+    "_id": "6975f6911ea7f70a78227102",
+    "name": "Artificial intelligence and data science ",
+    "code": "AI&DS",
+    "hod": "6994129ba601e0230673db3f",
+    "createdAt": "2026-01-25T10:55:13.986Z",
+    "updatedAt": "2026-02-17T07:04:05.024Z",
+    "__v": 0
+  },
+  {
+    "_id": "69804be593793841c8cb83b2",
+    "name": "Information Technology ",
+    "code": "IT",
+    "hod": "6984983d29dc0f6301283e56",
+    "createdAt": "2026-02-02T07:01:57.131Z",
+    "updatedAt": "2026-02-05T13:17:03.067Z",
+    "__v": 0
+  }
+]

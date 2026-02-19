@@ -48,6 +48,12 @@ import StudentAttendance from '../screens/StudentAttendance';
 import StudentMarks from '../screens/StudentMarks';
 import StudentComplaint from '../screens/StudentComplaint';
 import ComplaintViewer from '../screens/ComplaintViewer';
+import UploadNotes from '../screens/UploadNotes';
+import ViewNotes from '../screens/ViewNotes';
+import FacultyLounge from '../screens/FacultyLounge';
+import AssignmentsScreen from '../screens/AssignmentsScreen';
+import SubmissionList from '../screens/SubmissionList';
+import ClassSelectionScreen from '../screens/ClassSelectionScreen';
 
 const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -82,6 +88,12 @@ const MainStack = () => {
                     <Stack.Screen name="TimeTableGenerator" component={TimeTableGenerator} />
                     <Stack.Screen name="TimetableViewer" component={TimetableViewer} />
                     <Stack.Screen name="ComplaintViewer" component={ComplaintViewer} />
+                    <Stack.Screen name="UploadNotes" component={UploadNotes} />
+                    <Stack.Screen name="ViewNotes" component={ViewNotes} />
+                    <Stack.Screen name="FacultyLounge" component={FacultyLounge} />
+                    <Stack.Screen name="Assignments" component={AssignmentsScreen} />
+                    <Stack.Screen name="SubmissionList" component={SubmissionList} />
+                    <Stack.Screen name="ClassSelection" component={ClassSelectionScreen} />
                 </>
             )
             }
@@ -96,9 +108,10 @@ const MainStack = () => {
                         <Stack.Screen name="StudentMarks" component={StudentMarks} />
                         <Stack.Screen name="StudentLibrary" component={GenericDashboard} />
                         <Stack.Screen name="SmartRequest" component={GenericDashboard} />
-                        <Stack.Screen name="Assignments" component={GenericDashboard} />
+                        <Stack.Screen name="Assignments" component={AssignmentsScreen} />
                         <Stack.Screen name="Complaints" component={StudentComplaint} />
                         <Stack.Screen name="Fees" component={GenericDashboard} />
+                        <Stack.Screen name="ViewNotes" component={ViewNotes} />
                     </>
                 )
             }
@@ -113,6 +126,12 @@ const MainStack = () => {
                         <Stack.Screen name="MarkAttendance" component={MarkAttendance} />
                         <Stack.Screen name="CoordinatorClassView" component={CoordinatorClassView} />
                         <Stack.Screen name="CoordinatorRequests" component={CoordinatorRequests} />
+                        <Stack.Screen name="UploadNotes" component={UploadNotes} />
+                        <Stack.Screen name="ViewNotes" component={ViewNotes} />
+                        <Stack.Screen name="FacultyLounge" component={FacultyLounge} />
+                        <Stack.Screen name="Assignments" component={AssignmentsScreen} />
+                        <Stack.Screen name="SubmissionList" component={SubmissionList} />
+                        <Stack.Screen name="ClassSelection" component={ClassSelectionScreen} />
                     </>
                 )
             }
@@ -137,6 +156,12 @@ const MainStack = () => {
                         <Stack.Screen name="BulkLeaveManagement" component={BulkLeaveManagement} />
                         <Stack.Screen name="StudentProfileView" component={StudentProfileView} />
                         <Stack.Screen name="ComplaintViewer" component={ComplaintViewer} />
+                        <Stack.Screen name="UploadNotes" component={UploadNotes} />
+                        <Stack.Screen name="ViewNotes" component={ViewNotes} />
+                        <Stack.Screen name="FacultyLounge" component={FacultyLounge} />
+                        <Stack.Screen name="Assignments" component={AssignmentsScreen} />
+                        <Stack.Screen name="SubmissionList" component={SubmissionList} />
+                        <Stack.Screen name="ClassSelection" component={ClassSelectionScreen} />
                     </>
                 )
             }
