@@ -72,6 +72,16 @@ const HODRequests = ({ navigation }) => {
         }
     };
 
+    const formatYear = (year) => {
+        if (!year) return '';
+        const yStr = String(year);
+        if (yStr === '1') return '1st Year';
+        if (yStr === '2') return '2nd Year';
+        if (yStr === '3') return '3rd Year';
+        if (yStr === '4') return '4th Year';
+        return `${year}th Year`;
+    };
+
     const renderRequestItem = ({ item }) => (
         <View style={styles.card}>
             <View style={styles.cardHeader}>
@@ -87,12 +97,15 @@ const HODRequests = ({ navigation }) => {
                 <User size={16} color="#800000" />
                 <Text style={styles.studentName}>{item.student.name} ({item.student.userId})</Text>
             </View>
-            <Text style={styles.classInfo}>{item.student.department} • Sem {item.student.semester} - Sec {item.student.section}</Text>
+            <Text style={styles.classInfo}>
+                {item.student.department} • {formatYear(item.student.year)} - Sec {item.student.section}
+            </Text>
 
             <Text style={styles.subject}>{item.subject}</Text>
 
-            <View style={styles.contentContainer}>
-                <Text style={styles.contentText} numberOfLines={3}>{item.content}</Text>
+            <View style={styles.letterContainer}>
+                <Text style={styles.letterLabel}>Letter Preview:</Text>
+                <Text style={styles.contentText}>{item.content}</Text>
             </View>
 
             <View style={styles.coordinatorRemarks}>
@@ -234,7 +247,9 @@ const styles = StyleSheet.create({
     classInfo: { fontSize: 12, color: '#64748b', marginBottom: 10, fontWeight: '500' },
     subject: { fontSize: 17, fontWeight: '800', color: '#0f172a', marginBottom: 8 },
     contentContainer: { backgroundColor: '#f8fafc', padding: 12, borderRadius: 12, marginBottom: 12 },
-    contentText: { fontSize: 14, color: '#475569', lineHeight: 20 },
+    contentText: { fontSize: 14, color: '#475569', lineHeight: 22, fontStyle: 'italic' },
+    letterContainer: { backgroundColor: '#f1f5f9', padding: 15, borderRadius: 12, marginBottom: 15, borderLeftWidth: 4, borderLeftColor: '#800000' },
+    letterLabel: { fontSize: 12, fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: 8 },
     coordinatorRemarks: { backgroundColor: '#f0fdf4', padding: 10, borderRadius: 10, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: '#22c55e' },
     remarksLabel: { fontSize: 11, fontWeight: '700', color: '#166534', marginBottom: 2 },
     remarksText: { fontSize: 11, color: '#166534', fontStyle: 'italic' },

@@ -33,7 +33,7 @@ const SubjectSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['Theory', 'Practical'],
+        enum: ['Theory', 'Practical', 'Integrated'],
         default: 'Theory'
     },
     duration: {

@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 
 // Determine base URL depending on platform
 // For Android emulator use 10.0.2.2, otherwise use local IP or localhost as appropriate.
-const DEV_MACHINE_IP = '192.168.43.191'; // Updated to current machine IP
+const DEV_MACHINE_IP = '10.59.74.154'; // Updated to current machine IP
 
 const API_URL = Platform.select({
   web: 'http://localhost:5002/api',
@@ -58,6 +58,16 @@ api.interceptors.response.use(
   (error) => {
     if (error.response) {
       console.error(`❌ API Error Response: ${error.response.status} - ${error.response.data?.message || 'Unknown error'}`);
+
+      // Auto logout on 401 Unauthorized
+      if (error.response.status === 401) {
+        if (Platform.OS !== 'web') {
+          const { DeviceEventEmitter } = require('react-native');
+          DeviceEventEmitter.emit('LOGOUT');
+        } else if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('LOGOUT'));
+        }
+      }
     } else if (error.request) {
       console.error('❌ API Network Error: No response received from server');
       // Only alert if it's a network/connectivity issue to avoid spamming on logical 400s

@@ -42,18 +42,18 @@ const StudentRequestHistory = ({ navigation }) => {
 
     const getStatusStyle = (status) => {
         switch (status) {
-            case 'Approved': return { bg: '#dcfce7', text: '#15803d', icon: <CheckCircle2 size={16} color="#15803d" /> };
-            case 'Rejected': return { bg: '#fee2e2', text: '#b91c1c', icon: <XCircle size={16} color="#b91c1c" /> };
-            case 'Pending_Coordinator': return { bg: '#fef3c7', text: '#b45309', icon: <Clock size={16} color="#b45309" /> };
-            case 'Pending_HOD': return { bg: '#e0e7ff', text: '#4338ca', icon: <Clock size={16} color="#4338ca" /> };
+            case 'Approved': return { bg: '#dcfce7', text: '#15803d', icon: <CheckCircle2 size={16} color="#15803d" /> }; // Green
+            case 'Rejected': return { bg: '#fee2e2', text: '#b91c1c', icon: <XCircle size={16} color="#b91c1c" /> }; // Red
+            case 'Pending_Coordinator': return { bg: '#fef3c7', text: '#b45309', icon: <Clock size={16} color="#b45309" /> }; // Yellow
+            case 'Pending_HOD': return { bg: '#ffedd5', text: '#ea580c', icon: <Clock size={16} color="#ea580c" /> }; // Orange
             default: return { bg: '#f1f5f9', text: '#64748b', icon: <Clock size={16} color="#64748b" /> };
         }
     };
 
     const renderRequestItem = ({ item }) => {
         const statusCfg = getStatusStyle(item.status);
-        const displayStatus = item.status === 'Pending_Coordinator' ? 'Pending (Coordinator)' :
-            item.status === 'Pending_HOD' ? 'Pending (HOD)' : item.status;
+        const displayStatus = item.status === 'Pending_Coordinator' ? 'Pending Advisor' :
+            item.status === 'Pending_HOD' ? 'Pending HOD' : item.status;
 
         return (
             <View style={styles.card}>

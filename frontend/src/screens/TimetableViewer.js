@@ -131,12 +131,17 @@ const TimetableViewer = ({ navigation }) => {
         try {
             const semStr = `${selectedYear} Year - Sem ${selectedSem}`;
             const res = await api.get(`/timetable/${selectedDept}/${semStr}/${selectedSec}`);
-            setTimetable(res.data);
-            setShowFilters(false);
+            if (res.data && res.data.exists === false) {
+                setTimetable(null);
+                Alert.alert('Not Found', 'No timetable found for the selected criteria.');
+            } else {
+                setTimetable(res.data);
+                setShowFilters(false);
+            }
         } catch (error) {
             console.error('Error fetching timetable:', error);
             setTimetable(null);
-            Alert.alert('Not Found', 'No timetable found for the selected criteria.');
+            Alert.alert('Error', 'Failed to fetch timetable.');
         } finally {
             setLoading(false);
         }

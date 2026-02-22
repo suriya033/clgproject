@@ -185,7 +185,6 @@ const StudentDashboard = ({ navigation }) => {
                             </TouchableOpacity>
                             <View style={{ flex: 1, marginLeft: 15 }}>
                                 <Text style={styles.dateText}>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
-                                <Text style={styles.welcomeText}>Hello Student,</Text>
                                 <Text style={styles.userName}>{user?.name?.split(' ')[0] || 'User'}</Text>
                             </View>
                             <TouchableOpacity

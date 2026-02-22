@@ -72,6 +72,16 @@ const CoordinatorRequests = ({ navigation }) => {
         }
     };
 
+    const formatYear = (year) => {
+        if (!year) return '';
+        const yStr = String(year);
+        if (yStr === '1') return '1st Year';
+        if (yStr === '2') return '2nd Year';
+        if (yStr === '3') return '3rd Year';
+        if (yStr === '4') return '4th Year';
+        return `${year}th Year`;
+    };
+
     const renderRequestItem = ({ item }) => (
         <View style={styles.card}>
             <View style={styles.cardHeader}>
@@ -85,20 +95,26 @@ const CoordinatorRequests = ({ navigation }) => {
 
             <View style={styles.studentInfo}>
                 <User size={16} color="#800000" />
-                <Text style={styles.studentName}>{item.student.name} ({item.student.userId})</Text>
+                <View>
+                    <Text style={styles.studentName}>{item.student.name} ({item.student.userId})</Text>
+                    <Text style={styles.studentDept}>
+                        {item.student.department} • {formatYear(item.student.year)} - Sec {item.student.section}
+                    </Text>
+                </View>
             </View>
 
             <Text style={styles.subject}>{item.subject}</Text>
-
-            <View style={styles.contentContainer}>
-                <Text style={styles.contentText} numberOfLines={3}>{item.content}</Text>
-            </View>
 
             <View style={styles.dateInfo}>
                 <Calendar size={14} color="#64748b" />
                 <Text style={styles.dateText}>
                     {new Date(item.startDate).toLocaleDateString()} - {new Date(item.endDate).toLocaleDateString()}
                 </Text>
+            </View>
+
+            <View style={styles.letterContainer}>
+                <Text style={styles.letterLabel}>Letter Preview:</Text>
+                <Text style={styles.contentText}>{item.content}</Text>
             </View>
 
             <View style={styles.actionRow}>
@@ -232,11 +248,14 @@ const styles = StyleSheet.create({
     typeBadge: { backgroundColor: '#fff1f2', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10 },
     typeText: { fontSize: 12, fontWeight: '800', color: '#800000', textTransform: 'uppercase' },
     appliedAt: { fontSize: 12, color: '#94a3b8', fontWeight: '600' },
-    studentInfo: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-    studentName: { fontSize: 15, fontWeight: '700', color: '#1e293b' },
+    studentInfo: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+    studentName: { fontSize: 15, fontWeight: '800', color: '#1e293b' },
+    studentDept: { fontSize: 12, color: '#64748b', fontWeight: '600' },
     subject: { fontSize: 17, fontWeight: '800', color: '#0f172a', marginBottom: 8 },
     contentContainer: { backgroundColor: '#f8fafc', padding: 12, borderRadius: 12, marginBottom: 12 },
-    contentText: { fontSize: 14, color: '#475569', lineHeight: 20 },
+    contentText: { fontSize: 14, color: '#475569', lineHeight: 22, fontStyle: 'italic' },
+    letterContainer: { backgroundColor: '#f1f5f9', padding: 15, borderRadius: 12, marginBottom: 15, borderLeftWidth: 4, borderLeftColor: '#800000' },
+    letterLabel: { fontSize: 12, fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginBottom: 8 },
     dateInfo: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 15 },
     dateText: { fontSize: 13, color: '#64748b', fontWeight: '600' },
     actionRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },

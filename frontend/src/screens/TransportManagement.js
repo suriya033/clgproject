@@ -32,9 +32,10 @@ import {
     UserPlus,
     Edit2,
     RefreshCw,
-    Menu
+    Menu,
+    AlertCircle
 } from 'lucide-react-native';
-import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/api';
@@ -55,6 +56,7 @@ const TransportManagement = ({ navigation }) => {
     const [trackingBus, setTrackingBus] = useState(null);
     const [mapModalVisible, setMapModalVisible] = useState(false);
     const [busLocation, setBusLocation] = useState(null);
+    const [mapReady, setMapReady] = useState(false);
     const mapRef = useRef(null);
 
     // Form State
@@ -109,12 +111,35 @@ const TransportManagement = ({ navigation }) => {
         try {
             const response = await api.get(`/transport/bus/${trackingBus._id}/location`);
             if (response.data.location && response.data.location.lat) {
-                setBusLocation({
-                    latitude: response.data.location.lat,
-                    longitude: response.data.location.lng,
+                const newCoords = {
+                    latitude: parseFloat(response.data.location.lat),
+                    longitude: parseFloat(response.data.location.lng),
                     latitudeDelta: 0.01,
                     longitudeDelta: 0.01,
-                });
+                };
+
+                setBusLocation(newCoords);
+
+                // Animate to new position if map is ready
+                if (mapRef.current && mapReady) {
+                    mapRef.current.animateToRegion(newCoords, 1000);
+                }
+            } else {
+                // If no location, set a default center (e.g., college main building)
+                // but keep marker hidden or show "not started"
+                if (!busLocation) {
+                    const defaultCoords = {
+                        latitude: 12.9716, // Default fallback (e.g. Bangalore)
+                        longitude: 77.5946,
+                        latitudeDelta: 0.05,
+                        longitudeDelta: 0.05,
+                        isPlaceholder: true
+                    };
+                    setBusLocation(defaultCoords);
+                    if (mapRef.current && mapReady) {
+                        mapRef.current.animateToRegion(defaultCoords, 1000);
+                    }
+                }
             }
         } catch (error) {
             console.error('Error fetching bus location', error);
@@ -123,7 +148,8 @@ const TransportManagement = ({ navigation }) => {
 
     const handleTrack = (bus) => {
         setTrackingBus(bus);
-        setBusLocation(null); // Reset previous location
+        setBusLocation(null);
+        setMapReady(false); // Reset map ready state for new bus
         setMapModalVisible(true);
     };
 
@@ -316,14 +342,16 @@ const TransportManagement = ({ navigation }) => {
                     <Bus size={16} color="#800000" />
                     <Text style={styles.busNumberText}>{item.busNumber}</Text>
                 </View>
-                <View style={{ flexDirection: 'row' }}>
-                    <TouchableOpacity onPress={() => handleEdit(item)} style={[styles.deleteButton, { backgroundColor: '#f0f9ff', marginRight: 8 }]}>
-                        <Edit2 size={18} color="#0284c7" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleDelete(item._id)} style={styles.deleteButton}>
-                        <Trash2 size={18} color="#ef4444" />
-                    </TouchableOpacity>
-                </View>
+                {(currentUser?.role === 'Admin' || currentUser?.role === 'Transport') && (
+                    <View style={{ flexDirection: 'row' }}>
+                        <TouchableOpacity onPress={() => handleEdit(item)} style={[styles.deleteButton, { backgroundColor: '#f0f9ff', marginRight: 8 }]}>
+                            <Edit2 size={18} color="#0284c7" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => handleDelete(item._id)} style={styles.deleteButton}>
+                            <Trash2 size={18} color="#ef4444" />
+                        </TouchableOpacity>
+                    </View>
+                )}
             </View>
 
             <View style={styles.routeSection}>
@@ -338,14 +366,6 @@ const TransportManagement = ({ navigation }) => {
                         {item.driverId?.name || item.driverName || 'No Driver Assigned'}
                     </Text>
                 </View>
-                {(item.driverId?.mobileNo || item.driverContact) && (
-                    <View style={styles.driverInfo}>
-                        <Phone size={14} color="#94a3b8" />
-                        <Text style={styles.driverContact}>
-                            {item.driverId?.mobileNo || item.driverContact}
-                        </Text>
-                    </View>
-                )}
             </View>
 
             <View style={styles.cardFooter}>
@@ -725,27 +745,47 @@ const TransportManagement = ({ navigation }) => {
                     </View>
 
                     {busLocation ? (
-                        <MapView
-                            ref={mapRef}
-                            style={styles.map}
-                            provider={PROVIDER_DEFAULT}
-                            initialRegion={busLocation}
-                            region={busLocation}
-                        >
-                            <Marker
-                                coordinate={busLocation}
-                                title={trackingBus?.busNumber}
-                                description={`Driver: ${trackingBus?.driverName || 'Unknown'}`}
+                        <View style={{ flex: 1, position: 'relative' }}>
+                            <MapView
+                                ref={mapRef}
+                                provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+                                style={styles.map}
+                                initialRegion={busLocation}
+                                region={!busLocation.isPlaceholder ? busLocation : undefined}
+                                showsUserLocation={true}
+                                showsMyLocationButton={true}
+                                showsCompass={true}
+                                loadingEnabled={true}
+                                onMapReady={() => setMapReady(true)}
                             >
-                                <View style={styles.busMarker}>
-                                    <Bus size={20} color="#fff" />
+                                {!busLocation.isPlaceholder && (
+                                    <Marker
+                                        coordinate={{
+                                            latitude: busLocation.latitude,
+                                            longitude: busLocation.longitude
+                                        }}
+                                        title={trackingBus?.busNumber}
+                                        description={`Driver: ${trackingBus?.driverName || 'Unknown'}`}
+                                    >
+                                        <View style={styles.busMarker}>
+                                            <Bus size={20} color="#fff" />
+                                        </View>
+                                    </Marker>
+                                )}
+                            </MapView>
+                            {busLocation.isPlaceholder && (
+                                <View style={styles.noLocationOverlay}>
+                                    <View style={styles.noLocationBadge}>
+                                        <AlertCircle size={20} color="#ef4444" />
+                                        <Text style={styles.noLocationText}>Waiting for Driver to start Trip...</Text>
+                                    </View>
                                 </View>
-                            </Marker>
-                        </MapView>
+                            )}
+                        </View>
                     ) : (
                         <View style={styles.mapLoading}>
                             <ActivityIndicator size="large" color="#800000" />
-                            <Text style={styles.mapLoadingText}>Locating Bus...</Text>
+                            <Text style={styles.mapLoadingText}>Initializing Map...</Text>
                         </View>
                     )}
 
@@ -1138,6 +1178,35 @@ const styles = StyleSheet.create({
         padding: 10,
         backgroundColor: '#f1f5f9',
         borderRadius: 12,
+    },
+    noLocationOverlay: {
+        position: 'absolute',
+        top: 20,
+        left: 20,
+        right: 20,
+        alignItems: 'center',
+        zIndex: 100
+    },
+    noLocationBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#fee2e2',
+        gap: 10,
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+    },
+    noLocationText: {
+        color: '#991b1b',
+        fontSize: 14,
+        fontWeight: '800',
     }
 });
 

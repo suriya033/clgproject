@@ -70,7 +70,7 @@ router.get('/coordinator-list', auth(['Staff', 'HOD']), async (req, res) => {
         const requests = await LeaveRequest.find({
             coordinator: req.user.id,
             status: 'Pending_Coordinator'
-        }).populate('student', 'name userId department semester section');
+        }).populate('student', 'name userId department semester section year');
         res.json(requests);
     } catch (err) {
         console.error(err.message);
@@ -86,7 +86,7 @@ router.get('/hod-list', auth(['HOD']), async (req, res) => {
         const requests = await LeaveRequest.find({
             hod: req.user.id,
             status: 'Pending_HOD'
-        }).populate('student', 'name userId department semester section');
+        }).populate('student', 'name userId department semester section year');
         res.json(requests);
     } catch (err) {
         console.error(err.message);

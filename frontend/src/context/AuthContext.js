@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
+import { DeviceEventEmitter, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../api/api';
 
@@ -10,6 +11,22 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         loadUser();
+
+        // Listen for 401 Unauthorized responses to auto-logout
+        let subscription;
+        if (Platform.OS !== 'web') {
+            subscription = DeviceEventEmitter.addListener('LOGOUT', logout);
+        } else if (typeof window !== 'undefined') {
+            window.addEventListener('LOGOUT', logout);
+        }
+
+        return () => {
+            if (Platform.OS !== 'web' && subscription) {
+                subscription.remove();
+            } else if (typeof window !== 'undefined') {
+                window.removeEventListener('LOGOUT', logout);
+            }
+        };
     }, []);
 
     const loadUser = async () => {

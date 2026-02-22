@@ -848,9 +848,20 @@ const TimeTableGenerator = ({ navigation }) => {
                                             <View style={{ flex: 1 }}>
                                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                                     <Text style={styles.subItemName}>{item.name}</Text>
-                                                    <View style={[styles.typeBadge, item.type === 'Practical' ? styles.practicalBadge : styles.theoryBadge]}>
-                                                        <Clock size={10} color={item.type === 'Practical' ? '#0891b2' : '#64748b'} />
-                                                        <Text style={styles.typeBadgeText}>{item.type}</Text>
+                                                    <View style={[
+                                                        styles.typeBadge,
+                                                        item.type === 'Practical' ? styles.practicalBadge :
+                                                            item.type === 'Integrated' ? styles.integratedBadge : styles.theoryBadge
+                                                    ]}>
+                                                        <Clock size={10} color={
+                                                            item.type === 'Practical' ? '#0891b2' :
+                                                                item.type === 'Integrated' ? '#7c3aed' : '#64748b'
+                                                        } />
+                                                        <Text style={[
+                                                            styles.typeBadgeText,
+                                                            item.type === 'Practical' && { color: '#0891b2' },
+                                                            item.type === 'Integrated' && { color: '#7c3aed' }
+                                                        ]}>{item.type}</Text>
                                                     </View>
                                                 </View>
                                                 <Text style={styles.subItemDetail}>
@@ -959,33 +970,6 @@ const TimeTableGenerator = ({ navigation }) => {
 
                         <ScrollView showsVerticalScrollIndicator={false}>
                             {/* Subject Summary Stats */}
-                            <View style={styles.summaryContainer}>
-                                <Text style={styles.summaryTitle}>Allocation Summary</Text>
-                                {batchResults[currentClassIndex].subjects.map((sub, idx) => {
-                                    const expected = parseInt(sub.hoursPerWeek);
-                                    let actual = 0;
-                                    Object.values(batchResults[currentClassIndex].schedule).forEach(daySlots => {
-                                        daySlots.forEach(slot => {
-                                            if (slot.subject === (sub.name || sub.label)) actual++;
-                                        });
-                                    });
-
-                                    const isMatch = actual >= expected;
-                                    return (
-                                        <View key={idx} style={styles.summaryRow}>
-                                            <View style={{ flex: 1 }}>
-                                                <Text style={styles.summarySubName}>{sub.name || sub.label}</Text>
-                                                <Text style={styles.summaryStaff}>{sub.staffName}</Text>
-                                            </View>
-                                            <View style={styles.summaryStats}>
-                                                <Text style={[styles.statValue, isMatch ? { color: '#059669' } : { color: '#dc2626' }]}>
-                                                    {actual}/{expected} hrs
-                                                </Text>
-                                            </View>
-                                        </View>
-                                    );
-                                })}
-                            </View>
 
                             {batchResults[currentClassIndex].schedule &&
                                 Object.entries(batchResults[currentClassIndex].schedule).map(([day, slots]) => renderDaySchedule(day, slots))}
@@ -1380,6 +1364,9 @@ const styles = StyleSheet.create({
     },
     practicalBadge: {
         backgroundColor: '#ecfeff',
+    },
+    integratedBadge: {
+        backgroundColor: '#f5f3ff',
     },
     typeBadgeText: {
         fontSize: 10,

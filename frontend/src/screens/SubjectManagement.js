@@ -159,7 +159,8 @@ const SubjectManagement = ({ navigation, route }) => {
 
     const subjectTypes = [
         { label: 'Theory', value: 'Theory' },
-        { label: 'Practical', value: 'Practical' }
+        { label: 'Practical', value: 'Practical' },
+        { label: 'Integrated', value: 'Integrated' }
     ];
 
     const durationOptions = [
@@ -380,9 +381,20 @@ const SubjectManagement = ({ navigation, route }) => {
                         <Layers size={14} color="#64748b" />
                         <Text style={styles.infoText} numberOfLines={1}>{item.department?.name || 'N/A'}</Text>
                     </View>
-                    <View style={[styles.typeTag, item.type === 'Practical' ? styles.practicalTag : styles.theoryTag]}>
-                        <Clock size={12} color={item.type === 'Practical' ? '#0891b2' : '#64748b'} />
-                        <Text style={[styles.tagText, item.type === 'Practical' && { color: '#0891b2' }]}>
+                    <View style={[
+                        styles.typeTag,
+                        item.type === 'Practical' ? styles.practicalTag :
+                            item.type === 'Integrated' ? styles.integratedTag : styles.theoryTag
+                    ]}>
+                        <Clock size={12} color={
+                            item.type === 'Practical' ? '#0891b2' :
+                                item.type === 'Integrated' ? '#7c3aed' : '#64748b'
+                        } />
+                        <Text style={[
+                            styles.tagText,
+                            item.type === 'Practical' && { color: '#0891b2' },
+                            item.type === 'Integrated' && { color: '#7c3aed' }
+                        ]}>
                             {item.type || 'Theory'} {item.type === 'Practical' ? `(${item.duration} Periods)` : ''}
                         </Text>
                     </View>
@@ -693,6 +705,7 @@ const styles = StyleSheet.create({
     },
     theoryTag: { backgroundColor: '#f1f5f9' },
     practicalTag: { backgroundColor: '#ecfeff' },
+    integratedTag: { backgroundColor: '#f5f3ff' },
     tagText: { fontSize: 11, fontWeight: '800', color: '#64748b', textTransform: 'uppercase' },
     infoText: {
         fontSize: 13,

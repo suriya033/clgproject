@@ -344,12 +344,13 @@ const NoticeManagement = ({ navigation }) => {
                         <ChevronLeft size={24} color="#fff" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Notice Board</Text>
-                    <TouchableOpacity
-                        style={styles.iconButton}
-                        onPress={openCreateModal}
-                    >
-                        <Plus size={24} color="#fff" />
-                    </TouchableOpacity>
+                    {['Admin', 'HOD', 'Office'].includes(user?.role) ? (
+                        <TouchableOpacity style={styles.iconButton} onPress={openCreateModal}>
+                            <Plus size={24} color="#fff" />
+                        </TouchableOpacity>
+                    ) : (
+                        <View style={{ width: 40 }} />
+                    )}
                 </View>
 
                 <View style={styles.searchContainer}>

@@ -407,7 +407,7 @@ router.get('/:department/:semester/:section', auth(), async (req, res) => {
 
         if (!timetable) {
             console.log('TIMETABLE NOT FOUND IN DB');
-            return res.status(404).json({ message: 'Timetable not found' });
+            return res.json({ exists: false });
         }
         res.json(timetable);
     } catch (err) {

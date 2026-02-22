@@ -412,25 +412,43 @@ const ClassManagement = ({ navigation, route }) => {
                                         {allStaff.length === 0 ? (
                                             <Text style={styles.emptyDropdownText}>No teachers found</Text>
                                         ) : (
-                                            allStaff.map(staff => (
+                                            <>
                                                 <TouchableOpacity
-                                                    key={staff._id}
                                                     style={[
                                                         styles.dropdownItem,
-                                                        selectedAdvisor?._id === staff._id && styles.dropdownItemActive
+                                                        !selectedAdvisor && styles.dropdownItemActive
                                                     ]}
                                                     onPress={() => {
-                                                        setSelectedAdvisor(staff);
+                                                        setSelectedAdvisor(null);
                                                         setShowAdvisorDropdown(false);
                                                     }}
                                                 >
                                                     <Text style={[
                                                         styles.dropdownItemText,
-                                                        selectedAdvisor?._id === staff._id && styles.dropdownItemTextActive
-                                                    ]}>{staff.name}</Text>
-                                                    {selectedAdvisor?._id === staff._id && <CheckCircle2 size={16} color="#800000" />}
+                                                        !selectedAdvisor && styles.dropdownItemTextActive
+                                                    ]}>None (Unassign)</Text>
+                                                    {!selectedAdvisor && <CheckCircle2 size={16} color="#800000" />}
                                                 </TouchableOpacity>
-                                            ))
+                                                {allStaff.map(staff => (
+                                                    <TouchableOpacity
+                                                        key={staff._id}
+                                                        style={[
+                                                            styles.dropdownItem,
+                                                            selectedAdvisor?._id === staff._id && styles.dropdownItemActive
+                                                        ]}
+                                                        onPress={() => {
+                                                            setSelectedAdvisor(staff);
+                                                            setShowAdvisorDropdown(false);
+                                                        }}
+                                                    >
+                                                        <Text style={[
+                                                            styles.dropdownItemText,
+                                                            selectedAdvisor?._id === staff._id && styles.dropdownItemTextActive
+                                                        ]}>{staff.name}</Text>
+                                                        {selectedAdvisor?._id === staff._id && <CheckCircle2 size={16} color="#800000" />}
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </>
                                         )}
                                     </ScrollView>
                                 </View>
@@ -519,25 +537,43 @@ const ClassManagement = ({ navigation, route }) => {
                                             {allStaff.length === 0 ? (
                                                 <Text style={styles.emptyDropdownText}>No teachers found</Text>
                                             ) : (
-                                                allStaff.map(staff => (
+                                                <>
                                                     <TouchableOpacity
-                                                        key={staff._id}
                                                         style={[
                                                             styles.dropdownItem,
-                                                            advisor?._id === staff._id && styles.dropdownItemActive
+                                                            !advisor && styles.dropdownItemActive
                                                         ]}
                                                         onPress={() => {
-                                                            setAdvisor(staff);
+                                                            setAdvisor(null);
                                                             setShowAdvisorDropdown(false);
                                                         }}
                                                     >
                                                         <Text style={[
                                                             styles.dropdownItemText,
-                                                            advisor?._id === staff._id && styles.dropdownItemTextActive
-                                                        ]}>{staff.name}</Text>
-                                                        {advisor?._id === staff._id && <CheckCircle2 size={16} color="#800000" />}
+                                                            !advisor && styles.dropdownItemTextActive
+                                                        ]}>None (Unassign)</Text>
+                                                        {!advisor && <CheckCircle2 size={16} color="#800000" />}
                                                     </TouchableOpacity>
-                                                ))
+                                                    {allStaff.map(staff => (
+                                                        <TouchableOpacity
+                                                            key={staff._id}
+                                                            style={[
+                                                                styles.dropdownItem,
+                                                                advisor?._id === staff._id && styles.dropdownItemActive
+                                                            ]}
+                                                            onPress={() => {
+                                                                setAdvisor(staff);
+                                                                setShowAdvisorDropdown(false);
+                                                            }}
+                                                        >
+                                                            <Text style={[
+                                                                styles.dropdownItemText,
+                                                                advisor?._id === staff._id && styles.dropdownItemTextActive
+                                                            ]}>{staff.name}</Text>
+                                                            {advisor?._id === staff._id && <CheckCircle2 size={16} color="#800000" />}
+                                                        </TouchableOpacity>
+                                                    ))}
+                                                </>
                                             )}
                                         </ScrollView>
                                     </View>

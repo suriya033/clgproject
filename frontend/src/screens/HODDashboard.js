@@ -33,7 +33,8 @@ import {
     Phone,
     Briefcase,
     Hash,
-    MessageSquare
+    MessageSquare,
+    FileText
 } from 'lucide-react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -85,6 +86,7 @@ const HODDashboard = ({ navigation }) => {
         { id: '1e', title: 'CIA Marks', icon: <Hash size={24} color="#f59e0b" />, route: 'StaffCIAMarks', bg: '#ffedd5' },
         { id: '2', title: 'Staff', icon: <Users size={24} color="#ec4899" />, route: 'StaffManagement', bg: '#fdf2f8', params: { departmentFilter: user?.department }, subtitle: `${stats.staff} Members` },
         { id: '3', title: 'Students', icon: <GraduationCap size={24} color="#6366f1" />, action: 'openYears', bg: '#e0e7ff', subtitle: `${stats.students} Students` },
+        { id: 'classes', title: 'Classes', icon: <BookOpen size={24} color="#4f46e5" />, route: 'ClassManagement', bg: '#e0e7ff', params: { departmentFilter: user?.department } },
         { id: '4', title: 'Subjects', icon: <BookOpen size={24} color="#10b981" />, route: 'SubjectManagement', bg: '#d1fae5', params: { departmentFilter: user?.department }, subtitle: `${stats.courses} Subjects` },
 
         { id: '6', title: 'Notice', icon: <Megaphone size={24} color="#06b6d4" />, route: 'Announcements', bg: '#cffafe' },

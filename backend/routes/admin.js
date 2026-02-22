@@ -49,10 +49,18 @@ router.post('/classes', auth(['Admin', 'HOD']), async (req, res) => {
         }
 
         if (cls) {
+            // Unassign old coordinator
+            if (cls.coordinator && String(cls.coordinator) !== String(coordinatorId)) {
+                await User.findByIdAndUpdate(cls.coordinator, {
+                    isCoordinator: false,
+                    $unset: { coordinatorDetails: 1 }
+                });
+            }
+
             cls.name = name;
             cls.semester = semester;
             cls.section = section;
-            cls.coordinator = coordinatorId;
+            cls.coordinator = coordinatorId || null; // Use null if empty
             cls.academicYear = academicYear;
             await cls.save();
         } else {
@@ -61,7 +69,7 @@ router.post('/classes', auth(['Admin', 'HOD']), async (req, res) => {
                 department: finalDept,
                 semester,
                 section,
-                coordinator: coordinatorId,
+                coordinator: coordinatorId || null,
                 academicYear
             });
             await cls.save();

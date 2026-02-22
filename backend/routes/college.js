@@ -302,6 +302,19 @@ router.get('/fees', auth(), async (req, res) => {
     }
 });
 
+// --- Student Library Routes ---
+router.get('/library/my-books', auth(), async (req, res) => {
+    try {
+        const IssuedBook = require('../models/IssuedBook');
+        // Depending on how IssuedBook defines student ID, let's just match user.id
+        // Let's assume studentId is a string or ObjectId matching user.id
+        const books = await IssuedBook.find({ studentId: req.user.id }).sort({ issueDate: -1 });
+        res.json(books);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.put('/fees/:id', auth(['Admin', 'Office']), async (req, res) => {
     try {
         const fee = await Fee.findByIdAndUpdate(req.params.id, req.body, { new: true });

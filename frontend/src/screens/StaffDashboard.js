@@ -141,7 +141,6 @@ const StaffDashboard = ({ navigation }) => {
                             </TouchableOpacity>
                             <View style={{ flex: 1, marginLeft: 15 }}>
                                 <Text style={styles.dateText}>{getDateString()}</Text>
-                                <Text style={styles.welcomeText}>Welcome back,</Text>
                                 <Text style={styles.userName}>{user?.name?.split(' ')[0] || 'Staff'}</Text>
                             </View>
                             <TouchableOpacity

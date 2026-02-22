@@ -54,6 +54,9 @@ import FacultyLounge from '../screens/FacultyLounge';
 import AssignmentsScreen from '../screens/AssignmentsScreen';
 import SubmissionList from '../screens/SubmissionList';
 import ClassSelectionScreen from '../screens/ClassSelectionScreen';
+import StudentLibrary from '../screens/StudentLibrary';
+import StudentFees from '../screens/StudentFees';
+import SmartRequestDashboard from '../screens/SmartRequestDashboard';
 
 const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -106,12 +109,13 @@ const MainStack = () => {
                         <Stack.Screen name="TimetableViewer" component={TimetableViewer} />
                         <Stack.Screen name="Attendance" component={StudentAttendance} />
                         <Stack.Screen name="StudentMarks" component={StudentMarks} />
-                        <Stack.Screen name="StudentLibrary" component={GenericDashboard} />
-                        <Stack.Screen name="SmartRequest" component={GenericDashboard} />
+                        <Stack.Screen name="StudentLibrary" component={StudentLibrary} />
+                        <Stack.Screen name="SmartRequest" component={SmartRequestDashboard} />
                         <Stack.Screen name="Assignments" component={AssignmentsScreen} />
                         <Stack.Screen name="Complaints" component={StudentComplaint} />
-                        <Stack.Screen name="Fees" component={GenericDashboard} />
+                        <Stack.Screen name="Fees" component={StudentFees} />
                         <Stack.Screen name="ViewNotes" component={ViewNotes} />
+                        <Stack.Screen name="Announcements" component={NoticeManagement} />
                     </>
                 )
             }

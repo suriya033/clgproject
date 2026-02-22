@@ -24,15 +24,23 @@ const StudentLeaveRequest = ({ navigation }) => {
 
     const [type, setType] = useState('Leave'); // Leave or OD
     const [subject, setSubject] = useState('');
-    const [content, setContent] = useState('');
+    const [reason, setReason] = useState('');
     const [startDate, setStartDate] = useState(new Date());
     const [endDate, setEndDate] = useState(new Date());
     const [showStartPicker, setShowStartPicker] = useState(false);
     const [showEndPicker, setShowEndPicker] = useState(false);
 
+    const generateLetter = () => {
+        const start = startDate.toISOString().split('T')[0];
+        const end = endDate.toISOString().split('T')[0];
+        const days = start === end ? `on ${start}` : `from ${start} to ${end}`;
+
+        return `Respected Mam/Sir,\n\nI am writing to formally request you to grant me ${type} ${days}. The reason for my request is: ${reason}.\n\nI request you to kindly approve my application.\n\nThank you,\n${user?.name} (${user?.userId})`;
+    };
+
     const handleSubmit = async () => {
-        if (!subject || !content) {
-            Alert.alert('Error', 'Please enter subject and content');
+        if (!subject || !reason) {
+            Alert.alert('Error', 'Please enter subject and reason');
             return;
         }
 
@@ -41,7 +49,7 @@ const StudentLeaveRequest = ({ navigation }) => {
             await api.post('/requests/leave', {
                 type,
                 subject,
-                content,
+                content: generateLetter(),
                 startDate: startDate.toISOString(),
                 endDate: endDate.toISOString()
             });
@@ -166,20 +174,28 @@ const StudentLeaveRequest = ({ navigation }) => {
                             </View>
                         </View>
 
-                        {/* Content */}
+                        {/* Reason */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Respected Mam/Sir,</Text>
+                            <Text style={styles.label}>Reason</Text>
                             <View style={styles.contentInputContainer}>
                                 <MessageSquare size={20} color="#64748b" style={[styles.inputIcon, { marginTop: 12 }]} />
                                 <TextInput
                                     style={styles.contentInput}
-                                    placeholder="Write your request content here..."
+                                    placeholder="Enter your reason here..."
                                     multiline
-                                    numberOfLines={6}
+                                    numberOfLines={4}
                                     textAlignVertical="top"
-                                    value={content}
-                                    onChangeText={setContent}
+                                    value={reason}
+                                    onChangeText={setReason}
                                 />
+                            </View>
+                        </View>
+
+                        {/* Letter Preview */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Formal Letter Preview</Text>
+                            <View style={styles.previewBox}>
+                                <Text style={styles.previewText}>{generateLetter()}</Text>
                             </View>
                         </View>
 
@@ -366,8 +382,23 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         fontSize: 15,
         color: '#1e293b',
-        minHeight: 120,
+        minHeight: 80,
         fontWeight: '500',
+    },
+    previewBox: {
+        backgroundColor: '#e0e7ff',
+        padding: 15,
+        borderRadius: 12,
+        borderLeftWidth: 4,
+        borderLeftColor: '#4338ca',
+        marginTop: 5
+    },
+    previewText: {
+        fontSize: 14,
+        color: '#1e293b',
+        lineHeight: 22,
+        fontWeight: '500',
+        fontStyle: 'italic'
     },
     submitBtn: {
         flexDirection: 'row',
