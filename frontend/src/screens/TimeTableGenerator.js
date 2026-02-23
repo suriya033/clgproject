@@ -34,6 +34,7 @@ import {
 } from 'lucide-react-native';
 import api from '../api/api';
 import { AuthContext } from '../context/AuthContext';
+import TimetableExport from '../components/TimetableExport';
 
 const { width, height } = Dimensions.get('window');
 
@@ -160,6 +161,9 @@ const TimeTableGenerator = ({ navigation }) => {
     const [semester, setSemester] = useState('');
     const [semesterOptions, setSemesterOptions] = useState([]);
     const [section, setSection] = useState('');
+    const [batch, setBatch] = useState('2023 - 2027');
+    const [academicYear, setAcademicYear] = useState('2025 - 2026 (EVEN SEM)');
+    const [room, setRoom] = useState('CS 4');
 
     // Current Subject being added
     const [currentSubject, setCurrentSubject] = useState({
@@ -203,6 +207,7 @@ const TimeTableGenerator = ({ navigation }) => {
             setSubjectsList(subRes.data.map(s => ({
                 label: `${s.code} - ${s.name} ${s.shortName ? `(${s.shortName})` : ''}`,
                 value: s._id,
+                code: s.code,
                 name: s.name,
                 shortName: s.shortName,
                 dept: s.department?._id || s.department,
@@ -213,7 +218,12 @@ const TimeTableGenerator = ({ navigation }) => {
             })));
             setStaffList(staffRes.data
                 .filter(u => u.role === 'Staff' || u.role === 'HOD')
-                .map(u => ({ label: u.name, value: u._id, subLabel: u.department }))
+                .map(u => ({
+                    label: u.name,
+                    value: u._id,
+                    subLabel: u.department,
+                    userId: u.userId
+                }))
             );
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -311,31 +321,32 @@ const TimeTableGenerator = ({ navigation }) => {
             }
         }
 
-        // Limit only for theory subjects
-        if (!isPractical && parseInt(finalHours) > 5) {
-            Alert.alert('Error', 'Number of hours per week must be 5 or less for Theory subjects');
-            return;
-        }
 
         const newEntry = {
             id: Date.now().toString(),
             subjectId: currentSubject.subjectId,
+            code: subObj.code,
             name: subObj.shortName || subObj.name,
+            fullName: subObj.name,
+            shortName: subObj.shortName,
             staffId: currentSubject.staffId,
             staffName: staffObj.label,
+            staffCode: staffObj.userId,
             hoursPerWeek: finalHours,
             type: subObj.type,
             type: subObj.type,
             duration: parseInt(currentSubject.duration),
             alternative: currentSubject.enableAlt ? {
                 subjectId: currentSubject.altSubjectId,
+                code: subjectsList.find(s => s.value === currentSubject.altSubjectId)?.code,
                 name: subjectsList.find(s => s.value === currentSubject.altSubjectId)?.shortName || subjectsList.find(s => s.value === currentSubject.altSubjectId)?.name,
+                fullName: subjectsList.find(s => s.value === currentSubject.altSubjectId)?.name,
                 staffId: currentSubject.altStaffId,
-                staffName: staffList.find(s => s.value === currentSubject.altStaffId)?.label
+                staffName: staffList.find(s => s.value === currentSubject.altStaffId)?.label,
+                staffCode: staffList.find(s => s.value === currentSubject.altStaffId)?.userId
             } : null
         };
 
-        setAddedSubjects([...addedSubjects, newEntry]);
         setAddedSubjects([...addedSubjects, newEntry]);
         setCurrentSubject({
             subjectId: '', staffId: '', hoursPerWeek: '4', duration: '1', sessions: '1',
@@ -359,7 +370,10 @@ const TimeTableGenerator = ({ navigation }) => {
                     semester: `${selectedYear} Year - Sem ${semester}`,
                     section: section || 'A',
                     year: selectedYear,
-                    semVal: semester
+                    semVal: semester,
+                    batch: batch,
+                    academicYear: academicYear,
+                    room: room
                 },
                 subjects: addedSubjects
             });
@@ -401,7 +415,10 @@ const TimeTableGenerator = ({ navigation }) => {
                 semester: `${selectedYear} Year - Sem ${semester}`,
                 section: section || 'A',
                 year: selectedYear,
-                semVal: semester
+                semVal: semester,
+                batch: batch,
+                academicYear: academicYear,
+                room: room
             },
             subjects: addedSubjects
         };
@@ -709,6 +726,39 @@ const TimeTableGenerator = ({ navigation }) => {
                                 </View>
                             </View>
 
+                            <View style={styles.row}>
+                                <View style={{ flex: 1, marginRight: 8 }}>
+                                    <Text style={styles.inputLabel}>Batch</Text>
+                                    <TextInput
+                                        style={styles.textInput}
+                                        value={batch}
+                                        onChangeText={setBatch}
+                                        placeholder="e.g. 2023 - 2027"
+                                    />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.inputLabel}>Academic Year</Text>
+                                    <TextInput
+                                        style={styles.textInput}
+                                        value={academicYear}
+                                        onChangeText={setAcademicYear}
+                                        placeholder="e.g. 2025 - 2026"
+                                    />
+                                </View>
+                            </View>
+
+                            <View style={styles.row}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.inputLabel}>Lecture Hall</Text>
+                                    <TextInput
+                                        style={styles.textInput}
+                                        value={room}
+                                        onChangeText={setRoom}
+                                        placeholder="e.g. GS14"
+                                    />
+                                </View>
+                            </View>
+
                             <View style={styles.sectionHeader}>
                                 <Text style={styles.sectionTitle}>Manage Subjects</Text>
                             </View>
@@ -964,16 +1014,15 @@ const TimeTableGenerator = ({ navigation }) => {
                             </ScrollView>
                         </View>
 
-                        <Text style={styles.classDetailHeader}>
-                            {batchResults[currentClassIndex].metadata.deptName} - {batchResults[currentClassIndex].metadata.semester} Section {batchResults[currentClassIndex].metadata.section}
-                        </Text>
+                        <ScrollView showsVerticalScrollIndicator={true} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }}>
+                            <Text style={styles.classDetailHeader}>
+                                {batchResults[currentClassIndex].metadata.deptName} - {batchResults[currentClassIndex].metadata.semester} Section {batchResults[currentClassIndex].metadata.section}
+                            </Text>
 
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            {/* Subject Summary Stats */}
+                            <TimetableExport result={batchResults[currentClassIndex]} />
 
                             {batchResults[currentClassIndex].schedule &&
                                 Object.entries(batchResults[currentClassIndex].schedule).map(([day, slots]) => renderDaySchedule(day, slots))}
-                            <View style={{ height: 100 }} />
                         </ScrollView>
 
                         <View style={styles.bottomActions}>
