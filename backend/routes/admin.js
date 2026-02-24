@@ -247,8 +247,14 @@ router.delete('/users/:id', auth(['Admin', 'Office', 'HOD']), async (req, res) =
             return res.status(403).json({ message: 'Access denied: You can only delete users in your department' });
         }
 
+        // Cleanup Department HOD reference
+        await Department.updateMany({ hod: req.params.id }, { $unset: { hod: 1 } });
+
+        // Cleanup Class Coordinator reference
+        await Class.updateMany({ coordinator: req.params.id }, { $unset: { coordinator: 1 } });
+
         await User.findByIdAndDelete(req.params.id);
-        res.json({ message: 'User deleted' });
+        res.json({ message: 'User deleted and references cleaned up' });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server error');
@@ -447,7 +453,10 @@ router.get('/stats', auth(['Admin', 'Office']), async (req, res) => {
     try {
         const studentCount = await User.countDocuments({ role: 'Student' });
         const staffCount = await User.countDocuments({
-            role: { $in: ['Staff', 'HOD', 'Transport', 'Library', 'Hostel', 'Placement', 'Sports', 'Office', 'ExamCell'] }
+            role: { $in: ['Staff', 'HOD'] }
+        });
+        const otherStaffCount = await User.countDocuments({
+            role: { $in: ['Transport', 'Library', 'Hostel', 'Placement', 'Sports', 'Office', 'ExamCell'] }
         });
         const driverCount = await User.countDocuments({ role: 'Driver' });
         const deptCount = await Department.countDocuments();
@@ -460,6 +469,7 @@ router.get('/stats', auth(['Admin', 'Office']), async (req, res) => {
         res.json({
             students: studentCount,
             staff: staffCount,
+            otherStaff: otherStaffCount,
             drivers: driverCount,
             departments: deptCount,
             courses: courseCount,

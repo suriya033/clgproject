@@ -154,7 +154,7 @@ const UserManagement = ({ navigation, route }) => {
         password: '',
         name: '',
         email: '',
-        role: roleFilter || 'Student',
+        role: Array.isArray(roleFilter) ? roleFilter[0] : (roleFilter || 'Student'),
         department: departmentFilter || '',
         contact: '',
         photo: null,
@@ -196,7 +196,11 @@ const UserManagement = ({ navigation, route }) => {
             let filteredUsers = response.data;
 
             if (roleFilter) {
-                filteredUsers = filteredUsers.filter(user => user.role === roleFilter);
+                if (Array.isArray(roleFilter)) {
+                    filteredUsers = filteredUsers.filter(user => roleFilter.includes(user.role));
+                } else {
+                    filteredUsers = filteredUsers.filter(user => user.role === roleFilter);
+                }
             }
 
             // Additional Filters
@@ -265,7 +269,7 @@ const UserManagement = ({ navigation, route }) => {
                 password: '',
                 name: '',
                 email: '',
-                role: roleFilter || 'Student',
+                role: Array.isArray(roleFilter) ? roleFilter[0] : (roleFilter || 'Student'),
                 department: '',
                 contact: '',
                 photo: null,
@@ -414,7 +418,7 @@ const UserManagement = ({ navigation, route }) => {
                     <Text style={styles.headerTitle}>
                         {route?.params?.departmentFilter
                             ? `${route.params.departmentFilter} ${route.params.yearFilter ? `- ${route.params.yearFilter} Year` : ''} Students`
-                            : (roleFilter ? `${roleFilter} Management` : 'User Management')
+                            : (roleFilter ? `${Array.isArray(roleFilter) ? roleFilter.join('/') : roleFilter} Management` : 'User Management')
                         }
                     </Text>
                     <View style={{ width: 40 }} />
@@ -599,7 +603,7 @@ const UserManagement = ({ navigation, route }) => {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Add New {roleFilter || 'User'}</Text>
+                            <Text style={styles.modalTitle}>Add New {Array.isArray(roleFilter) ? roleFilter[0] : (roleFilter || 'User')}</Text>
                             <TouchableOpacity onPress={() => setModalVisible(false)}>
                                 <X size={24} color="#64748b" />
                             </TouchableOpacity>
@@ -660,15 +664,20 @@ const UserManagement = ({ navigation, route }) => {
                                 />
                             </View>
 
-                            {!roleFilter && (
+                            {(!roleFilter || Array.isArray(roleFilter)) && (
                                 <View style={styles.inputGroup}>
                                     <Text style={styles.label}>Role *</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        value={newUser.role}
-                                        onChangeText={(text) => setNewUser({ ...newUser, role: text })}
-                                        placeholder="Student, Staff, HOD, etc."
-                                    />
+                                    <View style={styles.roleButtons}>
+                                        {(Array.isArray(roleFilter) ? roleFilter : ['Student', 'Staff', 'HOD']).map((r) => (
+                                            <TouchableOpacity
+                                                key={r}
+                                                style={[styles.roleButton, newUser.role === r && styles.roleButtonActive]}
+                                                onPress={() => setNewUser({ ...newUser, role: r })}
+                                            >
+                                                <Text style={[styles.roleButtonText, newUser.role === r && styles.roleButtonTextActive]}>{r}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
                                 </View>
                             )}
 
@@ -1307,6 +1316,32 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 15,
         fontWeight: '800',
+    },
+    roleButtons: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 10,
+        marginTop: 5,
+    },
+    roleButton: {
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        backgroundColor: '#f1f5f9',
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+    },
+    roleButtonActive: {
+        backgroundColor: '#800000',
+        borderColor: '#800000',
+    },
+    roleButtonText: {
+        color: '#64748b',
+        fontWeight: '600',
+        fontSize: 14,
+    },
+    roleButtonTextActive: {
+        color: '#fff',
     },
 });
 

@@ -9,7 +9,8 @@ import {
     TouchableOpacity,
     StatusBar,
     Alert,
-    Image
+    Image,
+    Platform
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Check, X, UserMinus } from 'lucide-react-native';
@@ -37,7 +38,9 @@ const MarkAttendance = ({ navigation, route }) => {
                     date: classDetails.date
                 }
             });
-            setStudents(res.data);
+            // Default to present if status not set
+            const data = (res.data || []).map(s => ({ ...s, status: s.status || 'P' }));
+            setStudents(data);
         } catch (error) {
             console.error(error);
             Alert.alert('Error', 'Failed to fetch student list');
@@ -50,6 +53,12 @@ const MarkAttendance = ({ navigation, route }) => {
         setStudents(prev => prev.map(s =>
             s._id === studentId ? { ...s, status: newStatus } : s
         ));
+    };
+
+    const stats = {
+        present: students.filter(s => s.status === 'P').length,
+        absent: students.filter(s => s.status === 'A').length,
+        od: students.filter(s => s.status === 'OD').length
     };
 
     const handleSubmit = async () => {
@@ -76,9 +85,12 @@ const MarkAttendance = ({ navigation, route }) => {
         }
     };
 
-    const renderStudentItem = ({ item }) => (
+    const renderStudentItem = ({ item, index }) => (
         <View style={styles.studentCard}>
             <View style={styles.studentInfo}>
+                <View style={styles.indexCircle}>
+                    <Text style={styles.indexText}>{index + 1}</Text>
+                </View>
                 {item.photo ? (
                     <Image source={{ uri: item.photo }} style={styles.avatar} />
                 ) : (
@@ -87,31 +99,29 @@ const MarkAttendance = ({ navigation, route }) => {
                     </View>
                 )}
                 <View style={styles.nameContainer}>
-                    <Text style={styles.studentName}>{item.name}</Text>
+                    <Text style={styles.studentName} numberOfLines={1}>{item.name}</Text>
                     <Text style={styles.rollNo}>{item.userId}</Text>
                 </View>
             </View>
 
-            <View style={styles.optionsContainer}>
+            <View style={styles.statusToggle}>
                 <TouchableOpacity
-                    style={[styles.optionBtn, item.status === 'P' && styles.presentBtn]}
                     onPress={() => updateStatus(item._id, 'P')}
+                    style={[styles.toggleOption, item.status === 'P' && styles.pActive]}
                 >
-                    <Text style={[styles.optionText, item.status === 'P' && styles.activeText]}>P</Text>
+                    <Text style={[styles.toggleLabel, item.status === 'P' && styles.activeLabel]}>P</Text>
                 </TouchableOpacity>
-
                 <TouchableOpacity
-                    style={[styles.optionBtn, item.status === 'A' && styles.absentBtn]}
                     onPress={() => updateStatus(item._id, 'A')}
+                    style={[styles.toggleOption, item.status === 'A' && styles.aActive]}
                 >
-                    <Text style={[styles.optionText, item.status === 'A' && styles.activeText]}>A</Text>
+                    <Text style={[styles.toggleLabel, item.status === 'A' && styles.activeLabel]}>A</Text>
                 </TouchableOpacity>
-
                 <TouchableOpacity
-                    style={[styles.optionBtn, item.status === 'OD' && styles.odBtn]}
                     onPress={() => updateStatus(item._id, 'OD')}
+                    style={[styles.toggleOption, item.status === 'OD' && styles.odActive]}
                 >
-                    <Text style={[styles.optionText, item.status === 'OD' && styles.activeText]}>OD</Text>
+                    <Text style={[styles.toggleLabel, item.status === 'OD' && styles.activeLabel]}>OD</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -119,9 +129,9 @@ const MarkAttendance = ({ navigation, route }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+            <StatusBar barStyle="light-content" backgroundColor="#800000" />
             <LinearGradient
-                colors={['#800000', '#5a0000']}
+                colors={['#800000', '#600000']}
                 style={styles.header}
             >
                 <View style={styles.headerTop}>
@@ -129,11 +139,20 @@ const MarkAttendance = ({ navigation, route }) => {
                         <ChevronLeft size={24} color="#fff" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Mark Attendance</Text>
-                    <View style={{ width: 40 }} />
+                    <View style={styles.classBadge}>
+                        <Text style={styles.classBadgeText}>SEC {classDetails.section}</Text>
+                    </View>
                 </View>
-                <View style={styles.classInfo}>
+
+                <View style={styles.classMainInfo}>
                     <Text style={styles.className}>{classDetails.subject}</Text>
-                    <Text style={styles.classSub}>{new Date(classDetails.date).toDateString()} • Sem {classDetails.semester} • Sec {classDetails.section}</Text>
+                    <View style={styles.metaRow}>
+                        <Clock size={12} color="rgba(255,255,255,0.7)" />
+                        <Text style={styles.metaText}>{classDetails.startTime} - {classDetails.endTime}</Text>
+                        <View style={styles.metaDivider} />
+                        <Calendar size={12} color="rgba(255,255,255,0.7)" />
+                        <Text style={styles.metaText}>Sem {classDetails.semester}</Text>
+                    </View>
                 </View>
             </LinearGradient>
 
@@ -144,30 +163,55 @@ const MarkAttendance = ({ navigation, route }) => {
                     </View>
                 ) : (
                     <>
-                        <View style={styles.listHeader}>
-                            <Text style={styles.countText}>{students.length} Students</Text>
-                            <View style={styles.legend}>
-                                <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: '#10b981' }]} /><Text style={styles.legendText}>Present</Text></View>
-                                <View style={styles.legendItem}><View style={[styles.dot, { backgroundColor: '#ef4444' }]} /><Text style={styles.legendText}>Absent</Text></View>
+                        <View style={styles.statsContainer}>
+                            <View style={styles.statBox}>
+                                <Text style={styles.statNum}>{students.length}</Text>
+                                <Text style={styles.statLabel}>Total</Text>
+                            </View>
+                            <View style={[styles.statBox, styles.statBorder]}>
+                                <Text style={[styles.statNum, { color: '#10b981' }]}>{stats.present}</Text>
+                                <Text style={styles.statLabel}>Present</Text>
+                            </View>
+                            <View style={[styles.statBox, styles.statBorder]}>
+                                <Text style={[styles.statNum, { color: '#ef4444' }]}>{stats.absent}</Text>
+                                <Text style={styles.statLabel}>Absent</Text>
+                            </View>
+                            <View style={styles.statBox}>
+                                <Text style={[styles.statNum, { color: '#3b82f6' }]}>{stats.od}</Text>
+                                <Text style={styles.statLabel}>OD</Text>
                             </View>
                         </View>
+
                         <FlatList
                             data={students}
                             renderItem={renderStudentItem}
                             keyExtractor={(item) => item._id}
                             contentContainerStyle={styles.listContent}
+                            showsVerticalScrollIndicator={false}
                         />
+
                         <View style={styles.footer}>
                             <TouchableOpacity
                                 style={[styles.submitBtn, submitting && styles.disabledBtn]}
                                 onPress={handleSubmit}
                                 disabled={submitting}
+                                activeOpacity={0.8}
                             >
-                                {submitting ? (
-                                    <ActivityIndicator color="#fff" />
-                                ) : (
-                                    <Text style={styles.submitText}>Submit Attendance</Text>
-                                )}
+                                <LinearGradient
+                                    colors={['#800000', '#600000']}
+                                    style={styles.btnGradient}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                >
+                                    {submitting ? (
+                                        <ActivityIndicator color="#fff" />
+                                    ) : (
+                                        <>
+                                            <Text style={styles.submitText}>Finalize Attendance</Text>
+                                            <Check size={20} color="#fff" style={{ marginLeft: 8 }} />
+                                        </>
+                                    )}
+                                </LinearGradient>
                             </TouchableOpacity>
                         </View>
                     </>
@@ -180,94 +224,128 @@ const MarkAttendance = ({ navigation, route }) => {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f8fafc' },
     header: {
-        paddingTop: 50,
-        paddingBottom: 20,
-        paddingHorizontal: 20,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
+        paddingTop: Platform.OS === 'ios' ? 10 : 40,
+        paddingBottom: 25,
+        paddingHorizontal: 24,
+        borderBottomLeftRadius: 35,
+        borderBottomRightRadius: 35,
     },
     headerTop: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 15
+        marginBottom: 20
     },
     backButton: {
-        width: 40,
-        height: 40,
+        width: 42,
+        height: 42,
         borderRadius: 12,
-        backgroundColor: 'rgba(255,255,255,0.2)',
+        backgroundColor: 'rgba(255,255,255,0.15)',
         justifyContent: 'center',
         alignItems: 'center',
     },
+    classBadge: {
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 10,
+    },
+    classBadgeText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: '900',
+    },
     headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
+        fontSize: 18,
+        fontWeight: '800',
         color: '#fff',
     },
-    classInfo: {
+    classMainInfo: {
         marginTop: 5
     },
-    className: { color: '#fff', fontSize: 18, fontWeight: '700' },
-    classSub: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 },
+    className: { color: '#fff', fontSize: 22, fontWeight: '800' },
+    metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+    metaText: { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '600', marginLeft: 4 },
+    metaDivider: { width: 1, height: 10, backgroundColor: 'rgba(255,255,255,0.3)', marginHorizontal: 10 },
     content: { flex: 1 },
-    listHeader: {
+    statsContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingTop: 15,
-        paddingBottom: 10
+        backgroundColor: '#fff',
+        marginHorizontal: 20,
+        marginTop: -25,
+        borderRadius: 20,
+        paddingVertical: 15,
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        borderWidth: 1,
+        borderColor: '#f1f5f9'
     },
-    countText: { fontSize: 14, fontWeight: '700', color: '#64748b' },
-    legend: { flexDirection: 'row' },
-    legendItem: { flexDirection: 'row', alignItems: 'center', marginLeft: 15 },
-    dot: { width: 8, height: 8, borderRadius: 4, marginRight: 5 },
-    legendText: { fontSize: 12, color: '#64748b', fontWeight: '600' },
-    listContent: { padding: 15, paddingBottom: 100 },
+    statBox: { flex: 1, alignItems: 'center' },
+    statBorder: { borderRightWidth: 1, borderRightColor: '#f1f5f9' },
+    statNum: { fontSize: 18, fontWeight: '900', color: '#1e293b' },
+    statLabel: { fontSize: 10, color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', marginTop: 2 },
+    listContent: { padding: 20, paddingTop: 25, paddingBottom: 100 },
     studentCard: {
         backgroundColor: '#fff',
-        borderRadius: 16,
-        padding: 12,
-        marginBottom: 12,
+        borderRadius: 20,
+        padding: 15,
+        marginBottom: 15,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        elevation: 2,
+        elevation: 3,
         shadowColor: '#000',
         shadowOpacity: 0.05,
-        shadowRadius: 5
+        shadowRadius: 10,
+        borderWidth: 1,
+        borderColor: '#f1f5f9'
     },
     studentInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-    avatar: { width: 44, height: 44, borderRadius: 22 },
+    indexCircle: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: '#f1f5f9',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 10
+    },
+    indexText: { fontSize: 10, color: '#64748b', fontWeight: '800' },
+    avatar: { width: 44, height: 44, borderRadius: 15 },
     avatarPlaceholder: {
         width: 44,
         height: 44,
-        borderRadius: 22,
-        backgroundColor: '#f1f5f9',
+        borderRadius: 15,
+        backgroundColor: '#fee2e2',
         justifyContent: 'center',
         alignItems: 'center'
     },
-    avatarText: { fontSize: 18, fontWeight: 'bold', color: '#800000' },
-    nameContainer: { marginLeft: 12 },
-    studentName: { fontSize: 15, fontWeight: '700', color: '#1e293b' },
-    rollNo: { fontSize: 12, color: '#94a3b8', marginTop: 1 },
-    optionsContainer: { flexDirection: 'row', gap: 8 },
-    optionBtn: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+    avatarText: { fontSize: 18, fontWeight: '900', color: '#800000' },
+    nameContainer: { marginLeft: 12, flex: 1 },
+    studentName: { fontSize: 15, fontWeight: '800', color: '#1e293b' },
+    rollNo: { fontSize: 11, color: '#94a3b8', marginTop: 2, fontWeight: '600' },
+    statusToggle: {
+        flexDirection: 'row',
+        backgroundColor: '#f8fafc',
+        borderRadius: 12,
+        padding: 4,
         borderWidth: 1,
-        borderColor: '#e2e8f0',
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#f8fafc'
+        borderColor: '#f1f5f9'
     },
-    optionText: { fontSize: 12, fontWeight: '800', color: '#94a3b8' },
-    presentBtn: { backgroundColor: '#10b981', borderColor: '#10b981' },
-    absentBtn: { backgroundColor: '#ef4444', borderColor: '#ef4444' },
-    odBtn: { backgroundColor: '#3b82f6', borderColor: '#3b82f6' },
-    activeText: { color: '#fff' },
+    toggleOption: {
+        width: 32,
+        height: 32,
+        borderRadius: 9,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    toggleLabel: { fontSize: 11, fontWeight: '900', color: '#cbd5e1' },
+    activeLabel: { color: '#fff' },
+    pActive: { backgroundColor: '#10b981' },
+    aActive: { backgroundColor: '#ef4444' },
+    odActive: { backgroundColor: '#3b82f6' },
     footer: {
         position: 'absolute',
         bottom: 0,
@@ -275,20 +353,25 @@ const styles = StyleSheet.create({
         right: 0,
         backgroundColor: '#fff',
         padding: 20,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 25,
         borderTopWidth: 1,
         borderTopColor: '#f1f5f9'
     },
     submitBtn: {
-        backgroundColor: '#800000',
-        paddingVertical: 16,
-        borderRadius: 15,
-        alignItems: 'center',
-        elevation: 4,
+        borderRadius: 18,
+        overflow: 'hidden',
+        elevation: 8,
         shadowColor: '#800000',
-        shadowOpacity: 0.2,
-        shadowRadius: 8
+        shadowOpacity: 0.3,
+        shadowRadius: 12
     },
-    submitText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+    btnGradient: {
+        paddingVertical: 18,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    submitText: { color: '#fff', fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
     disabledBtn: { opacity: 0.7 },
     loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' }
 });
