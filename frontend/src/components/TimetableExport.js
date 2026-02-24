@@ -281,7 +281,11 @@ const TimetableExport = ({ result }) => {
                                     if (sub.alternative) {
                                         altCode = ` / ${sub.alternative.code || '-'}`;
                                         altName = ` / ${sub.alternative.name || sub.alternative.fullName}${sub.alternative.name && sub.alternative.name !== sub.alternative.fullName ? ` (${sub.alternative.name})` : ''}`;
-                                        altStaff = ` / ${sub.alternative.staffName}${sub.alternative.staffCode ? ` (${sub.alternative.staffCode})` : ''}`;
+
+                                        // Prevents double staff display if they are the same person
+                                        if (sub.alternative.staffName && sub.alternative.staffName !== staffToDisplay) {
+                                            altStaff = ` / ${sub.alternative.staffName}${sub.alternative.staffCode ? ` (${sub.alternative.staffCode})` : ''}`;
+                                        }
                                     }
 
                                     return (

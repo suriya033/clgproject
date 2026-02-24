@@ -69,13 +69,43 @@ router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
 
         // Prepare tasks
         results.forEach(r => {
+            // Map to track primary lab staff and pre-calculate alternative coverage
+            const primaryLabStaffMap = {}; // { subjectId: staffName }
+            const altCoverage = {}; // { subjectId: hours }
+
+            r.subjects.forEach(sub => {
+                // Determine primary lab staff for this subject
+                const labStaff = sub.type === 'Integrated' ?
+                    (sub.hasSeparateLabStaff ? (sub.labStaffName || sub.labStaffId) : (sub.staffName || sub.staffId)) :
+                    (sub.type === 'Practical' ? (sub.staffName || sub.staffId) : null);
+
+                if (labStaff && sub.subjectId) {
+                    primaryLabStaffMap[sub.subjectId] = labStaff;
+                }
+
+                if (sub.alternative && sub.alternative.subjectId) {
+                    const labDur = parseInt(sub.duration) || 2;
+                    const labSessions = parseInt(sub.sessions) || 1;
+                    const coverage = labDur * labSessions;
+                    altCoverage[sub.alternative.subjectId] = (altCoverage[sub.alternative.subjectId] || 0) + coverage;
+                }
+            });
+
             r.subjects.forEach(sub => {
                 const totalHours = parseInt(sub.hoursPerWeek) || 3;
                 const duration = parseInt(sub.duration) || 1;
 
+                // Ensure alternative uses primary staff if available to avoid "two staff" problem
+                if (sub.alternative && sub.alternative.subjectId && primaryLabStaffMap[sub.alternative.subjectId]) {
+                    sub.alternative.staffName = primaryLabStaffMap[sub.alternative.subjectId];
+                }
+
                 if (sub.type === 'Integrated') {
                     // Handle LAB part
-                    const labTotal = parseInt(sub.labHours) || 0;
+                    const subLabHours = parseInt(sub.labHours) || 0;
+                    // Deduct hours if this subject's lab is already covered by being an alternative elsewhere
+                    const labTotal = Math.max(0, subLabHours - (altCoverage[sub.subjectId] || 0));
+
                     const labDur = parseInt(sub.duration) || 2;
                     let labRemaining = labTotal;
 
@@ -105,7 +135,10 @@ router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
                     }
                 } else if (sub.type === 'Practical' && duration > 1) {
                     // Create blocks for Practicals
-                    let hoursRemaining = totalHours;
+                    const subLabHours = totalHours;
+                    const labTotal = Math.max(0, subLabHours - (altCoverage[sub.subjectId] || 0));
+
+                    let hoursRemaining = labTotal;
                     while (hoursRemaining >= duration) {
                         r.practicalTasks.push({
                             name: sub.name,
@@ -205,7 +238,7 @@ router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
 
                         if (task.alternative) {
                             subjectText = `${task.name} / ${task.alternative.name}`;
-                            staffText = `${task.staff} / ${task.alternative.staffName}`;
+                            staffText = (task.staff === task.alternative.staffName) ? task.staff : `${task.staff} / ${task.alternative.staffName}`;
                         }
 
                         for (let i = startIdx; i <= finalEndIdx; i++) {
