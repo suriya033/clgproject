@@ -16,6 +16,7 @@ import {
     Platform,
     Switch
 } from 'react-native';
+import Svg, { Circle, G, Text as SvgText } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
     ChevronLeft,
@@ -182,6 +183,85 @@ const TimeTableGenerator = ({ navigation }) => {
 
     // Added subjects list
     const [addedSubjects, setAddedSubjects] = useState([]);
+
+    const totalAllocated = addedSubjects.reduce((acc, curr) => acc + parseInt(curr.hoursPerWeek || 0), 0);
+    const remainingHours = 40 - totalAllocated;
+
+    const ProgressRing = ({ size, strokeWidth, progress, total, remaining }) => {
+        const radius = (size - strokeWidth) / 2;
+        const circumference = radius * 2 * Math.PI;
+        const offset = circumference - (Math.min(progress, 1) * circumference);
+
+        return (
+            <View style={styles.progressRingCard}>
+                <Text style={styles.progressTitle}>Weekly Hours Progress</Text>
+                <View style={{ alignItems: 'center', justifyContent: 'center', marginVertical: 20 }}>
+                    <Svg width={size} height={size}>
+                        <G rotation="-90" origin={`${size / 2}, ${size / 2}`}>
+                            <Circle
+                                cx={size / 2}
+                                cy={size / 2}
+                                r={radius}
+                                stroke="#f1f5f9"
+                                strokeWidth={strokeWidth}
+                                fill="none"
+                            />
+                            <Circle
+                                cx={size / 2}
+                                cy={size / 2}
+                                r={radius}
+                                stroke="#800000"
+                                strokeWidth={strokeWidth}
+                                strokeDasharray={circumference}
+                                strokeDashoffset={offset}
+                                strokeLinecap="round"
+                                fill="none"
+                            />
+                        </G>
+                        <SvgText
+                            x={size / 2}
+                            y={size / 2 - 5}
+                            textAnchor="middle"
+                            fontSize="24"
+                            fontWeight="bold"
+                            fill="#1e293b"
+                        >
+                            {total}
+                        </SvgText>
+                        <SvgText
+                            x={size / 2}
+                            y={size / 2 + 18}
+                            textAnchor="middle"
+                            fontSize="11"
+                            fontWeight="600"
+                            fill="#64748b"
+                        >
+                            Hrs Allocated
+                        </SvgText>
+                    </Svg>
+                </View>
+                <View style={styles.progressStats}>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statLabel}>Total Limit</Text>
+                        <Text style={styles.statValue}>40h</Text>
+                    </View>
+                    <View style={styles.statDivider} />
+                    <View style={styles.statItem}>
+                        <Text style={styles.statLabel}>Remaining</Text>
+                        <Text style={[styles.statValue, { color: remaining < 0 ? '#ef4444' : '#059669' }]}>
+                            {remaining}h
+                        </Text>
+                    </View>
+                </View>
+                {remaining < 0 && (
+                    <View style={styles.overLimitWarning}>
+                        <X size={12} color="#ef4444" />
+                        <Text style={styles.warningText}>Limit Exceeded</Text>
+                    </View>
+                )}
+            </View>
+        );
+    };
 
     // Batch Generation State
     const [pendingClasses, setPendingClasses] = useState([]);
@@ -710,409 +790,432 @@ const TimeTableGenerator = ({ navigation }) => {
                 </View>
             </LinearGradient>
 
-            <View style={styles.content}>
-                {step === 1 ? (
-                    <View style={{ flex: 1 }}>
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            {/* Dropdowns for Class Info */}
-                            <CustomDropdown
-                                label="Department"
-                                value={selectedDept}
-                                options={departments}
-                                onSelect={setSelectedDept}
-                                placeholder="Choose Department"
-                                disabled={user?.role === 'HOD'}
-                            />
-
-                            <View style={styles.row}>
-                                <View style={{ flex: 1.4, marginRight: 8 }}>
-                                    <CustomDropdown
-                                        label="Year"
-                                        value={selectedYear}
-                                        options={years}
-                                        onSelect={setSelectedYear}
-                                        placeholder="Year"
+            <View style={[styles.content, width > 1000 && { flexDirection: 'row', gap: 20 }]}>
+                <View style={{ flex: width > 1000 ? 3 : 1 }}>
+                    {step === 1 ? (
+                        <View style={{ flex: 1 }}>
+                            <ScrollView showsVerticalScrollIndicator={false}>
+                                {width <= 1000 && (
+                                    <ProgressRing
+                                        size={180}
+                                        strokeWidth={15}
+                                        progress={totalAllocated / 40}
+                                        total={totalAllocated}
+                                        remaining={remainingHours}
                                     />
-                                </View>
-                                <View style={{ flex: 2, marginRight: 8 }}>
-                                    <CustomDropdown
-                                        label="Semester"
-                                        value={semester}
-                                        options={semesterOptions}
-                                        onSelect={setSemester}
-                                        placeholder="Semester"
-                                        disabled={!selectedYear}
-                                    />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <CustomDropdown
-                                        label="Section"
-                                        value={section}
-                                        options={sectionOptions}
-                                        onSelect={setSection}
-                                        placeholder="Sec"
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={styles.row}>
-                                <View style={{ flex: 1, marginRight: 8 }}>
-                                    <Text style={styles.inputLabel}>Batch</Text>
-                                    <TextInput
-                                        style={styles.textInput}
-                                        value={batch}
-                                        onChangeText={setBatch}
-                                        placeholder="e.g. 2023 - 2027"
-                                    />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.inputLabel}>Academic Year</Text>
-                                    <TextInput
-                                        style={styles.textInput}
-                                        value={academicYear}
-                                        onChangeText={setAcademicYear}
-                                        placeholder="e.g. 2025 - 2026"
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={styles.row}>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.inputLabel}>Lecture Hall</Text>
-                                    <TextInput
-                                        style={styles.textInput}
-                                        value={room}
-                                        onChangeText={setRoom}
-                                        placeholder="e.g. GS14"
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={styles.sectionHeader}>
-                                <Text style={styles.sectionTitle}>Manage Subjects</Text>
-                            </View>
-
-                            {/* Add Subject Card */}
-                            <View style={styles.addSubjectCard}>
-                                <CustomDropdown
-                                    label="Subject"
-                                    value={currentSubject.subjectId}
-                                    options={filteredSubjectsList}
-                                    onSelect={(val) => {
-                                        const sub = subjectsList.find(s => s.value === val);
-                                        const isPracOrInt = sub?.type === 'Practical' || sub?.type === 'Integrated';
-                                        const defaultDur = sub?.duration || 2;
-                                        setCurrentSubject({
-                                            ...currentSubject,
-                                            subjectId: val,
-                                            duration: isPracOrInt ? String(defaultDur) : '1',
-                                            hoursPerWeek: sub?.type === 'Theory' ? '4' : '0',
-                                            theoryHours: sub?.type === 'Integrated' ? '3' : '0',
-                                            sessions: isPracOrInt ? '1' : '0',
-                                            hasSeparateLabStaff: false,
-                                            labStaffId: ''
-                                        });
-                                    }}
-                                    placeholder={selectedDept && selectedYear && semester ? "Select Subject" : "Fill class info details"}
-                                    icon={BookOpen}
-                                />
-                                <CustomDropdown
-                                    label="Staff"
-                                    value={currentSubject.staffId}
-                                    options={staffList}
-                                    onSelect={(val) => {
-                                        setCurrentSubject({ ...currentSubject, staffId: val });
-                                    }}
-                                    placeholder="Select Staff"
-                                    icon={Users}
-                                />
-
-                                {/* Separate Lab Staff Option for Integrated Subjects */}
-                                {currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated' && (
-                                    <View style={styles.altLabContainer}>
-                                        <View style={styles.altLabHeader}>
-                                            <Text style={styles.inputLabel}>Is there separate staff for the lab?</Text>
-                                            <Switch
-                                                value={currentSubject.hasSeparateLabStaff}
-                                                onValueChange={(val) => setCurrentSubject({ ...currentSubject, hasSeparateLabStaff: val, labStaffId: val ? currentSubject.labStaffId : '' })}
-                                                trackColor={{ false: "#767577", true: "#800000" }}
-                                                thumbColor={currentSubject.hasSeparateLabStaff ? "#f4f3f4" : "#f4f3f4"}
-                                            />
-                                        </View>
-
-                                        {currentSubject.hasSeparateLabStaff && (
-                                            <View style={styles.altLabFields}>
-                                                <CustomDropdown
-                                                    label="Lab Staff Name"
-                                                    value={currentSubject.labStaffId}
-                                                    options={staffList}
-                                                    onSelect={(val) => setCurrentSubject({ ...currentSubject, labStaffId: val })}
-                                                    placeholder="Select Lab Staff"
-                                                    icon={Users}
-                                                />
-                                            </View>
-                                        )}
-                                    </View>
                                 )}
-                                {currentSubject.subjectId && (subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical' || subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated') && (
-                                    <View style={{ marginBottom: 15 }}>
+                                {/* Dropdowns for Class Info */}
+                                <CustomDropdown
+                                    label="Department"
+                                    value={selectedDept}
+                                    options={departments}
+                                    onSelect={setSelectedDept}
+                                    placeholder="Choose Department"
+                                    disabled={user?.role === 'HOD'}
+                                />
+
+                                <View style={styles.row}>
+                                    <View style={{ flex: 1.4, marginRight: 8 }}>
                                         <CustomDropdown
-                                            label="Number of Continuous Periods (Lab)"
-                                            value={currentSubject.duration}
-                                            options={[
-                                                { label: '2 Periods', value: '2' },
-                                                { label: '3 Periods', value: '3' },
-                                                { label: '4 Periods', value: '4' }
-                                            ]}
-                                            onSelect={(val) => setCurrentSubject({
-                                                ...currentSubject,
-                                                duration: val,
-                                            })}
-                                            placeholder="Select Lab Duration"
-                                            icon={Clock}
+                                            label="Year"
+                                            value={selectedYear}
+                                            options={years}
+                                            onSelect={setSelectedYear}
+                                            placeholder="Year"
                                         />
-                                        <View style={styles.practicalInfo}>
-                                            <Sparkles size={16} color="#0891b2" />
-                                            <Text style={styles.practicalInfoText}>
-                                                {`Lab Logic: ${currentSubject.sessions} Session(s) of ${currentSubject.duration} continuous periods. (Total Lab: ${parseInt(currentSubject.sessions || 0) * parseInt(currentSubject.duration)} hrs)`}
-                                            </Text>
-                                        </View>
                                     </View>
-                                )}
-
-                                {/* Alternative Lab Option */}
-                                {currentSubject.subjectId && (subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical' || subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated') && (
-                                    <View style={styles.altLabContainer}>
-                                        <View style={styles.altLabHeader}>
-                                            <Text style={styles.inputLabel}>Alternative Batch Lab?</Text>
-                                            <Switch
-                                                value={currentSubject.enableAlt}
-                                                onValueChange={(val) => setCurrentSubject({ ...currentSubject, enableAlt: val })}
-                                                trackColor={{ false: "#767577", true: "#800000" }}
-                                                thumbColor={currentSubject.enableAlt ? "#f4f3f4" : "#f4f3f4"}
-                                            />
-                                        </View>
-
-                                        {currentSubject.enableAlt && (
-                                            <View style={styles.altLabFields}>
-                                                <CustomDropdown
-                                                    label="Alternative Subject (Batch 2)"
-                                                    value={currentSubject.altSubjectId}
-                                                    options={filteredSubjectsList.filter(s => s.value !== currentSubject.subjectId && (s.type === 'Practical' || s.type === 'Integrated'))}
-                                                    onSelect={(val) => setCurrentSubject({ ...currentSubject, altSubjectId: val })}
-                                                    placeholder="Select Alt Subject"
-                                                    icon={BookOpen}
-                                                />
-                                                <CustomDropdown
-                                                    label="Alternative Staff"
-                                                    value={currentSubject.altStaffId}
-                                                    options={staffList.filter(s => s.value !== currentSubject.staffId)}
-                                                    onSelect={(val) => setCurrentSubject({ ...currentSubject, altStaffId: val })}
-                                                    placeholder="Select Alt Staff"
-                                                    icon={Users}
-                                                />
-                                            </View>
-                                        )}
+                                    <View style={{ flex: 2, marginRight: 8 }}>
+                                        <CustomDropdown
+                                            label="Semester"
+                                            value={semester}
+                                            options={semesterOptions}
+                                            onSelect={setSemester}
+                                            placeholder="Semester"
+                                            disabled={!selectedYear}
+                                        />
                                     </View>
-                                )}
-                                {currentSubject.subjectId && (
-                                    <View style={styles.row}>
-                                        {(subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical' || subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated') && (
-                                            <View style={{ flex: 1, marginRight: subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated' ? 10 : 0 }}>
-                                                <Text style={styles.inputLabel}>
-                                                    {subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated' ? 'Lab Sessions' : 'Sessions / Week'}
-                                                </Text>
-                                                <TextInput
-                                                    style={styles.textInput}
-                                                    placeholder="1"
-                                                    value={currentSubject.sessions}
-                                                    onChangeText={(t) => setCurrentSubject({ ...currentSubject, sessions: t })}
-                                                    keyboardType="numeric"
-                                                />
-                                            </View>
-                                        )}
-
-                                        {(subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Theory' || subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated') && (
-                                            <View style={{ flex: 1 }}>
-                                                <Text style={styles.inputLabel}>
-                                                    {subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated' ? 'Theory Hours' : 'Hours / Week'}
-                                                </Text>
-                                                <TextInput
-                                                    style={styles.textInput}
-                                                    placeholder="3"
-                                                    value={subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated' ? currentSubject.theoryHours : currentSubject.hoursPerWeek}
-                                                    onChangeText={(t) => {
-                                                        if (subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated') {
-                                                            setCurrentSubject({ ...currentSubject, theoryHours: t });
-                                                        } else {
-                                                            setCurrentSubject({ ...currentSubject, hoursPerWeek: t });
-                                                        }
-                                                    }}
-                                                    keyboardType="numeric"
-                                                />
-                                            </View>
-                                        )}
+                                    <View style={{ flex: 1 }}>
+                                        <CustomDropdown
+                                            label="Section"
+                                            value={section}
+                                            options={sectionOptions}
+                                            onSelect={setSection}
+                                            placeholder="Sec"
+                                        />
                                     </View>
-                                )}
-
-                                <TouchableOpacity
-                                    style={styles.addBtn}
-                                    onPress={handleAddSubject}
-                                >
-                                    <Plus size={20} color="#fff" style={{ marginRight: 8 }} />
-                                    <Text style={styles.addBtnText}>Add Subject</Text>
-                                </TouchableOpacity>
-                            </View>
-
-                            {/* List of Added Subjects */}
-                            {addedSubjects.length > 0 && (
-                                <View style={styles.addedList}>
-                                    {addedSubjects.map((item) => (
-                                        <View key={item.id} style={styles.subjectItem}>
-                                            <View style={{ flex: 1 }}>
-                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                                    <Text style={styles.subItemName}>{item.name}</Text>
-                                                    <View style={[
-                                                        styles.typeBadge,
-                                                        item.type === 'Practical' ? styles.practicalBadge :
-                                                            item.type === 'Integrated' ? styles.integratedBadge : styles.theoryBadge
-                                                    ]}>
-                                                        <Clock size={10} color={
-                                                            item.type === 'Practical' ? '#0891b2' :
-                                                                item.type === 'Integrated' ? '#7c3aed' : '#64748b'
-                                                        } />
-                                                        <Text style={[
-                                                            styles.typeBadgeText,
-                                                            item.type === 'Practical' && { color: '#0891b2' },
-                                                            item.type === 'Integrated' && { color: '#7c3aed' }
-                                                        ]}>{item.type}</Text>
-                                                    </View>
-                                                </View>
-                                                <Text style={styles.subItemDetail}>
-                                                    {item.staffName}{item.hasSeparateLabStaff ? ` (Theory) & ${item.labStaffName} (Lab)` : ''} • {item.hoursPerWeek} hrs {item.type === 'Practical' ? `(${item.duration} periods block)` : ''}
-                                                </Text>
-                                                {item.alternative && (
-                                                    <View style={styles.altBadge}>
-                                                        <Text style={styles.altBadgeText}>
-                                                            Batch 2: {item.alternative.name} ({item.alternative.staffName})
-                                                        </Text>
-                                                    </View>
-                                                )}
-                                            </View>
-                                            <TouchableOpacity onPress={() => removeSubject(item.id)} style={styles.removeBtn}>
-                                                <X size={18} color="#ef4444" />
-                                            </TouchableOpacity>
-                                        </View>
-                                    ))}
                                 </View>
-                            )}
 
-                            {/* Pending Classes Batch */}
-                            {pendingClasses.length > 0 && (
-                                <View style={styles.batchSection}>
-                                    <View style={styles.sectionHeader}>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                            <Sparkles size={20} color="#800000" style={{ marginRight: 8 }} />
-                                            <Text style={styles.sectionTitle}>Batch Queue ({pendingClasses.length})</Text>
-                                        </View>
+                                <View style={styles.row}>
+                                    <View style={{ flex: 1, marginRight: 8 }}>
+                                        <Text style={styles.inputLabel}>Batch</Text>
+                                        <TextInput
+                                            style={styles.textInput}
+                                            value={batch}
+                                            onChangeText={setBatch}
+                                            placeholder="e.g. 2023 - 2027"
+                                        />
                                     </View>
-                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.batchContainer}>
-                                        {pendingClasses.map((item, idx) => (
-                                            <View key={idx} style={styles.batchCard}>
-                                                <View style={styles.batchCardContent}>
-                                                    <Text style={styles.batchCardTitle}>{item.metadata.deptName}</Text>
-                                                    <Text style={styles.batchCardSubtitle}>{item.metadata.semester} • Sec {item.metadata.section}</Text>
-                                                    <Text style={styles.batchCardCount}>{item.subjects.length} Subjects</Text>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.inputLabel}>Academic Year</Text>
+                                        <TextInput
+                                            style={styles.textInput}
+                                            value={academicYear}
+                                            onChangeText={setAcademicYear}
+                                            placeholder="e.g. 2025 - 2026"
+                                        />
+                                    </View>
+                                </View>
+
+                                <View style={styles.row}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.inputLabel}>Lecture Hall</Text>
+                                        <TextInput
+                                            style={styles.textInput}
+                                            value={room}
+                                            onChangeText={setRoom}
+                                            placeholder="e.g. GS14"
+                                        />
+                                    </View>
+                                </View>
+
+                                <View style={styles.sectionHeader}>
+                                    <Text style={styles.sectionTitle}>Manage Subjects</Text>
+                                </View>
+
+                                {/* Add Subject Card */}
+                                <View style={styles.addSubjectCard}>
+                                    <CustomDropdown
+                                        label="Subject"
+                                        value={currentSubject.subjectId}
+                                        options={filteredSubjectsList}
+                                        onSelect={(val) => {
+                                            const sub = subjectsList.find(s => s.value === val);
+                                            const isPracOrInt = sub?.type === 'Practical' || sub?.type === 'Integrated';
+                                            const defaultDur = sub?.duration || 2;
+                                            setCurrentSubject({
+                                                ...currentSubject,
+                                                subjectId: val,
+                                                duration: isPracOrInt ? String(defaultDur) : '1',
+                                                hoursPerWeek: sub?.type === 'Theory' ? '4' : '0',
+                                                theoryHours: sub?.type === 'Integrated' ? '3' : '0',
+                                                sessions: isPracOrInt ? '1' : '0',
+                                                hasSeparateLabStaff: false,
+                                                labStaffId: ''
+                                            });
+                                        }}
+                                        placeholder={selectedDept && selectedYear && semester ? "Select Subject" : "Fill class info details"}
+                                        icon={BookOpen}
+                                    />
+                                    <CustomDropdown
+                                        label="Staff"
+                                        value={currentSubject.staffId}
+                                        options={staffList}
+                                        onSelect={(val) => {
+                                            setCurrentSubject({ ...currentSubject, staffId: val });
+                                        }}
+                                        placeholder="Select Staff"
+                                        icon={Users}
+                                    />
+
+                                    {/* Separate Lab Staff Option for Integrated Subjects */}
+                                    {currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated' && (
+                                        <View style={styles.altLabContainer}>
+                                            <View style={styles.altLabHeader}>
+                                                <Text style={styles.inputLabel}>Is there separate staff for the lab?</Text>
+                                                <Switch
+                                                    value={currentSubject.hasSeparateLabStaff}
+                                                    onValueChange={(val) => setCurrentSubject({ ...currentSubject, hasSeparateLabStaff: val, labStaffId: val ? currentSubject.labStaffId : '' })}
+                                                    trackColor={{ false: "#767577", true: "#800000" }}
+                                                    thumbColor={currentSubject.hasSeparateLabStaff ? "#f4f3f4" : "#f4f3f4"}
+                                                />
+                                            </View>
+
+                                            {currentSubject.hasSeparateLabStaff && (
+                                                <View style={styles.altLabFields}>
+                                                    <CustomDropdown
+                                                        label="Lab Staff Name"
+                                                        value={currentSubject.labStaffId}
+                                                        options={staffList}
+                                                        onSelect={(val) => setCurrentSubject({ ...currentSubject, labStaffId: val })}
+                                                        placeholder="Select Lab Staff"
+                                                        icon={Users}
+                                                    />
                                                 </View>
-                                                <TouchableOpacity
-                                                    style={styles.batchRemoveBtn}
-                                                    onPress={() => removeClassFromBatch(idx)}
-                                                >
-                                                    <X size={14} color="#ef4444" />
+                                            )}
+                                        </View>
+                                    )}
+                                    {currentSubject.subjectId && (subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical' || subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated') && (
+                                        <View style={{ marginBottom: 15 }}>
+                                            <CustomDropdown
+                                                label="Number of Continuous Periods (Lab)"
+                                                value={currentSubject.duration}
+                                                options={[
+                                                    { label: '2 Periods', value: '2' },
+                                                    { label: '3 Periods', value: '3' },
+                                                    { label: '4 Periods', value: '4' }
+                                                ]}
+                                                onSelect={(val) => setCurrentSubject({
+                                                    ...currentSubject,
+                                                    duration: val,
+                                                })}
+                                                placeholder="Select Lab Duration"
+                                                icon={Clock}
+                                            />
+                                            <View style={styles.practicalInfo}>
+                                                <Sparkles size={16} color="#0891b2" />
+                                                <Text style={styles.practicalInfoText}>
+                                                    {`Lab Logic: ${currentSubject.sessions} Session(s) of ${currentSubject.duration} continuous periods. (Total Lab: ${parseInt(currentSubject.sessions || 0) * parseInt(currentSubject.duration)} hrs)`}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                    )}
+
+                                    {/* Alternative Lab Option */}
+                                    {currentSubject.subjectId && (subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical' || subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated') && (
+                                        <View style={styles.altLabContainer}>
+                                            <View style={styles.altLabHeader}>
+                                                <Text style={styles.inputLabel}>Alternative Batch Lab?</Text>
+                                                <Switch
+                                                    value={currentSubject.enableAlt}
+                                                    onValueChange={(val) => setCurrentSubject({ ...currentSubject, enableAlt: val })}
+                                                    trackColor={{ false: "#767577", true: "#800000" }}
+                                                    thumbColor={currentSubject.enableAlt ? "#f4f3f4" : "#f4f3f4"}
+                                                />
+                                            </View>
+
+                                            {currentSubject.enableAlt && (
+                                                <View style={styles.altLabFields}>
+                                                    <CustomDropdown
+                                                        label="Alternative Subject (Batch 2)"
+                                                        value={currentSubject.altSubjectId}
+                                                        options={filteredSubjectsList.filter(s => s.value !== currentSubject.subjectId && (s.type === 'Practical' || s.type === 'Integrated'))}
+                                                        onSelect={(val) => setCurrentSubject({ ...currentSubject, altSubjectId: val })}
+                                                        placeholder="Select Alt Subject"
+                                                        icon={BookOpen}
+                                                    />
+                                                    <CustomDropdown
+                                                        label="Alternative Staff"
+                                                        value={currentSubject.altStaffId}
+                                                        options={staffList.filter(s => s.value !== currentSubject.staffId)}
+                                                        onSelect={(val) => setCurrentSubject({ ...currentSubject, altStaffId: val })}
+                                                        placeholder="Select Alt Staff"
+                                                        icon={Users}
+                                                    />
+                                                </View>
+                                            )}
+                                        </View>
+                                    )}
+                                    {currentSubject.subjectId && (
+                                        <View style={styles.row}>
+                                            {(subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical' || subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated') && (
+                                                <View style={{ flex: 1, marginRight: subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated' ? 10 : 0 }}>
+                                                    <Text style={styles.inputLabel}>
+                                                        {subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated' ? 'Lab Sessions' : 'Sessions / Week'}
+                                                    </Text>
+                                                    <TextInput
+                                                        style={styles.textInput}
+                                                        placeholder="1"
+                                                        value={currentSubject.sessions}
+                                                        onChangeText={(t) => setCurrentSubject({ ...currentSubject, sessions: t })}
+                                                        keyboardType="numeric"
+                                                    />
+                                                </View>
+                                            )}
+
+                                            {(subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Theory' || subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated') && (
+                                                <View style={{ flex: 1 }}>
+                                                    <Text style={styles.inputLabel}>
+                                                        {subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated' ? 'Theory Hours' : 'Hours / Week'}
+                                                    </Text>
+                                                    <TextInput
+                                                        style={styles.textInput}
+                                                        placeholder="3"
+                                                        value={subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated' ? currentSubject.theoryHours : currentSubject.hoursPerWeek}
+                                                        onChangeText={(t) => {
+                                                            if (subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated') {
+                                                                setCurrentSubject({ ...currentSubject, theoryHours: t });
+                                                            } else {
+                                                                setCurrentSubject({ ...currentSubject, hoursPerWeek: t });
+                                                            }
+                                                        }}
+                                                        keyboardType="numeric"
+                                                    />
+                                                </View>
+                                            )}
+                                        </View>
+                                    )}
+
+                                    <TouchableOpacity
+                                        style={styles.addBtn}
+                                        onPress={handleAddSubject}
+                                    >
+                                        <Plus size={20} color="#fff" style={{ marginRight: 8 }} />
+                                        <Text style={styles.addBtnText}>Add Subject</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                {/* List of Added Subjects */}
+                                {addedSubjects.length > 0 && (
+                                    <View style={styles.addedList}>
+                                        {addedSubjects.map((item) => (
+                                            <View key={item.id} style={styles.subjectItem}>
+                                                <View style={{ flex: 1 }}>
+                                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                                        <Text style={styles.subItemName}>{item.name}</Text>
+                                                        <View style={[
+                                                            styles.typeBadge,
+                                                            item.type === 'Practical' ? styles.practicalBadge :
+                                                                item.type === 'Integrated' ? styles.integratedBadge : styles.theoryBadge
+                                                        ]}>
+                                                            <Clock size={10} color={
+                                                                item.type === 'Practical' ? '#0891b2' :
+                                                                    item.type === 'Integrated' ? '#7c3aed' : '#64748b'
+                                                            } />
+                                                            <Text style={[
+                                                                styles.typeBadgeText,
+                                                                item.type === 'Practical' && { color: '#0891b2' },
+                                                                item.type === 'Integrated' && { color: '#7c3aed' }
+                                                            ]}>{item.type}</Text>
+                                                        </View>
+                                                    </View>
+                                                    <Text style={styles.subItemDetail}>
+                                                        {item.staffName}{item.hasSeparateLabStaff ? ` (Theory) & ${item.labStaffName} (Lab)` : ''} • {item.hoursPerWeek} hrs {item.type === 'Practical' ? `(${item.duration} periods block)` : ''}
+                                                    </Text>
+                                                    {item.alternative && (
+                                                        <View style={styles.altBadge}>
+                                                            <Text style={styles.altBadgeText}>
+                                                                Batch 2: {item.alternative.name} ({item.alternative.staffName})
+                                                            </Text>
+                                                        </View>
+                                                    )}
+                                                </View>
+                                                <TouchableOpacity onPress={() => removeSubject(item.id)} style={styles.removeBtn}>
+                                                    <X size={18} color="#ef4444" />
                                                 </TouchableOpacity>
                                             </View>
                                         ))}
-                                    </ScrollView>
-                                </View>
-                            )}
+                                    </View>
+                                )}
 
-                            <View style={{ height: 100 }} />
-                        </ScrollView>
+                                {/* Pending Classes Batch */}
+                                {pendingClasses.length > 0 && (
+                                    <View style={styles.batchSection}>
+                                        <View style={styles.sectionHeader}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                <Sparkles size={20} color="#800000" style={{ marginRight: 8 }} />
+                                                <Text style={styles.sectionTitle}>Batch Queue ({pendingClasses.length})</Text>
+                                            </View>
+                                        </View>
+                                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.batchContainer}>
+                                            {pendingClasses.map((item, idx) => (
+                                                <View key={idx} style={styles.batchCard}>
+                                                    <View style={styles.batchCardContent}>
+                                                        <Text style={styles.batchCardTitle}>{item.metadata.deptName}</Text>
+                                                        <Text style={styles.batchCardSubtitle}>{item.metadata.semester} • Sec {item.metadata.section}</Text>
+                                                        <Text style={styles.batchCardCount}>{item.subjects.length} Subjects</Text>
+                                                    </View>
+                                                    <TouchableOpacity
+                                                        style={styles.batchRemoveBtn}
+                                                        onPress={() => removeClassFromBatch(idx)}
+                                                    >
+                                                        <X size={14} color="#ef4444" />
+                                                    </TouchableOpacity>
+                                                </View>
+                                            ))}
+                                        </ScrollView>
+                                    </View>
+                                )}
 
-                        {/* Bottom Buttons */}
-                        <View style={styles.bottomActions}>
-                            <TouchableOpacity
-                                style={styles.nextBtn}
-                                onPress={handleNext}
-                            >
-                                <Plus size={20} color="#800000" style={{ marginRight: 8 }} />
-                                <Text style={styles.nextBtnText}>Add to Batch</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.submitBtn}
-                                onPress={generateTimeTable}
-                            >
-                                <Sparkles size={20} color="#fff" style={{ marginRight: 8 }} />
-                                <Text style={styles.submitBtnText}>Generate All</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                ) : (
-                    <View style={{ flex: 1 }}>
-                        <View style={styles.resultHeader}>
-                            <View>
-                                <Text style={styles.resultTitle}>Preview Schedules</Text>
-                                <Text style={styles.resultSubtitle}>
-                                    Showing {currentClassIndex + 1} of {batchResults.length} classes
-                                </Text>
-                            </View>
-                            <TouchableOpacity onPress={() => setStep(1)} style={styles.editBtnSmall}>
-                                <Text style={styles.editBtnTextSmall}>Add More</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        {/* Tabs for multiple classes */}
-                        <View style={styles.tabsContainer}>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                {batchResults.map((res, idx) => (
-                                    <TouchableOpacity
-                                        key={idx}
-                                        style={[styles.tab, currentClassIndex === idx && styles.activeTab]}
-                                        onPress={() => setCurrentClassIndex(idx)}
-                                    >
-                                        <Text style={[styles.tabText, currentClassIndex === idx && styles.activeTabText]}>
-                                            {res.metadata.section} ({res.metadata.semester.split(' ')[0]} Yr)
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
+                                <View style={{ height: 100 }} />
                             </ScrollView>
+
+                            {/* Bottom Buttons */}
+                            <View style={styles.bottomActions}>
+                                <TouchableOpacity
+                                    style={styles.nextBtn}
+                                    onPress={handleNext}
+                                >
+                                    <Plus size={20} color="#800000" style={{ marginRight: 8 }} />
+                                    <Text style={styles.nextBtnText}>Add to Batch</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.submitBtn}
+                                    onPress={generateTimeTable}
+                                >
+                                    <Sparkles size={20} color="#fff" style={{ marginRight: 8 }} />
+                                    <Text style={styles.submitBtnText}>Generate All</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
+                    ) : (
+                        <View style={{ flex: 1 }}>
+                            <View style={styles.resultHeader}>
+                                <View>
+                                    <Text style={styles.resultTitle}>Preview Schedules</Text>
+                                    <Text style={styles.resultSubtitle}>
+                                        Showing {currentClassIndex + 1} of {batchResults.length} classes
+                                    </Text>
+                                </View>
+                                <TouchableOpacity onPress={() => setStep(1)} style={styles.editBtnSmall}>
+                                    <Text style={styles.editBtnTextSmall}>Add More</Text>
+                                </TouchableOpacity>
+                            </View>
 
-                        <ScrollView showsVerticalScrollIndicator={true} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }}>
-                            <Text style={styles.classDetailHeader}>
-                                {batchResults[currentClassIndex].metadata.deptName} - {batchResults[currentClassIndex].metadata.semester} Section {batchResults[currentClassIndex].metadata.section}
-                            </Text>
+                            {/* Tabs for multiple classes */}
+                            <View style={styles.tabsContainer}>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                    {batchResults.map((res, idx) => (
+                                        <TouchableOpacity
+                                            key={idx}
+                                            style={[styles.tab, currentClassIndex === idx && styles.activeTab]}
+                                            onPress={() => setCurrentClassIndex(idx)}
+                                        >
+                                            <Text style={[styles.tabText, currentClassIndex === idx && styles.activeTabText]}>
+                                                {res.metadata.section} ({res.metadata.semester.split(' ')[0]} Yr)
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
 
-                            <TimetableExport result={batchResults[currentClassIndex]} />
+                            <ScrollView showsVerticalScrollIndicator={true} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }}>
+                                <Text style={styles.classDetailHeader}>
+                                    {batchResults[currentClassIndex].metadata.deptName} - {batchResults[currentClassIndex].metadata.semester} Section {batchResults[currentClassIndex].metadata.section}
+                                </Text>
 
-                            {batchResults[currentClassIndex].schedule &&
-                                Object.entries(batchResults[currentClassIndex].schedule).map(([day, slots]) => renderDaySchedule(day, slots))}
-                        </ScrollView>
+                                <TimetableExport result={batchResults[currentClassIndex]} />
 
-                        <View style={styles.bottomActions}>
-                            <TouchableOpacity
-                                style={[styles.submitBtn, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', marginRight: 10 }]}
-                                onPress={() => setStep(1)}
-                            >
-                                <Edit3 size={20} color="#64748b" style={{ marginRight: 8 }} />
-                                <Text style={[styles.submitBtnText, { color: '#64748b' }]}>Edit Batch</Text>
-                            </TouchableOpacity>
+                                {batchResults[currentClassIndex].schedule &&
+                                    Object.entries(batchResults[currentClassIndex].schedule).map(([day, slots]) => renderDaySchedule(day, slots))}
+                            </ScrollView>
 
-                            <TouchableOpacity style={styles.submitBtn} onPress={saveTimeTable}>
-                                <Save size={20} color="#fff" style={{ marginRight: 8 }} />
-                                <Text style={styles.submitBtnText}>Save All</Text>
-                            </TouchableOpacity>
+                            <View style={styles.bottomActions}>
+                                <TouchableOpacity
+                                    style={[styles.submitBtn, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', marginRight: 10 }]}
+                                    onPress={() => setStep(1)}
+                                >
+                                    <Edit3 size={20} color="#64748b" style={{ marginRight: 8 }} />
+                                    <Text style={[styles.submitBtnText, { color: '#64748b' }]}>Edit Batch</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity style={styles.submitBtn} onPress={saveTimeTable}>
+                                    <Save size={20} color="#fff" style={{ marginRight: 8 }} />
+                                    <Text style={styles.submitBtnText}>Save All</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
+                    )}
+                </View>
+
+                {step === 1 && width > 1000 && (
+                    <View style={styles.sidebarContainer}>
+                        <ProgressRing
+                            size={220}
+                            strokeWidth={18}
+                            progress={totalAllocated / 40}
+                            total={totalAllocated}
+                            remaining={remainingHours}
+                        />
                     </View>
                 )}
             </View>
@@ -1548,6 +1651,79 @@ const styles = StyleSheet.create({
     },
     altLabFields: {
         gap: 8
+    },
+
+    // Progress Ring Styles
+    progressRingCard: {
+        backgroundColor: '#fff',
+        borderRadius: 24,
+        padding: 24,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        alignItems: 'center',
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10
+    },
+    progressTitle: {
+        fontSize: 16,
+        fontWeight: '800',
+        color: '#1e293b',
+        textAlign: 'center',
+        marginBottom: 5
+    },
+    progressStats: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+        marginTop: 10,
+        backgroundColor: '#f8fafc',
+        borderRadius: 16,
+        padding: 12
+    },
+    statItem: {
+        flex: 1,
+        alignItems: 'center'
+    },
+    statLabel: {
+        fontSize: 11,
+        color: '#64748b',
+        fontWeight: '600',
+        marginBottom: 4
+    },
+    statValue: {
+        fontSize: 16,
+        fontWeight: '800',
+        color: '#1e293b'
+    },
+    statDivider: {
+        width: 1,
+        height: 30,
+        backgroundColor: '#e2e8f0'
+    },
+    sidebarContainer: {
+        width: 300,
+        paddingTop: 10
+    },
+    overLimitWarning: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fee2e2',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 20,
+        marginTop: 15,
+        gap: 6
+    },
+    warningText: {
+        fontSize: 10,
+        color: '#ef4444',
+        fontWeight: '800',
+        textTransform: 'uppercase'
     }
 });
 
