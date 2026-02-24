@@ -19,7 +19,7 @@ connectDB().then(async () => {
             const admin = new User({
                 userId: 'admin',
                 password: 'admin123',
-                name: 'System Administrator',
+                name: 'Administrator',
                 email: 'admin@college.edu',
                 role: 'Admin',
                 department: 'Administration'

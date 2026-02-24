@@ -73,7 +73,33 @@ router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
                 const totalHours = parseInt(sub.hoursPerWeek) || 3;
                 const duration = parseInt(sub.duration) || 1;
 
-                if (sub.type === 'Practical' && duration > 1) {
+                if (sub.type === 'Integrated') {
+                    // Handle LAB part
+                    const labTotal = parseInt(sub.labHours) || 0;
+                    const labDur = parseInt(sub.duration) || 2;
+                    let labRemaining = labTotal;
+                    while (labRemaining >= labDur) {
+                        r.practicalTasks.push({
+                            name: sub.name,
+                            subjectId: sub.subjectId,
+                            staff: sub.staffName || sub.staffId || 'TBD',
+                            staffId: sub.staffId,
+                            duration: labDur,
+                            alternative: sub.alternative
+                        });
+                        labRemaining -= labDur;
+                    }
+                    // Handle THEORY part
+                    const theoryTotal = parseInt(sub.theoryHours) || 0;
+                    for (let i = 0; i < theoryTotal; i++) {
+                        r.theoryTasks.push({
+                            name: sub.name,
+                            subjectId: sub.subjectId,
+                            staff: sub.staffName || sub.staffId || 'TBD',
+                            staffId: sub.staffId
+                        });
+                    }
+                } else if (sub.type === 'Practical' && duration > 1) {
                     // Create blocks for Practicals
                     let hoursRemaining = totalHours;
                     while (hoursRemaining >= duration) {

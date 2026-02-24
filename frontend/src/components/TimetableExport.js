@@ -236,15 +236,41 @@ const TimetableExport = ({ result }) => {
                                     <Text style={[styles.allocHeaderCell, { flex: 2 }]}>Faculty Name & Code</Text>
                                     <Text style={[styles.allocHeaderCell, { width: 70 }]}>Hours</Text>
                                 </View>
-                                {subjects.map((sub, idx) => {
+                                {subjects.reduce((acc, sub) => {
+                                    if (sub.type === 'Integrated' && parseInt(sub.theoryHours || 0) > 0) {
+                                        // 1) Add Lab entry first (with alternative details)
+                                        acc.push({
+                                            ...sub,
+                                            _displayType: 'Lab',
+                                            _displayName: `${sub.name} (LAB)`,
+                                            _displayHours: sub.labHours
+                                        });
+                                        // 2) Add Theory entry (WITHOUT alternative details)
+                                        acc.push({
+                                            ...sub,
+                                            alternative: null, // Clear alternative for theory part
+                                            _displayType: 'Theory',
+                                            _displayName: `${sub.name} (THEORY)`,
+                                            _displayHours: sub.theoryHours
+                                        });
+                                    } else {
+                                        acc.push({
+                                            ...sub,
+                                            _displayType: sub.type,
+                                            _displayName: sub.name,
+                                            _displayHours: sub.hoursPerWeek
+                                        });
+                                    }
+                                    return acc;
+                                }, []).map((sub, idx) => {
                                     const primaryCode = sub.code || '-';
-                                    const primaryName = `${sub.fullName || sub.name}${sub.shortName && sub.shortName !== sub.fullName ? ` (${sub.shortName})` : ''}`;
+                                    const primaryName = sub._displayName;
                                     const primaryStaff = `${sub.staffName}${sub.staffCode ? ` (${sub.staffCode})` : ''}`;
 
                                     let altCode = '', altName = '', altStaff = '';
                                     if (sub.alternative) {
                                         altCode = ` / ${sub.alternative.code || '-'}`;
-                                        altName = ` / ${sub.alternative.fullName || sub.alternative.name}${sub.alternative.name && sub.alternative.name !== sub.alternative.fullName ? ` (${sub.alternative.name})` : ''}`;
+                                        altName = ` / ${sub.alternative.name || sub.alternative.fullName}${sub.alternative.name && sub.alternative.name !== sub.alternative.fullName ? ` (${sub.alternative.name})` : ''}`;
                                         altStaff = ` / ${sub.alternative.staffName}${sub.alternative.staffCode ? ` (${sub.alternative.staffCode})` : ''}`;
                                     }
 
@@ -261,7 +287,7 @@ const TimetableExport = ({ result }) => {
                                                 {primaryStaff}{altStaff}
                                             </Text>
                                             <Text style={[styles.allocCell, { width: 70, textAlign: 'center', fontWeight: 'bold' }]}>
-                                                {sub.hoursPerWeek}
+                                                {sub._displayHours}
                                             </Text>
                                         </View>
                                     );

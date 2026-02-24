@@ -170,6 +170,7 @@ const TimeTableGenerator = ({ navigation }) => {
         subjectId: '',
         staffId: '',
         hoursPerWeek: '4',
+        theoryHours: '3',
         duration: '1',
         sessions: '1',
         enableAlt: false,
@@ -267,18 +268,20 @@ const TimeTableGenerator = ({ navigation }) => {
     const filteredSubjectsList = subjectsList.filter(s => {
         const matchesDept = !selectedDept || s.dept === selectedDept;
 
-        // Filter based on Year -> Semester Range (e.g. Year 1 shows Sems 1 & 2)
-        // We ignore strict 'semester' equality so user can pick subjects from the other semester of the same year if needed.
-        let matchesYearRange = true;
-        if (selectedYear) {
+        let matchesSem = true;
+        if (semester) {
+            // Strict semester match if selected
+            matchesSem = String(s.semester) === String(semester);
+        } else if (selectedYear) {
+            // Show all subjects for the year if semester is not yet selected
             const y = parseInt(selectedYear);
             const minSem = (y - 1) * 2 + 1;
             const maxSem = minSem + 1;
             const sSem = parseInt(s.semester);
-            matchesYearRange = (sSem === minSem || sSem === maxSem);
+            matchesSem = (sSem === minSem || sSem === maxSem);
         }
 
-        return matchesDept && matchesYearRange;
+        return matchesDept && matchesSem;
     });
 
     // Reset current subject if filters change and it's no longer in the list
@@ -289,7 +292,7 @@ const TimeTableGenerator = ({ navigation }) => {
     }, [selectedDept, selectedYear, semester]);
 
     const handleAddSubject = () => {
-        const isPractical = currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical';
+        let isPractical = currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical';
         // Validate
         if (!currentSubject.subjectId || !currentSubject.staffId) {
             Alert.alert('Error', 'Please select a subject and staff');
@@ -307,20 +310,33 @@ const TimeTableGenerator = ({ navigation }) => {
 
         const subObj = subjectsList.find(s => s.value === currentSubject.subjectId);
         const staffObj = staffList.find(s => s.value === currentSubject.staffId);
+        isPractical = subObj?.type === 'Practical';
+        const isIntegrated = subObj?.type === 'Integrated';
 
-        // Calculate total hours for practical
-        const finalHours = isPractical
-            ? String(parseInt(currentSubject.sessions) * parseInt(currentSubject.duration))
-            : currentSubject.hoursPerWeek;
+        // Calculate total hours
+        let finalHours = '0';
+        let labHours = '0';
+        let theoryHours = '0';
+
+        if (isIntegrated) {
+            labHours = String(parseInt(currentSubject.sessions || 0) * parseInt(currentSubject.duration || 0));
+            theoryHours = currentSubject.theoryHours || '0';
+            finalHours = String(parseInt(labHours) + parseInt(theoryHours));
+        } else if (isPractical) {
+            labHours = String(parseInt(currentSubject.sessions || 0) * parseInt(currentSubject.duration || 0));
+            finalHours = labHours;
+        } else {
+            theoryHours = currentSubject.hoursPerWeek || '0';
+            finalHours = theoryHours;
+        }
 
         // Validation for Alternative Lab
-        if (isPractical && currentSubject.enableAlt) {
+        if ((isPractical || isIntegrated) && currentSubject.enableAlt) {
             if (!currentSubject.altSubjectId || !currentSubject.altStaffId) {
                 Alert.alert('Error', 'Please select alternative subject and staff');
                 return;
             }
         }
-
 
         const newEntry = {
             id: Date.now().toString(),
@@ -333,9 +349,11 @@ const TimeTableGenerator = ({ navigation }) => {
             staffName: staffObj.label,
             staffCode: staffObj.userId,
             hoursPerWeek: finalHours,
-            type: subObj.type,
+            labHours: labHours,
+            theoryHours: theoryHours,
             type: subObj.type,
             duration: parseInt(currentSubject.duration),
+            sessions: parseInt(currentSubject.sessions),
             alternative: currentSubject.enableAlt ? {
                 subjectId: currentSubject.altSubjectId,
                 code: subjectsList.find(s => s.value === currentSubject.altSubjectId)?.code,
@@ -771,13 +789,15 @@ const TimeTableGenerator = ({ navigation }) => {
                                     options={filteredSubjectsList}
                                     onSelect={(val) => {
                                         const sub = subjectsList.find(s => s.value === val);
+                                        const isPracOrInt = sub?.type === 'Practical' || sub?.type === 'Integrated';
                                         const defaultDur = sub?.duration || 2;
                                         setCurrentSubject({
                                             ...currentSubject,
                                             subjectId: val,
-                                            duration: sub?.type === 'Practical' ? String(defaultDur) : '1',
-                                            hoursPerWeek: sub?.type === 'Practical' ? String(defaultDur) : currentSubject.hoursPerWeek,
-                                            sessions: '1'
+                                            duration: isPracOrInt ? String(defaultDur) : '1',
+                                            hoursPerWeek: sub?.type === 'Theory' ? '4' : '0',
+                                            theoryHours: sub?.type === 'Integrated' ? '3' : '0',
+                                            sessions: isPracOrInt ? '1' : '0'
                                         });
                                     }}
                                     placeholder={selectedDept && selectedYear && semester ? "Select Subject" : "Fill class info details"}
@@ -793,10 +813,10 @@ const TimeTableGenerator = ({ navigation }) => {
                                     placeholder="Select Staff"
                                     icon={Users}
                                 />
-                                {currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical' && (
+                                {currentSubject.subjectId && (subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical' || subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated') && (
                                     <View style={{ marginBottom: 15 }}>
                                         <CustomDropdown
-                                            label="Number of Continuous Periods"
+                                            label="Number of Continuous Periods (Lab)"
                                             value={currentSubject.duration}
                                             options={[
                                                 { label: '2 Periods', value: '2' },
@@ -806,22 +826,21 @@ const TimeTableGenerator = ({ navigation }) => {
                                             onSelect={(val) => setCurrentSubject({
                                                 ...currentSubject,
                                                 duration: val,
-                                                // hoursPerWeek: val // Auto-sync hours with duration for typical lab use
                                             })}
-                                            placeholder="Select Duration"
+                                            placeholder="Select Lab Duration"
                                             icon={Clock}
                                         />
                                         <View style={styles.practicalInfo}>
                                             <Sparkles size={16} color="#0891b2" />
                                             <Text style={styles.practicalInfoText}>
-                                                {`Logic: ${currentSubject.sessions} Session(s) of ${currentSubject.duration} continuous periods will be scheduled. (Total: ${parseInt(currentSubject.sessions || 0) * parseInt(currentSubject.duration)} hrs)`}
+                                                {`Lab Logic: ${currentSubject.sessions} Session(s) of ${currentSubject.duration} continuous periods. (Total Lab: ${parseInt(currentSubject.sessions || 0) * parseInt(currentSubject.duration)} hrs)`}
                                             </Text>
                                         </View>
                                     </View>
                                 )}
 
                                 {/* Alternative Lab Option */}
-                                {currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical' && (
+                                {currentSubject.subjectId && (subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical' || subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated') && (
                                     <View style={styles.altLabContainer}>
                                         <View style={styles.altLabHeader}>
                                             <Text style={styles.inputLabel}>Alternative Batch Lab?</Text>
@@ -838,7 +857,7 @@ const TimeTableGenerator = ({ navigation }) => {
                                                 <CustomDropdown
                                                     label="Alternative Subject (Batch 2)"
                                                     value={currentSubject.altSubjectId}
-                                                    options={filteredSubjectsList.filter(s => s.value !== currentSubject.subjectId && s.type === 'Practical')}
+                                                    options={filteredSubjectsList.filter(s => s.value !== currentSubject.subjectId && (s.type === 'Practical' || s.type === 'Integrated'))}
                                                     onSelect={(val) => setCurrentSubject({ ...currentSubject, altSubjectId: val })}
                                                     placeholder="Select Alt Subject"
                                                     icon={BookOpen}
@@ -855,31 +874,45 @@ const TimeTableGenerator = ({ navigation }) => {
                                         )}
                                     </View>
                                 )}
-                                <View style={styles.row}>
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={styles.inputLabel}>
-                                            {currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical'
-                                                ? 'Number of Sessions / Week'
-                                                : 'Total Hours / Week'}
-                                        </Text>
-                                        <TextInput
-                                            style={styles.textInput}
-                                            placeholder={currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical' ? "e.g. 2" : "4"}
-                                            value={currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical'
-                                                ? currentSubject.sessions
-                                                : currentSubject.hoursPerWeek}
-                                            onChangeText={(t) => {
-                                                const isPractical = currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical';
-                                                if (isPractical) {
-                                                    setCurrentSubject({ ...currentSubject, sessions: t });
-                                                } else {
-                                                    setCurrentSubject({ ...currentSubject, hoursPerWeek: t });
-                                                }
-                                            }}
-                                            keyboardType="numeric"
-                                        />
+                                {currentSubject.subjectId && (
+                                    <View style={styles.row}>
+                                        {(subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical' || subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated') && (
+                                            <View style={{ flex: 1, marginRight: subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated' ? 10 : 0 }}>
+                                                <Text style={styles.inputLabel}>
+                                                    {subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated' ? 'Lab Sessions' : 'Sessions / Week'}
+                                                </Text>
+                                                <TextInput
+                                                    style={styles.textInput}
+                                                    placeholder="1"
+                                                    value={currentSubject.sessions}
+                                                    onChangeText={(t) => setCurrentSubject({ ...currentSubject, sessions: t })}
+                                                    keyboardType="numeric"
+                                                />
+                                            </View>
+                                        )}
+
+                                        {(subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Theory' || subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated') && (
+                                            <View style={{ flex: 1 }}>
+                                                <Text style={styles.inputLabel}>
+                                                    {subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated' ? 'Theory Hours' : 'Hours / Week'}
+                                                </Text>
+                                                <TextInput
+                                                    style={styles.textInput}
+                                                    placeholder="3"
+                                                    value={subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated' ? currentSubject.theoryHours : currentSubject.hoursPerWeek}
+                                                    onChangeText={(t) => {
+                                                        if (subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated') {
+                                                            setCurrentSubject({ ...currentSubject, theoryHours: t });
+                                                        } else {
+                                                            setCurrentSubject({ ...currentSubject, hoursPerWeek: t });
+                                                        }
+                                                    }}
+                                                    keyboardType="numeric"
+                                                />
+                                            </View>
+                                        )}
                                     </View>
-                                </View>
+                                )}
 
                                 <TouchableOpacity
                                     style={styles.addBtn}
