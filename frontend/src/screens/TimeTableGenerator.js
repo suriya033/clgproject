@@ -175,7 +175,9 @@ const TimeTableGenerator = ({ navigation }) => {
         sessions: '1',
         enableAlt: false,
         altSubjectId: '',
-        altStaffId: ''
+        altStaffId: '',
+        hasSeparateLabStaff: false,
+        labStaffId: ''
     });
 
     // Added subjects list
@@ -338,6 +340,8 @@ const TimeTableGenerator = ({ navigation }) => {
             }
         }
 
+        const labStaffObj = currentSubject.hasSeparateLabStaff ? staffList.find(s => s.value === currentSubject.labStaffId) : null;
+
         const newEntry = {
             id: Date.now().toString(),
             subjectId: currentSubject.subjectId,
@@ -348,6 +352,10 @@ const TimeTableGenerator = ({ navigation }) => {
             staffId: currentSubject.staffId,
             staffName: staffObj.label,
             staffCode: staffObj.userId,
+            labStaffId: currentSubject.hasSeparateLabStaff ? currentSubject.labStaffId : null,
+            labStaffName: labStaffObj ? labStaffObj.label : null,
+            labStaffCode: labStaffObj ? labStaffObj.userId : null,
+            hasSeparateLabStaff: currentSubject.hasSeparateLabStaff,
             hoursPerWeek: finalHours,
             labHours: labHours,
             theoryHours: theoryHours,
@@ -368,7 +376,8 @@ const TimeTableGenerator = ({ navigation }) => {
         setAddedSubjects([...addedSubjects, newEntry]);
         setCurrentSubject({
             subjectId: '', staffId: '', hoursPerWeek: '4', duration: '1', sessions: '1',
-            enableAlt: false, altSubjectId: '', altStaffId: ''
+            enableAlt: false, altSubjectId: '', altStaffId: '',
+            hasSeparateLabStaff: false, labStaffId: ''
         });
     };
 
@@ -462,7 +471,8 @@ const TimeTableGenerator = ({ navigation }) => {
         setSection('');
         setCurrentSubject({
             subjectId: '', staffId: '', hoursPerWeek: '4', duration: '1', sessions: '1',
-            enableAlt: false, altSubjectId: '', altStaffId: ''
+            enableAlt: false, altSubjectId: '', altStaffId: '',
+            hasSeparateLabStaff: false, labStaffId: ''
         });
 
         Alert.alert('Success', 'Class added to batch. You can enter another or click Submit to generate all.');
@@ -486,7 +496,8 @@ const TimeTableGenerator = ({ navigation }) => {
         setSection('');
         setCurrentSubject({
             subjectId: '', staffId: '', hoursPerWeek: '4', duration: '1', sessions: '1',
-            enableAlt: false, altSubjectId: '', altStaffId: ''
+            enableAlt: false, altSubjectId: '', altStaffId: '',
+            hasSeparateLabStaff: false, labStaffId: ''
         });
 
         // Only clear department if NOT HOD
@@ -797,7 +808,9 @@ const TimeTableGenerator = ({ navigation }) => {
                                             duration: isPracOrInt ? String(defaultDur) : '1',
                                             hoursPerWeek: sub?.type === 'Theory' ? '4' : '0',
                                             theoryHours: sub?.type === 'Integrated' ? '3' : '0',
-                                            sessions: isPracOrInt ? '1' : '0'
+                                            sessions: isPracOrInt ? '1' : '0',
+                                            hasSeparateLabStaff: false,
+                                            labStaffId: ''
                                         });
                                     }}
                                     placeholder={selectedDept && selectedYear && semester ? "Select Subject" : "Fill class info details"}
@@ -813,6 +826,34 @@ const TimeTableGenerator = ({ navigation }) => {
                                     placeholder="Select Staff"
                                     icon={Users}
                                 />
+
+                                {/* Separate Lab Staff Option for Integrated Subjects */}
+                                {currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated' && (
+                                    <View style={styles.altLabContainer}>
+                                        <View style={styles.altLabHeader}>
+                                            <Text style={styles.inputLabel}>Is there separate staff for the lab?</Text>
+                                            <Switch
+                                                value={currentSubject.hasSeparateLabStaff}
+                                                onValueChange={(val) => setCurrentSubject({ ...currentSubject, hasSeparateLabStaff: val, labStaffId: val ? currentSubject.labStaffId : '' })}
+                                                trackColor={{ false: "#767577", true: "#800000" }}
+                                                thumbColor={currentSubject.hasSeparateLabStaff ? "#f4f3f4" : "#f4f3f4"}
+                                            />
+                                        </View>
+
+                                        {currentSubject.hasSeparateLabStaff && (
+                                            <View style={styles.altLabFields}>
+                                                <CustomDropdown
+                                                    label="Lab Staff Name"
+                                                    value={currentSubject.labStaffId}
+                                                    options={staffList}
+                                                    onSelect={(val) => setCurrentSubject({ ...currentSubject, labStaffId: val })}
+                                                    placeholder="Select Lab Staff"
+                                                    icon={Users}
+                                                />
+                                            </View>
+                                        )}
+                                    </View>
+                                )}
                                 {currentSubject.subjectId && (subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical' || subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Integrated') && (
                                     <View style={{ marginBottom: 15 }}>
                                         <CustomDropdown
@@ -948,7 +989,7 @@ const TimeTableGenerator = ({ navigation }) => {
                                                     </View>
                                                 </View>
                                                 <Text style={styles.subItemDetail}>
-                                                    {item.staffName} • {item.hoursPerWeek} hrs {item.type === 'Practical' ? `(${item.duration} periods block)` : ''}
+                                                    {item.staffName}{item.hasSeparateLabStaff ? ` (Theory) & ${item.labStaffName} (Lab)` : ''} • {item.hoursPerWeek} hrs {item.type === 'Practical' ? `(${item.duration} periods block)` : ''}
                                                 </Text>
                                                 {item.alternative && (
                                                     <View style={styles.altBadge}>

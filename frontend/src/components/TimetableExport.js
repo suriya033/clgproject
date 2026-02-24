@@ -237,22 +237,30 @@ const TimetableExport = ({ result }) => {
                                     <Text style={[styles.allocHeaderCell, { width: 70 }]}>Hours</Text>
                                 </View>
                                 {subjects.reduce((acc, sub) => {
-                                    if (sub.type === 'Integrated' && parseInt(sub.theoryHours || 0) > 0) {
-                                        // 1) Add Lab entry first (with alternative details)
-                                        acc.push({
-                                            ...sub,
-                                            _displayType: 'Lab',
-                                            _displayName: `${sub.name} (LAB)`,
-                                            _displayHours: sub.labHours
-                                        });
+                                    if (sub.type === 'Integrated' && (parseInt(sub.theoryHours || 0) > 0 || parseInt(sub.labHours || 0) > 0)) {
+                                        // 1) Add Lab entry
+                                        if (parseInt(sub.labHours || 0) > 0) {
+                                            acc.push({
+                                                ...sub,
+                                                _displayType: 'Lab',
+                                                _displayName: `${sub.name} (LAB)`,
+                                                _displayHours: sub.labHours,
+                                                _displayStaff: sub.hasSeparateLabStaff ? sub.labStaffName : sub.staffName,
+                                                _displayStaffCode: sub.hasSeparateLabStaff ? sub.labStaffCode : sub.staffCode
+                                            });
+                                        }
                                         // 2) Add Theory entry (WITHOUT alternative details)
-                                        acc.push({
-                                            ...sub,
-                                            alternative: null, // Clear alternative for theory part
-                                            _displayType: 'Theory',
-                                            _displayName: `${sub.name} (THEORY)`,
-                                            _displayHours: sub.theoryHours
-                                        });
+                                        if (parseInt(sub.theoryHours || 0) > 0) {
+                                            acc.push({
+                                                ...sub,
+                                                alternative: null, // Clear alternative for theory part
+                                                _displayType: 'Theory',
+                                                _displayName: `${sub.name} (THEORY)`,
+                                                _displayHours: sub.theoryHours,
+                                                _displayStaff: sub.staffName,
+                                                _displayStaffCode: sub.staffCode
+                                            });
+                                        }
                                     } else {
                                         acc.push({
                                             ...sub,
@@ -265,7 +273,9 @@ const TimetableExport = ({ result }) => {
                                 }, []).map((sub, idx) => {
                                     const primaryCode = sub.code || '-';
                                     const primaryName = sub._displayName;
-                                    const primaryStaff = `${sub.staffName}${sub.staffCode ? ` (${sub.staffCode})` : ''}`;
+                                    const staffToDisplay = sub._displayStaff || sub.staffName;
+                                    const codeToDisplay = sub._displayStaffCode || sub.staffCode;
+                                    const primaryStaff = `${staffToDisplay}${codeToDisplay ? ` (${codeToDisplay})` : ''}`;
 
                                     let altCode = '', altName = '', altStaff = '';
                                     if (sub.alternative) {

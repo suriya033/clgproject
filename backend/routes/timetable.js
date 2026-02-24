@@ -78,12 +78,16 @@ router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
                     const labTotal = parseInt(sub.labHours) || 0;
                     const labDur = parseInt(sub.duration) || 2;
                     let labRemaining = labTotal;
+
+                    const effectiveLabStaff = sub.hasSeparateLabStaff ? (sub.labStaffName || sub.labStaffId) : (sub.staffName || sub.staffId);
+                    const effectiveLabStaffId = sub.hasSeparateLabStaff ? sub.labStaffId : sub.staffId;
+
                     while (labRemaining >= labDur) {
                         r.practicalTasks.push({
                             name: sub.name,
                             subjectId: sub.subjectId,
-                            staff: sub.staffName || sub.staffId || 'TBD',
-                            staffId: sub.staffId,
+                            staff: effectiveLabStaff || 'TBD',
+                            staffId: effectiveLabStaffId,
                             duration: labDur,
                             alternative: sub.alternative
                         });
