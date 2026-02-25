@@ -347,7 +347,7 @@ const TimeTableGenerator = ({ navigation }) => {
         setSemester('');
     }, [selectedYear]);
 
-    const filteredSubjectsList = subjectsList.filter(s => {
+    const deptSemSubjects = subjectsList.filter(s => {
         const matchesDept = !selectedDept || s.dept === selectedDept;
 
         let matchesSem = true;
@@ -362,8 +362,19 @@ const TimeTableGenerator = ({ navigation }) => {
             const sSem = parseInt(s.semester);
             matchesSem = (sSem === minSem || sSem === maxSem);
         }
-
         return matchesDept && matchesSem;
+    });
+
+    const filteredSubjectsList = deptSemSubjects.filter(s => {
+        // Filter out subjects already added as a main subject
+        return !addedSubjects.some(item => item.subjectId === s.value);
+    });
+
+    const availableAltSubjects = deptSemSubjects.filter(s => {
+        // Filter for Practical/Integrated and not already used as alternative
+        const isLab = s.type === 'Practical' || s.type === 'Integrated';
+        const isAlreadyAlt = addedSubjects.some(item => item.alternative && item.alternative.subjectId === s.value);
+        return isLab && !isAlreadyAlt;
     });
 
     // Reset current subject if filters change and it's no longer in the list
@@ -371,7 +382,10 @@ const TimeTableGenerator = ({ navigation }) => {
         if (currentSubject.subjectId && !filteredSubjectsList.find(s => s.value === currentSubject.subjectId)) {
             setCurrentSubject(prev => ({ ...prev, subjectId: '', duration: '1' }));
         }
-    }, [selectedDept, selectedYear, semester]);
+        if (currentSubject.altSubjectId && !availableAltSubjects.find(s => s.value === currentSubject.altSubjectId)) {
+            setCurrentSubject(prev => ({ ...prev, altSubjectId: '' }));
+        }
+    }, [selectedDept, selectedYear, semester, addedSubjects]);
 
     const handleAddSubject = () => {
         let isPractical = currentSubject.subjectId && subjectsList.find(s => s.value === currentSubject.subjectId)?.type === 'Practical';
@@ -768,7 +782,7 @@ const TimeTableGenerator = ({ navigation }) => {
     // Options for edit modal
     const editOptions = [
         { label: 'Free Period', value: 'FREE' },
-        ...addedSubjects.map(s => ({ label: `${s.name} (${s.staffName})`, value: s.subjectId }))
+        ...addedSubjects.map(s => ({ label: `${s.fullName || s.name} (${s.staffName})`, value: s.subjectId }))
     ];
 
     return (
@@ -887,7 +901,7 @@ const TimeTableGenerator = ({ navigation }) => {
                                     <CustomDropdown
                                         label="Subject"
                                         value={currentSubject.subjectId}
-                                        options={filteredSubjectsList}
+                                        options={filteredSubjectsList.filter(s => s.value !== currentSubject.altSubjectId)}
                                         onSelect={(val) => {
                                             const sub = subjectsList.find(s => s.value === val);
                                             const isPracOrInt = sub?.type === 'Practical' || sub?.type === 'Integrated';
@@ -988,7 +1002,7 @@ const TimeTableGenerator = ({ navigation }) => {
                                                     <CustomDropdown
                                                         label="Alternative Subject (Batch 2)"
                                                         value={currentSubject.altSubjectId}
-                                                        options={filteredSubjectsList.filter(s => s.value !== currentSubject.subjectId && (s.type === 'Practical' || s.type === 'Integrated'))}
+                                                        options={availableAltSubjects.filter(s => s.value !== currentSubject.subjectId)}
                                                         onSelect={(val) => setCurrentSubject({ ...currentSubject, altSubjectId: val })}
                                                         placeholder="Select Alt Subject"
                                                         icon={BookOpen}
@@ -1061,7 +1075,7 @@ const TimeTableGenerator = ({ navigation }) => {
                                             <View key={item.id} style={styles.subjectItem}>
                                                 <View style={{ flex: 1 }}>
                                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                                        <Text style={styles.subItemName}>{item.name}</Text>
+                                                        <Text style={styles.subItemName}>{item.fullName}</Text>
                                                         <View style={[
                                                             styles.typeBadge,
                                                             item.type === 'Practical' ? styles.practicalBadge :
@@ -1084,7 +1098,7 @@ const TimeTableGenerator = ({ navigation }) => {
                                                     {item.alternative && (
                                                         <View style={styles.altBadge}>
                                                             <Text style={styles.altBadgeText}>
-                                                                Batch 2: {item.alternative.name} ({item.alternative.staffName})
+                                                                Batch 2: {item.alternative.fullName} ({item.alternative.staffName})
                                                             </Text>
                                                         </View>
                                                     )}
@@ -1257,7 +1271,7 @@ const TimeTableGenerator = ({ navigation }) => {
                                 options={[
                                     { label: 'Free Period', value: 'FREE' },
                                     ...(batchResults[currentClassIndex]?.subjects || []).map(s => ({
-                                        label: `${s.name || s.label} (${s.staffName || s.staffId})`,
+                                        label: `${s.fullName || s.name || s.label} (${s.staffName || s.staffId})`,
                                         value: s.subjectId || s.id
                                     }))
                                 ]}

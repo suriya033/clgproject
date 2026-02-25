@@ -243,7 +243,7 @@ const TimetableExport = ({ result }) => {
                                             acc.push({
                                                 ...sub,
                                                 _displayType: 'Lab',
-                                                _displayName: `${sub.name} (LAB)`,
+                                                _displayName: `${sub.fullName || sub.name} (LAB)`,
                                                 _displayHours: sub.labHours,
                                                 _displayStaff: sub.hasSeparateLabStaff ? sub.labStaffName : sub.staffName,
                                                 _displayStaffCode: sub.hasSeparateLabStaff ? sub.labStaffCode : sub.staffCode
@@ -255,7 +255,7 @@ const TimetableExport = ({ result }) => {
                                                 ...sub,
                                                 alternative: null, // Clear alternative for theory part
                                                 _displayType: 'Theory',
-                                                _displayName: `${sub.name} (THEORY)`,
+                                                _displayName: `${sub.fullName || sub.name} (THEORY)`,
                                                 _displayHours: sub.theoryHours,
                                                 _displayStaff: sub.staffName,
                                                 _displayStaffCode: sub.staffCode
@@ -265,7 +265,7 @@ const TimetableExport = ({ result }) => {
                                         acc.push({
                                             ...sub,
                                             _displayType: sub.type,
-                                            _displayName: sub.name,
+                                            _displayName: sub.fullName || sub.name,
                                             _displayHours: sub.hoursPerWeek
                                         });
                                     }
@@ -280,7 +280,7 @@ const TimetableExport = ({ result }) => {
                                     let altCode = '', altName = '', altStaff = '';
                                     if (sub.alternative) {
                                         altCode = ` / ${sub.alternative.code || '-'}`;
-                                        altName = ` / ${sub.alternative.name || sub.alternative.fullName}${sub.alternative.name && sub.alternative.name !== sub.alternative.fullName ? ` (${sub.alternative.name})` : ''}`;
+                                        altName = ` / ${sub.alternative.fullName || sub.alternative.name}`;
 
                                         // Prevents double staff display if they are the same person
                                         if (sub.alternative.staffName && sub.alternative.staffName !== staffToDisplay) {
