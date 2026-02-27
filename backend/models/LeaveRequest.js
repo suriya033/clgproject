@@ -14,6 +14,15 @@ const LeaveRequestSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     },
+    principal: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    targetRecipient: {
+        type: String,
+        enum: ['Class Advisor', 'HOD', 'Principal'],
+        default: 'Class Advisor'
+    },
     type: {
         type: String,
         enum: ['Leave', 'OD'],
@@ -37,7 +46,7 @@ const LeaveRequestSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['Pending_Coordinator', 'Pending_HOD', 'Approved', 'Rejected'],
+        enum: ['Pending_Coordinator', 'Pending_HOD', 'Pending_Principal', 'Approved', 'Rejected'],
         default: 'Pending_Coordinator'
     },
     coordinatorStatus: {
@@ -50,8 +59,14 @@ const LeaveRequestSchema = new mongoose.Schema({
         enum: ['Pending', 'Approved', 'Rejected'],
         default: 'Pending'
     },
+    principalStatus: {
+        type: String,
+        enum: ['Pending', 'Approved', 'Rejected'],
+        default: 'Pending'
+    },
     coordinatorRemarks: String,
     hodRemarks: String,
+    principalRemarks: String,
     appliedAt: {
         type: Date,
         default: Date.now

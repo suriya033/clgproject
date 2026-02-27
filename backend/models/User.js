@@ -25,7 +25,7 @@ const UserSchema = new mongoose.Schema({
         type: String,
         required: true,
         enum: [
-            'Admin', 'Student', 'Staff', 'HOD', 'Transport',
+            'Admin', 'Student', 'Staff', 'HOD', 'Principal', 'Transport',
             'Library', 'Hostel', 'Placement', 'Sports',
             'Office', 'ExamCell', 'Driver'
         ]

@@ -13,8 +13,8 @@ import {
     KeyboardAvoidingView
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Send, Calendar, MessageSquare, BookOpen, SendHorizontal } from 'lucide-react-native';
-// import DateTimePicker from '@react-native-community/datetimepicker'; // Removed due to lib issues
+import { ChevronLeft, Send, Calendar, MessageSquare, BookOpen, SendHorizontal, User as UserIcon, Building2, GraduationCap } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import api from '../api/api';
 import { AuthContext } from '../context/AuthContext';
 
@@ -23,24 +23,47 @@ const StudentLeaveRequest = ({ navigation }) => {
     const [loading, setLoading] = useState(false);
 
     const [type, setType] = useState('Leave'); // Leave or OD
-    const [subject, setSubject] = useState('');
+    const [targetRecipient, setTargetRecipient] = useState('Class Advisor'); // Class Advisor, HOD, Principal
     const [reason, setReason] = useState('');
     const [startDate, setStartDate] = useState(new Date());
     const [endDate, setEndDate] = useState(new Date());
+
     const [showStartPicker, setShowStartPicker] = useState(false);
     const [showEndPicker, setShowEndPicker] = useState(false);
 
     const generateLetter = () => {
-        const start = startDate.toISOString().split('T')[0];
-        const end = endDate.toISOString().split('T')[0];
+        const start = startDate.toLocaleDateString('en-GB');
+        const end = endDate.toLocaleDateString('en-GB');
         const days = start === end ? `on ${start}` : `from ${start} to ${end}`;
 
-        return `Respected Mam/Sir,\n\nI am writing to formally request you to grant me ${type} ${days}. The reason for my request is: ${reason}.\n\nI request you to kindly approve my application.\n\nThank you,\n${user?.name} (${user?.userId})`;
+        let addressTo = "";
+        if (targetRecipient === 'Class Advisor') addressTo = "The Class Advisor";
+        else if (targetRecipient === 'HOD') addressTo = "The Head of Department";
+        else addressTo = "The Principal";
+
+        return `To,
+${addressTo},
+${user?.department} Department,
+
+Respected Sir/Madam,
+
+I am writing to formally request you to grant me ${type === 'Leave' ? 'leave' : 'On-Duty (OD) permission'} ${days}. 
+
+The reason for my request is: ${reason || '[Please specify reason]'}.
+
+I request you to kindly approve my application and grant me permission.
+
+Thank you,
+
+Yours sincerely,
+${user?.name}
+Roll No: ${user?.userId}
+${user?.department} - ${user?.semester}th Semester`;
     };
 
     const handleSubmit = async () => {
-        if (!subject || !reason) {
-            Alert.alert('Error', 'Please enter subject and reason');
+        if (!reason) {
+            Alert.alert('Error', 'Please enter a reason for your request');
             return;
         }
 
@@ -48,15 +71,16 @@ const StudentLeaveRequest = ({ navigation }) => {
         try {
             await api.post('/requests/leave', {
                 type,
-                subject,
+                targetRecipient,
+                subject: `${type} Request - ${user?.name}`,
                 content: generateLetter(),
                 startDate: startDate.toISOString(),
                 endDate: endDate.toISOString()
             });
 
             Alert.alert(
-                'Submited Successfully',
-                'Your request has been sent to your Class Coordinator for approval.',
+                'Submitted Successfully',
+                `Your request has been sent to your Class Advisor for initial approval.`,
                 [{ text: 'OK', onPress: () => navigation.goBack() }]
             );
         } catch (error) {
@@ -67,14 +91,14 @@ const StudentLeaveRequest = ({ navigation }) => {
         }
     };
 
-    const onStartDateChange = (event, selectedDate) => {
-        setShowStartPicker(false);
-        // if (selectedDate) setStartDate(selectedDate);
-    };
-
-    const onEndDateChange = (event, selectedDate) => {
-        setShowEndPicker(false);
-        // if (selectedDate) setEndDate(selectedDate);
+    const handleDateChange = (event, selectedDate, isStart) => {
+        if (isStart) {
+            setShowStartPicker(Platform.OS === 'ios');
+            if (selectedDate) setStartDate(selectedDate);
+        } else {
+            setShowEndPicker(Platform.OS === 'ios');
+            if (selectedDate) setEndDate(selectedDate);
+        }
     };
 
     return (
@@ -88,100 +112,106 @@ const StudentLeaveRequest = ({ navigation }) => {
                         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                             <ChevronLeft size={24} color="#fff" />
                         </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Leave / OD Request</Text>
+                        <Text style={styles.headerTitle}>Smart Request</Text>
                         <View style={{ width: 40 }} />
                     </View>
                 </LinearGradient>
 
                 <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                     <View style={styles.formCard}>
-                        {/* Pre-filled info */}
-                        <View style={styles.prefilledSection}>
-                            <View style={styles.infoRow}>
-                                <Text style={styles.infoLabel}>From:</Text>
-                                <Text style={styles.infoValue}>{user?.name} ({user?.userId})</Text>
-                            </View>
-                            <View style={styles.infoRow}>
-                                <Text style={styles.infoLabel}>Class:</Text>
-                                <Text style={styles.infoValue}>{user?.department} - Sec {user?.section}</Text>
-                            </View>
+                        {/* Recipient Selection */}
+                        <Text style={styles.sectionLabel}>Apply To</Text>
+                        <View style={styles.recipientContainer}>
+                            <TouchableOpacity
+                                style={[styles.recipientBtn, targetRecipient === 'Class Advisor' && styles.recipientBtnActive]}
+                                onPress={() => setTargetRecipient('Class Advisor')}
+                            >
+                                <UserIcon size={24} color={targetRecipient === 'Class Advisor' ? '#fff' : '#800000'} />
+                                <Text style={[styles.recipientText, targetRecipient === 'Class Advisor' && styles.recipientTextActive]}>Advisor</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.recipientBtn, targetRecipient === 'HOD' && styles.recipientBtnActive]}
+                                onPress={() => setTargetRecipient('HOD')}
+                            >
+                                <Building2 size={24} color={targetRecipient === 'HOD' ? '#fff' : '#800000'} />
+                                <Text style={[styles.recipientText, targetRecipient === 'HOD' && styles.recipientTextActive]}>HOD</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.recipientBtn, targetRecipient === 'Principal' && styles.recipientBtnActive]}
+                                onPress={() => setTargetRecipient('Principal')}
+                            >
+                                <GraduationCap size={24} color={targetRecipient === 'Principal' ? '#fff' : '#800000'} />
+                                <Text style={[styles.recipientText, targetRecipient === 'Principal' && styles.recipientTextActive]}>Principal</Text>
+                            </TouchableOpacity>
                         </View>
 
-                        <View style={styles.divider} />
-
-                        {/* Request Type Selector */}
-                        <View style={styles.typeSelector}>
+                        {/* Request Type */}
+                        <View style={styles.typeToggle}>
                             <TouchableOpacity
-                                style={[styles.typeBtn, type === 'Leave' && styles.typeBtnActive]}
+                                style={[styles.typeOption, type === 'Leave' && styles.typeOptionActive]}
                                 onPress={() => setType('Leave')}
                             >
-                                <Text style={[styles.typeBtnText, type === 'Leave' && styles.typeBtnTextActive]}>Leave Request</Text>
+                                <Text style={[styles.typeOptionText, type === 'Leave' && styles.typeOptionTextActive]}>Leave</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={[styles.typeBtn, type === 'OD' && styles.typeBtnActive]}
+                                style={[styles.typeOption, type === 'OD' && styles.typeOptionActive]}
                                 onPress={() => setType('OD')}
                             >
-                                <Text style={[styles.typeBtnText, type === 'OD' && styles.typeBtnTextActive]}>OD Request</Text>
+                                <Text style={[styles.typeOptionText, type === 'OD' && styles.typeOptionTextActive]}>On-Duty</Text>
                             </TouchableOpacity>
                         </View>
 
-                        {/* Date Pickers - Replaced with Text Inputs for reliability */}
+                        {/* Date Pickers */}
                         <View style={styles.dateRow}>
-                            <View style={styles.dateInput}>
+                            <TouchableOpacity
+                                style={styles.dateBox}
+                                onPress={() => setShowStartPicker(true)}
+                            >
                                 <Calendar size={18} color="#800000" />
-                                <View style={styles.dateTextContainer}>
-                                    <Text style={styles.dateLabel}>Start Date (YYYY-MM-DD)</Text>
-                                    <TextInput
-                                        style={styles.dateValueInput}
-                                        value={startDate.toISOString().split('T')[0]}
-                                        onChangeText={(text) => {
-                                            const d = new Date(text);
-                                            if (!isNaN(d)) setStartDate(d);
-                                        }}
-                                    />
+                                <View style={styles.dateBoxInfo}>
+                                    <Text style={styles.dateBoxLabel}>From Date</Text>
+                                    <Text style={styles.dateBoxValue}>{startDate.toLocaleDateString('en-GB')}</Text>
                                 </View>
-                            </View>
+                            </TouchableOpacity>
 
-                            <View style={styles.dateInput}>
+                            <TouchableOpacity
+                                style={styles.dateBox}
+                                onPress={() => setShowEndPicker(true)}
+                            >
                                 <Calendar size={18} color="#800000" />
-                                <View style={styles.dateTextContainer}>
-                                    <Text style={styles.dateLabel}>End Date (YYYY-MM-DD)</Text>
-                                    <TextInput
-                                        style={styles.dateValueInput}
-                                        value={endDate.toISOString().split('T')[0]}
-                                        onChangeText={(text) => {
-                                            const d = new Date(text);
-                                            if (!isNaN(d)) setEndDate(d);
-                                        }}
-                                    />
+                                <View style={styles.dateBoxInfo}>
+                                    <Text style={styles.dateBoxLabel}>To Date</Text>
+                                    <Text style={styles.dateBoxValue}>{endDate.toLocaleDateString('en-GB')}</Text>
                                 </View>
-                            </View>
+                            </TouchableOpacity>
                         </View>
 
-                        {/* Picker modals disabled due to library issues */}
+                        {showStartPicker && (
+                            <DateTimePicker
+                                value={startDate}
+                                mode="date"
+                                display="default"
+                                onChange={(event, date) => handleDateChange(event, date, true)}
+                            />
+                        )}
 
-                        {/* Subject */}
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Subject</Text>
-                            <View style={styles.subjectInputContainer}>
-                                <BookOpen size={20} color="#64748b" style={styles.inputIcon} />
-                                <TextInput
-                                    style={styles.subjectInput}
-                                    placeholder="e.g., Sick Leave / Sports Meet OD"
-                                    value={subject}
-                                    onChangeText={setSubject}
-                                />
-                            </View>
-                        </View>
+                        {showEndPicker && (
+                            <DateTimePicker
+                                value={endDate}
+                                mode="date"
+                                display="default"
+                                onChange={(event, date) => handleDateChange(event, date, false)}
+                            />
+                        )}
 
-                        {/* Reason */}
+                        {/* Reason Input */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Reason</Text>
-                            <View style={styles.contentInputContainer}>
-                                <MessageSquare size={20} color="#64748b" style={[styles.inputIcon, { marginTop: 12 }]} />
+                            <Text style={styles.label}>Reason for Request</Text>
+                            <View style={styles.textAreaContainer}>
+                                <MessageSquare size={20} color="#94a3b8" style={styles.textAreaIcon} />
                                 <TextInput
-                                    style={styles.contentInput}
-                                    placeholder="Enter your reason here..."
+                                    style={styles.textArea}
+                                    placeholder="Briefly explain your reason..."
                                     multiline
                                     numberOfLines={4}
                                     textAlignVertical="top"
@@ -191,16 +221,17 @@ const StudentLeaveRequest = ({ navigation }) => {
                             </View>
                         </View>
 
-                        {/* Letter Preview */}
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Formal Letter Preview</Text>
-                            <View style={styles.previewBox}>
-                                <Text style={styles.previewText}>{generateLetter()}</Text>
+                        {/* Formal Letter Output */}
+                        <View style={styles.outputSection}>
+                            <Text style={styles.outputLabel}>Generated Formal Letter</Text>
+                            <View style={styles.letterPaper}>
+                                <View style={styles.letterDecoration} />
+                                <Text style={styles.letterText}>{generateLetter()}</Text>
                             </View>
                         </View>
 
                         <TouchableOpacity
-                            style={[styles.submitBtn, loading && styles.disabledBtn]}
+                            style={[styles.sendBtn, loading && styles.disabledBtn]}
                             onPress={handleSubmit}
                             disabled={loading}
                         >
@@ -208,7 +239,7 @@ const StudentLeaveRequest = ({ navigation }) => {
                                 <ActivityIndicator color="#fff" />
                             ) : (
                                 <>
-                                    <Text style={styles.submitBtnText}>Submit Request</Text>
+                                    <Text style={styles.sendBtnText}>Send Request</Text>
                                     <SendHorizontal size={20} color="#fff" />
                                 </>
                             )}
@@ -230,11 +261,7 @@ const styles = StyleSheet.create({
         borderBottomLeftRadius: 32,
         borderBottomRightRadius: 32,
     },
-    headerTop: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
+    headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     backButton: {
         width: 40,
         height: 40,
@@ -244,184 +271,110 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     headerTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
-    content: { flex: 1, padding: 20 },
+    content: { flex: 1, padding: 15 },
     formCard: {
         backgroundColor: '#fff',
         borderRadius: 24,
         padding: 20,
-        elevation: 8,
+        elevation: 10,
         shadowColor: '#000',
         shadowOpacity: 0.1,
-        shadowRadius: 15,
-        shadowOffset: { width: 0, height: 5 },
+        shadowRadius: 20,
+        shadowOffset: { width: 0, height: 10 },
     },
-    prefilledSection: {
-        paddingBottom: 15,
-    },
-    infoRow: {
-        flexDirection: 'row',
-        marginBottom: 8,
-    },
-    infoLabel: {
-        fontSize: 14,
-        color: '#64748b',
-        fontWeight: '600',
-        width: 60,
-    },
-    infoValue: {
-        fontSize: 14,
-        color: '#1e293b',
-        fontWeight: '700',
+    sectionLabel: { fontSize: 14, fontWeight: '700', color: '#64748b', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+    recipientContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, gap: 10 },
+    recipientBtn: {
         flex: 1,
-    },
-    divider: {
-        height: 1,
         backgroundColor: '#f1f5f9',
-        marginBottom: 20,
+        borderRadius: 16,
+        padding: 15,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 2,
+        borderColor: 'transparent'
     },
-    typeSelector: {
+    recipientBtnActive: { backgroundColor: '#800000', borderColor: '#5a0000' },
+    recipientText: { fontSize: 12, fontWeight: '700', color: '#1e293b', marginTop: 8 },
+    recipientTextActive: { color: '#fff' },
+    typeToggle: {
         flexDirection: 'row',
         backgroundColor: '#f1f5f9',
         borderRadius: 12,
         padding: 4,
-        marginBottom: 20,
+        marginBottom: 20
     },
-    typeBtn: {
+    typeOption: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
+    typeOptionActive: { backgroundColor: '#fff', elevation: 2 },
+    typeOptionText: { fontSize: 14, fontWeight: '700', color: '#64748b' },
+    typeOptionTextActive: { color: '#800000' },
+    dateRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, gap: 10 },
+    dateBox: {
         flex: 1,
-        paddingVertical: 10,
-        alignItems: 'center',
-        borderRadius: 10,
-    },
-    typeBtnActive: {
-        backgroundColor: '#fff',
-        elevation: 2,
-    },
-    typeBtnText: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#64748b',
-    },
-    typeBtnTextActive: {
-        color: '#800000',
-    },
-    dateRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 20,
-    },
-    dateInput: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#f8fafc',
         borderWidth: 1,
         borderColor: '#e2e8f0',
-        borderRadius: 12,
+        borderRadius: 16,
         padding: 12,
-        width: '48%',
     },
-    dateTextContainer: {
-        marginLeft: 10,
-    },
-    dateLabel: {
-        fontSize: 10,
-        color: '#94a3b8',
-        fontWeight: '700',
-        textTransform: 'uppercase',
-    },
-    dateValue: {
-        fontSize: 13,
-        color: '#1e293b',
-        fontWeight: '700',
-    },
-    dateValueInput: {
-        fontSize: 13,
-        color: '#1e293b',
-        fontWeight: '700',
-        padding: 0,
-        height: 20
-    },
-    inputGroup: {
-        marginBottom: 20,
-    },
-    label: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#475569',
-        marginBottom: 8,
-        marginLeft: 4,
-    },
-    subjectInputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f8fafc',
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-        borderRadius: 12,
-        paddingHorizontal: 12,
-    },
-    inputIcon: {
-        marginRight: 10,
-    },
-    subjectInput: {
-        flex: 1,
-        paddingVertical: 12,
-        fontSize: 15,
-        color: '#1e293b',
-        fontWeight: '600',
-    },
-    contentInputContainer: {
+    dateBoxInfo: { marginLeft: 10 },
+    dateBoxLabel: { fontSize: 10, color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase' },
+    dateBoxValue: { fontSize: 13, color: '#1e293b', fontWeight: '700' },
+    inputGroup: { marginBottom: 20 },
+    label: { fontSize: 14, fontWeight: '700', color: '#475569', marginBottom: 8 },
+    textAreaContainer: {
         flexDirection: 'row',
         backgroundColor: '#f8fafc',
         borderWidth: 1,
         borderColor: '#e2e8f0',
-        borderRadius: 12,
-        paddingHorizontal: 12,
+        borderRadius: 16,
+        paddingHorizontal: 15,
     },
-    contentInput: {
-        flex: 1,
-        paddingVertical: 12,
-        fontSize: 15,
-        color: '#1e293b',
-        minHeight: 80,
-        fontWeight: '500',
+    textAreaIcon: { marginTop: 15 },
+    textArea: { flex: 1, paddingVertical: 12, paddingLeft: 10, fontSize: 15, color: '#1e293b', minHeight: 100 },
+    outputSection: { marginBottom: 25 },
+    outputLabel: { fontSize: 14, fontWeight: '700', color: '#64748b', marginBottom: 12, textTransform: 'uppercase' },
+    letterPaper: {
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        borderRadius: 4,
+        padding: 20,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
+        minHeight: 200,
+        position: 'relative',
+        overflow: 'hidden'
     },
-    previewBox: {
-        backgroundColor: '#e0e7ff',
-        padding: 15,
-        borderRadius: 12,
-        borderLeftWidth: 4,
-        borderLeftColor: '#4338ca',
-        marginTop: 5
+    letterDecoration: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 5,
+        backgroundColor: '#800000'
     },
-    previewText: {
-        fontSize: 14,
-        color: '#1e293b',
-        lineHeight: 22,
-        fontWeight: '500',
-        fontStyle: 'italic'
-    },
-    submitBtn: {
+    letterText: { fontSize: 14, color: '#334155', lineHeight: 22, fontFamily: Platform.OS === 'ios' ? 'Times New Roman' : 'serif' },
+    sendBtn: {
         flexDirection: 'row',
         backgroundColor: '#800000',
-        borderRadius: 16,
-        paddingVertical: 16,
+        borderRadius: 18,
+        paddingVertical: 18,
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 10,
-        elevation: 4,
+        gap: 12,
+        elevation: 8,
         shadowColor: '#800000',
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-        gap: 10
+        shadowOpacity: 0.4,
+        shadowRadius: 15,
+        shadowOffset: { width: 0, height: 8 },
     },
-    submitBtnText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '800',
-    },
-    disabledBtn: {
-        opacity: 0.7,
-    },
+    sendBtnText: { color: '#fff', fontSize: 18, fontWeight: '800' },
+    disabledBtn: { opacity: 0.7 }
 });
 
 export default StudentLeaveRequest;

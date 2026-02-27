@@ -43,40 +43,59 @@ router.post('/classes', auth(['Admin', 'HOD']), async (req, res) => {
             finalDept = req.user.department;
         }
 
+        // Restriction: Only HOD can assign/change advisors
+        const isHOD = req.user.role === 'HOD';
+
         let cls;
         if (id && id.length > 10) { // Check if it's a valid mongo ID
             cls = await Class.findById(id);
         }
 
         if (cls) {
-            // Unassign old coordinator
-            if (cls.coordinator && String(cls.coordinator) !== String(coordinatorId)) {
-                await User.findByIdAndUpdate(cls.coordinator, {
-                    isCoordinator: false,
-                    $unset: { coordinatorDetails: 1 }
-                });
+            // HOD can only edit classes in their department
+            if (isHOD && cls.department !== req.user.department) {
+                return res.status(403).json({ message: 'Access denied: You can only edit classes in your department' });
+            }
+
+            // If user is not HOD, ignore any coordinatorId changes if they were attempted
+            // If they are HOD, ensure they can only assign for their department
+            if (isHOD) {
+                // If coordinator is being changed
+                if (String(cls.coordinator) !== String(coordinatorId)) {
+                    // Unassign old coordinator
+                    if (cls.coordinator) {
+                        await User.findByIdAndUpdate(cls.coordinator, {
+                            isCoordinator: false,
+                            $unset: { coordinatorDetails: 1 }
+                        });
+                    }
+                    cls.coordinator = coordinatorId || null;
+                }
+            } else {
+                // If Admin is editing, we keep the existing coordinator
+                // coordinatorId from body is ignored for advisor assignment
             }
 
             cls.name = name;
             cls.semester = semester;
             cls.section = section;
-            cls.coordinator = coordinatorId || null; // Use null if empty
             cls.academicYear = academicYear;
             await cls.save();
         } else {
+            // New Class
             cls = new Class({
                 name,
                 department: finalDept,
                 semester,
                 section,
-                coordinator: coordinatorId || null,
+                coordinator: isHOD ? (coordinatorId || null) : null,
                 academicYear
             });
             await cls.save();
         }
 
-        // If coordinator is assigned, update the User model too
-        if (coordinatorId) {
+        // If coordinator is assigned/updated (and user is HOD), update the User model
+        if (isHOD && coordinatorId) {
             await User.findByIdAndUpdate(coordinatorId, {
                 isCoordinator: true,
                 coordinatorDetails: {
@@ -580,13 +599,23 @@ router.get('/hod-stats/:department', auth(['Admin', 'Office', 'HOD']), async (re
 
 // @route   POST api/admin/assign-coordinator
 // @desc    Assign a staff as class coordinator
-// @access  Private (Admin/HOD)
-router.post('/assign-coordinator', auth(['Admin', 'HOD']), async (req, res) => {
+// @access  Private (HOD only)
+router.post('/assign-coordinator', auth(['HOD']), async (req, res) => {
     const { staffId, department, semester, section } = req.body;
     try {
+        // HOD can only assign for their department
+        if (department !== req.user.department) {
+            return res.status(403).json({ message: 'Access denied: You can only assign coordinators for your department' });
+        }
+
         const staff = await User.findById(staffId);
         if (!staff || (staff.role !== 'Staff' && staff.role !== 'HOD')) {
             return res.status(404).json({ message: 'Staff member not found' });
+        }
+
+        // Ensure staff is in the same department
+        if (staff.department !== req.user.department) {
+            return res.status(400).json({ message: 'Staff must be in the same department' });
         }
 
         staff.isCoordinator = true;

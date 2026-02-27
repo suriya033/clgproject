@@ -130,7 +130,9 @@ const CoordinatorRequests = ({ navigation }) => {
                     onPress={() => handleAction(item, 'Approved')}
                 >
                     <Check size={18} color="#fff" />
-                    <Text style={styles.approveText}>Forward to HOD</Text>
+                    <Text style={styles.approveText}>
+                        {item.targetRecipient === 'Class Advisor' ? 'Approve' : 'Forward to HOD'}
+                    </Text>
                 </TouchableOpacity>
             </View>
         </View>

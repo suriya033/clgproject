@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
     StyleSheet,
     Text,
@@ -25,11 +25,16 @@ import {
     Edit2,
     UserCog,
     ChevronDown,
-    ChevronRight
+    ChevronRight,
+    Star,
+    UserMinus,
+    User
 } from 'lucide-react-native';
 import api from '../api/api';
+import { AuthContext } from '../context/AuthContext';
 
 const ClassManagement = ({ navigation, route }) => {
+    const { user } = useContext(AuthContext);
     const departmentFilter = route?.params?.departmentFilter;
     const [classes, setClasses] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -50,6 +55,7 @@ const ClassManagement = ({ navigation, route }) => {
     const [allStudents, setAllStudents] = useState([]);
     const [allStaff, setAllStaff] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
+    const [advisorSearchQuery, setAdvisorSearchQuery] = useState('');
     const [selectedStudents, setSelectedStudents] = useState([]);
 
     useEffect(() => {
@@ -203,12 +209,22 @@ const ClassManagement = ({ navigation, route }) => {
     };
 
     const handleAssignAdvisor = async () => {
-        if (!selectedClassForAdvisor) return;
+        if (!selectedClassForAdvisor || !selectedAdvisor) {
+            Alert.alert('Error', 'Please select a staff member');
+            return;
+        }
+
+        // If it was opened from the "Create New Class" flow (temp ID)
+        if (selectedClassForAdvisor._id === 'temp') {
+            setAdvisor(selectedAdvisor);
+            setAssignAdvisorModalVisible(false);
+            setModalVisible(true); // Go back to create modal
+            setAdvisorSearchQuery('');
+            return;
+        }
 
         setLoading(true);
         try {
-            // Reusing the update class endpoint but only sending necessary data
-            // Or better, trigger the save from here, effectively updating the class with new coordinator
             const classData = {
                 id: selectedClassForAdvisor._id,
                 name: selectedClassForAdvisor.name,
@@ -221,16 +237,23 @@ const ClassManagement = ({ navigation, route }) => {
 
             await api.post('/admin/classes', classData);
 
-            Alert.alert('Success', 'Class Coordinator updated successfully');
+            Alert.alert('Success', 'Class Advisor updated successfully');
             setAssignAdvisorModalVisible(false);
+            setAdvisorSearchQuery('');
             fetchClasses();
         } catch (error) {
             console.error('Save advisor error:', error);
-            Alert.alert('Error', 'Failed to update coordinator');
+            Alert.alert('Error', 'Failed to update advisor');
         } finally {
             setLoading(false);
         }
     };
+
+    const filteredStaff = allStaff.filter(s =>
+        s.name.toLowerCase().includes(advisorSearchQuery.toLowerCase()) ||
+        s.userId.toLowerCase().includes(advisorSearchQuery.toLowerCase()) ||
+        s.department?.toLowerCase().includes(advisorSearchQuery.toLowerCase())
+    );
 
     const renderClassCard = ({ item }) => (
         <View style={styles.card}>
@@ -264,26 +287,85 @@ const ClassManagement = ({ navigation, route }) => {
                 </View>
             </View>
 
-            <View style={styles.advisorSection}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={styles.advisorLabel}>Class Coordinator</Text>
-                    <TouchableOpacity onPress={() => openAdvisorModal(item)}>
-                        <Text style={{ color: '#800000', fontWeight: '600', fontSize: 12 }}>
-                            {item.coordinator ? 'Change' : 'Assign'}
-                        </Text>
-                    </TouchableOpacity>
+            <View style={styles.advisorBox}>
+                <View style={styles.advisorBoxHeader}>
+                    <View style={styles.advisorLabelRow}>
+                        <Star size={14} color="#800000" />
+                        <Text style={styles.advisorLabel}>CLASS ADVISOR</Text>
+                    </View>
                 </View>
-                <View style={styles.advisorInfo}>
-                    <UserCog size={16} color="#800000" />
-                    <Text style={styles.advisorName}>{item.coordinator ? item.coordinator.name : 'Not Assigned'}</Text>
+                <View style={styles.advisorBoxContent}>
+                    <View style={styles.advisorAvatar}>
+                        <Text style={styles.avatarText}>
+                            {item.coordinator ? item.coordinator.name.charAt(0) : '?'}
+                        </Text>
+                    </View>
+                    <View style={styles.advisorInfo}>
+                        <Text style={styles.advisorName}>
+                            {item.coordinator ? item.coordinator.name : 'Not Assigned'}
+                        </Text>
+                        <Text style={styles.advisorId}>
+                            {item.coordinator ? item.coordinator.userId : 'E-------'}
+                        </Text>
+                    </View>
+                    {user?.role === 'HOD' && (
+                        <View style={styles.advisorActions}>
+                            <TouchableOpacity
+                                style={styles.changeAdvisorBtn}
+                                onPress={() => openAdvisorModal(item)}
+                            >
+                                <Text style={styles.changeAdvisorBtnText}>Change</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.unassignAdvisorBtn}
+                                onPress={() => {
+                                    Alert.alert(
+                                        'Unassign Advisor',
+                                        'Are you sure you want to unassign the advisor?',
+                                        [
+                                            { text: 'Cancel', style: 'cancel' },
+                                            {
+                                                text: 'Unassign',
+                                                style: 'destructive',
+                                                onPress: async () => {
+                                                    setLoading(true);
+                                                    try {
+                                                        await api.post('/admin/classes', {
+                                                            id: item._id,
+                                                            name: item.name,
+                                                            section: item.section,
+                                                            semester: item.semester,
+                                                            academicYear: item.academicYear,
+                                                            coordinatorId: null,
+                                                            department: item.department
+                                                        });
+                                                        fetchClasses();
+                                                    } catch (e) {
+                                                        console.error(e);
+                                                    } finally {
+                                                        setLoading(false);
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    );
+                                }}
+                            >
+                                <UserMinus size={18} color="#ef4444" />
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </View>
             </View>
 
             <TouchableOpacity
-                style={styles.assignButton}
+                style={styles.manageStudentsBtn}
                 onPress={() => openAssignModal(item)}
             >
-                <Text style={styles.assignButtonText}>Manage Students</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <BookOpen size={18} color="#475569" />
+                    <Text style={styles.manageStudentsBtnText}>Manage Students</Text>
+                </View>
             </TouchableOpacity>
         </View>
     );
@@ -372,97 +454,112 @@ const ClassManagement = ({ navigation, route }) => {
                 />
             )}
 
-            {/* Advisor Assignment Modal (Dedicated) */}
+            {/* Advisor Assignment Modal (Match Image 2) */}
             <Modal
-                animationType="face"
+                animationType="slide"
                 transparent={true}
                 visible={assignAdvisorModalVisible}
                 onRequestClose={() => setAssignAdvisorModalVisible(false)}
             >
                 <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { height: 'auto', maxHeight: '60%' }]}>
-                        <View style={styles.modalHeader}>
+                    <View style={[styles.modalContent, { height: '85%' }]}>
+                        <View style={[styles.modalHeader, styles.advisorModalHeader]}>
                             <View>
-                                <Text style={styles.modalTitle}>Assign Coordinator</Text>
-                                <Text style={styles.modalSubtitle}>{selectedClassForAdvisor?.name}</Text>
+                                <Text style={styles.modalTitleWhite}>Assign Advisor Staff ({allStaff.length})</Text>
+                                <Text style={styles.modalSubtitleWhite}>
+                                    • Sem {selectedClassForAdvisor?.semester} • Sec {selectedClassForAdvisor?.section}
+                                </Text>
                             </View>
-                            <TouchableOpacity onPress={() => setAssignAdvisorModalVisible(false)} style={styles.closeButton}>
-                                <X size={20} color="#64748b" />
-                            </TouchableOpacity>
-                        </View>
-
-                        <View style={[styles.inputGroup, { marginBottom: 30 }]}>
-                            <Text style={styles.label}>Select Staff Member</Text>
                             <TouchableOpacity
-                                style={styles.dropdownButton}
-                                onPress={() => setShowAdvisorDropdown(!showAdvisorDropdown)}
+                                onPress={() => setAssignAdvisorModalVisible(false)}
+                                style={styles.closeButtonWhite}
                             >
-                                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                                    <UserCog size={20} color="#64748b" style={{ marginRight: 10 }} />
-                                    <Text style={[styles.dropdownText, !selectedAdvisor && { color: '#94a3b8' }]}>
-                                        {selectedAdvisor ? selectedAdvisor.name : 'Select a Teacher'}
-                                    </Text>
-                                </View>
-                                <ChevronDown size={20} color="#64748b" />
+                                <X size={24} color="#fff" />
                             </TouchableOpacity>
-
-                            {showAdvisorDropdown && (
-                                <View style={styles.dropdownList}>
-                                    <ScrollView nestedScrollEnabled={true} style={{ maxHeight: 200 }}>
-                                        {allStaff.length === 0 ? (
-                                            <Text style={styles.emptyDropdownText}>No teachers found</Text>
-                                        ) : (
-                                            <>
-                                                <TouchableOpacity
-                                                    style={[
-                                                        styles.dropdownItem,
-                                                        !selectedAdvisor && styles.dropdownItemActive
-                                                    ]}
-                                                    onPress={() => {
-                                                        setSelectedAdvisor(null);
-                                                        setShowAdvisorDropdown(false);
-                                                    }}
-                                                >
-                                                    <Text style={[
-                                                        styles.dropdownItemText,
-                                                        !selectedAdvisor && styles.dropdownItemTextActive
-                                                    ]}>None (Unassign)</Text>
-                                                    {!selectedAdvisor && <CheckCircle2 size={16} color="#800000" />}
-                                                </TouchableOpacity>
-                                                {allStaff.map(staff => (
-                                                    <TouchableOpacity
-                                                        key={staff._id}
-                                                        style={[
-                                                            styles.dropdownItem,
-                                                            selectedAdvisor?._id === staff._id && styles.dropdownItemActive
-                                                        ]}
-                                                        onPress={() => {
-                                                            setSelectedAdvisor(staff);
-                                                            setShowAdvisorDropdown(false);
-                                                        }}
-                                                    >
-                                                        <Text style={[
-                                                            styles.dropdownItemText,
-                                                            selectedAdvisor?._id === staff._id && styles.dropdownItemTextActive
-                                                        ]}>{staff.name}</Text>
-                                                        {selectedAdvisor?._id === staff._id && <CheckCircle2 size={16} color="#800000" />}
-                                                    </TouchableOpacity>
-                                                ))}
-                                            </>
-                                        )}
-                                    </ScrollView>
-                                </View>
-                            )}
                         </View>
 
-                        <TouchableOpacity style={styles.submitButton} onPress={handleAssignAdvisor}>
-                            <Text style={styles.submitButtonText}>Confirm & Assign</Text>
+                        <View style={styles.searchBarContainer}>
+                            <Search size={20} color="#94a3b8" />
+                            <TextInput
+                                style={styles.searchBarInput}
+                                placeholder="Search all staff members..."
+                                value={advisorSearchQuery}
+                                onChangeText={setAdvisorSearchQuery}
+                            />
+                        </View>
+
+                        <FlatList
+                            data={filteredStaff}
+                            keyExtractor={item => item._id}
+                            showsVerticalScrollIndicator={false}
+                            renderItem={({ item }) => {
+                                const isSelected = selectedAdvisor?._id === item._id;
+                                const isAlreadyCoordinator = item.isCoordinator && !isSelected;
+
+                                return (
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.staffCard,
+                                            isSelected && styles.staffCardSelected
+                                        ]}
+                                        onPress={() => setSelectedAdvisor(item)}
+                                    >
+                                        <View style={[
+                                            styles.staffAvatar,
+                                            isSelected && styles.staffAvatarSelected
+                                        ]}>
+                                            <Text style={[
+                                                styles.staffAvatarText,
+                                                isSelected && styles.staffAvatarTextSelected
+                                            ]}>
+                                                {item.name.charAt(0)}
+                                            </Text>
+                                        </View>
+                                        <View style={styles.staffInfo}>
+                                            <Text style={styles.staffName}>{item.name}</Text>
+                                            <Text style={styles.staffSub}>{item.userId} • {item.department}</Text>
+                                            {isAlreadyCoordinator && (
+                                                <View style={styles.coordinatorStatus}>
+                                                    <Star size={12} color="#f59e0b" fill="#f59e0b" />
+                                                    <Text style={styles.coordinatorStatusText}>Already a Coordinator</Text>
+                                                </View>
+                                            )}
+                                        </View>
+                                        {isSelected && (
+                                            <View style={styles.selectionCheck}>
+                                                <CheckCircle2 size={24} color="#800000" />
+                                            </View>
+                                        )}
+                                    </TouchableOpacity>
+                                );
+                            }}
+                        />
+
+                        {selectedAdvisor && (
+                            <View style={styles.assigningStatus}>
+                                <User size={18} color="#166534" />
+                                <Text style={styles.assigningStatusText}>
+                                    Assigning: <Text style={{ fontWeight: 'bold' }}>{selectedAdvisor.name}</Text>
+                                </Text>
+                            </View>
+                        )}
+
+                        <TouchableOpacity
+                            style={[
+                                styles.confirmAssignBtn,
+                                !selectedAdvisor && styles.btnDisabled
+                            ]}
+                            onPress={handleAssignAdvisor}
+                            disabled={!selectedAdvisor}
+                        >
+                            <UserCog size={20} color="#fff" />
+                            <Text style={styles.confirmAssignBtnText}>Confirm & Assign</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
 
-            {/* Create/Edit Class Modal */}
+            {/* Create/Edit Class Modal (Match Image 1) */}
             <Modal
                 animationType="slide"
                 transparent={true}
@@ -480,110 +577,106 @@ const ClassManagement = ({ navigation, route }) => {
 
                         <ScrollView showsVerticalScrollIndicator={false}>
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Class Name</Text>
+                                <Text style={[styles.label, { color: '#334155' }]}>Class Name</Text>
                                 <TextInput
-                                    style={styles.input}
+                                    style={styles.modernInput}
                                     placeholder="e.g. Computer Science"
                                     value={className}
                                     onChangeText={setClassName}
+                                    placeholderTextColor="#94a3b8"
                                 />
                             </View>
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Section</Text>
+                                <Text style={[styles.label, { color: '#334155' }]}>Section</Text>
                                 <TextInput
-                                    style={styles.input}
+                                    style={styles.modernInput}
                                     placeholder="e.g. A"
                                     value={section}
                                     onChangeText={setSection}
+                                    placeholderTextColor="#94a3b8"
                                 />
                             </View>
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Semester</Text>
+                                <Text style={[styles.label, { color: '#334155' }]}>Semester</Text>
                                 <TextInput
-                                    style={styles.input}
+                                    style={styles.modernInput}
                                     placeholder="e.g. 1"
                                     value={semester}
                                     onChangeText={setSemester}
+                                    placeholderTextColor="#94a3b8"
                                 />
                             </View>
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Academic Year</Text>
+                                <Text style={[styles.label, { color: '#334155' }]}>Academic Year</Text>
                                 <TextInput
-                                    style={styles.input}
+                                    style={styles.modernInput}
                                     placeholder="e.g. 2024-2025"
                                     value={academicYear}
                                     onChangeText={setAcademicYear}
+                                    placeholderTextColor="#94a3b8"
                                 />
                             </View>
 
-                            <View style={[styles.inputGroup, { zIndex: 1000 }]}>
-                                <Text style={styles.label}>Assign Class Advisor</Text>
-                                <TouchableOpacity
-                                    style={styles.dropdownButton}
-                                    onPress={() => setShowAdvisorDropdown(!showAdvisorDropdown)}
-                                >
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                                        <UserCog size={20} color="#64748b" style={{ marginRight: 10 }} />
-                                        <Text style={[styles.dropdownText, !advisor && { color: '#94a3b8' }]}>
-                                            {advisor ? advisor.name : 'Select a Teacher'}
-                                        </Text>
+                            {user?.role === 'HOD' ? (
+                                <View style={styles.inputGroup}>
+                                    <Text style={[styles.label, { color: '#334155' }]}>Assign Class Advisor</Text>
+                                    <TouchableOpacity
+                                        style={styles.modernDropdown}
+                                        onPress={() => {
+                                            setModalVisible(false);
+                                            // We open the dedicated advisor modal instead
+                                            setSelectedClassForAdvisor({
+                                                _id: editId || 'temp',
+                                                name: className,
+                                                section,
+                                                semester,
+                                                academicYear,
+                                                department: user.department // Use HOD's department
+                                            });
+                                            setAssignAdvisorModalVisible(true);
+                                        }}
+                                    >
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                            <UserCog size={20} color="#64748b" style={{ marginRight: 12 }} />
+                                            <Text style={[
+                                                styles.modernDropdownText,
+                                                !advisor && { color: '#94a3b8' }
+                                            ]}>
+                                                {advisor ? advisor.name : 'Click to Select Staff'}
+                                            </Text>
+                                        </View>
+                                        <ChevronDown size={20} color="#64748b" />
+                                    </TouchableOpacity>
+                                </View>
+                            ) : (
+                                <View style={styles.inputGroup}>
+                                    <Text style={[styles.label, { color: '#334155' }]}>Class Advisor</Text>
+                                    <View style={[styles.modernDropdown, { backgroundColor: '#f1f5f9' }]}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                            <UserCog size={20} color="#94a3b8" style={{ marginRight: 12 }} />
+                                            <Text style={[styles.modernDropdownText, { color: '#64748b' }]}>
+                                                {advisor ? advisor.name : 'Not Assigned'}
+                                            </Text>
+                                        </View>
                                     </View>
-                                    <ChevronDown size={20} color="#64748b" />
-                                </TouchableOpacity>
+                                    <Text style={{ fontSize: 11, color: '#f59e0b', marginTop: 4 }}>
+                                        * Only HOD can assign or change advisors
+                                    </Text>
+                                </View>
+                            )}
 
-                                {showAdvisorDropdown && (
-                                    <View style={styles.dropdownList}>
-                                        <ScrollView nestedScrollEnabled={true} style={{ maxHeight: 200 }}>
-                                            {allStaff.length === 0 ? (
-                                                <Text style={styles.emptyDropdownText}>No teachers found</Text>
-                                            ) : (
-                                                <>
-                                                    <TouchableOpacity
-                                                        style={[
-                                                            styles.dropdownItem,
-                                                            !advisor && styles.dropdownItemActive
-                                                        ]}
-                                                        onPress={() => {
-                                                            setAdvisor(null);
-                                                            setShowAdvisorDropdown(false);
-                                                        }}
-                                                    >
-                                                        <Text style={[
-                                                            styles.dropdownItemText,
-                                                            !advisor && styles.dropdownItemTextActive
-                                                        ]}>None (Unassign)</Text>
-                                                        {!advisor && <CheckCircle2 size={16} color="#800000" />}
-                                                    </TouchableOpacity>
-                                                    {allStaff.map(staff => (
-                                                        <TouchableOpacity
-                                                            key={staff._id}
-                                                            style={[
-                                                                styles.dropdownItem,
-                                                                advisor?._id === staff._id && styles.dropdownItemActive
-                                                            ]}
-                                                            onPress={() => {
-                                                                setAdvisor(staff);
-                                                                setShowAdvisorDropdown(false);
-                                                            }}
-                                                        >
-                                                            <Text style={[
-                                                                styles.dropdownItemText,
-                                                                advisor?._id === staff._id && styles.dropdownItemTextActive
-                                                            ]}>{staff.name}</Text>
-                                                            {advisor?._id === staff._id && <CheckCircle2 size={16} color="#800000" />}
-                                                        </TouchableOpacity>
-                                                    ))}
-                                                </>
-                                            )}
-                                        </ScrollView>
-                                    </View>
-                                )}
-                            </View>
-
-                            <TouchableOpacity style={styles.submitButton} onPress={handleCreateClass}>
-                                <Text style={styles.submitButtonText}>{editId ? 'Update Class' : 'Create Class'}</Text>
+                            <TouchableOpacity
+                                style={[
+                                    styles.modernSubmitBtn,
+                                    (!className || !section || !academicYear) && styles.btnDisabled
+                                ]}
+                                onPress={handleCreateClass}
+                            >
+                                <Text style={styles.modernSubmitBtnText}>
+                                    {editId ? 'Update Class' : 'Create Class'}
+                                </Text>
                             </TouchableOpacity>
-                            <View style={{ height: 20 }} />
+                            <View style={{ height: 40 }} />
                         </ScrollView>
                     </View>
                 </View>
@@ -736,43 +829,271 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '500',
     },
-    advisorSection: {
-        backgroundColor: '#f8fafc',
+    // New Advisor Box Styles (Match Image 3)
+    advisorBox: {
+        backgroundColor: '#fff1f2',
+        borderRadius: 16,
         padding: 12,
-        borderRadius: 12,
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: '#f1f5f9'
+        borderColor: '#ffe4e6',
+    },
+    advisorBoxHeader: {
+        marginBottom: 10,
+    },
+    advisorLabelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
     },
     advisorLabel: {
         fontSize: 12,
-        color: '#94a3b8',
-        fontWeight: '600',
-        marginBottom: 6,
-        textTransform: 'uppercase'
+        fontWeight: '800',
+        color: '#800000',
+        letterSpacing: 0.5,
     },
-    advisorInfo: {
+    advisorBoxContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8
+    },
+    advisorAvatar: {
+        width: 44,
+        height: 44,
+        borderRadius: 10,
+        backgroundColor: '#fb718520',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    avatarText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#800000',
+    },
+    advisorInfo: {
+        flex: 1,
     },
     advisorName: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#475569'
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#1e293b',
     },
-    assignButton: {
+    advisorId: {
+        fontSize: 12,
+        color: '#64748b',
+        marginTop: 2,
+    },
+    advisorActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    changeAdvisorBtn: {
+        backgroundColor: '#800000',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+    },
+    changeAdvisorBtnText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    unassignAdvisorBtn: {
+        padding: 6,
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#fee2e2',
+    },
+    manageStudentsBtn: {
         backgroundColor: '#f8fafc',
-        padding: 12,
-        borderRadius: 12,
+        padding: 14,
+        borderRadius: 14,
         alignItems: 'center',
         borderWidth: 1,
         borderColor: '#e2e8f0',
     },
-    assignButtonText: {
+    manageStudentsBtnText: {
+        color: '#475569',
+        fontWeight: '700',
+        fontSize: 15,
+    },
+
+    // Advisor Modal Styles (Match Image 2)
+    advisorModalHeader: {
+        backgroundColor: '#800000',
+        marginHorizontal: -24,
+        marginTop: -24,
+        padding: 24,
+        borderTopLeftRadius: 30,
+        borderTopRightRadius: 30,
+        marginBottom: 20,
+    },
+    modalTitleWhite: {
+        fontSize: 22,
+        fontWeight: '800',
+        color: '#fff',
+    },
+    modalSubtitleWhite: {
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.8)',
+        marginTop: 4,
+    },
+    closeButtonWhite: {
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        borderRadius: 12,
+        padding: 8,
+    },
+    searchBarContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f8fafc',
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        height: 56,
+        marginBottom: 16,
+    },
+    searchBarInput: {
+        flex: 1,
+        marginLeft: 12,
+        fontSize: 16,
         color: '#1e293b',
+    },
+    staffCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
+    },
+    staffCardSelected: {
+        borderColor: '#800000',
+        backgroundColor: '#fff1f2',
+    },
+    staffAvatar: {
+        width: 48,
+        height: 48,
+        borderRadius: 14,
+        backgroundColor: '#f1f5f9',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    staffAvatarSelected: {
+        backgroundColor: '#ffe4e6',
+    },
+    staffAvatarText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#64748b',
+    },
+    staffAvatarTextSelected: {
+        color: '#800000',
+    },
+    staffInfo: {
+        flex: 1,
+    },
+    staffName: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1e293b',
+    },
+    staffSub: {
+        fontSize: 13,
+        color: '#64748b',
+        marginTop: 2,
+    },
+    coordinatorStatus: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        marginTop: 4,
+    },
+    coordinatorStatusText: {
+        fontSize: 11,
+        color: '#d97706',
         fontWeight: '600',
     },
+    selectionCheck: {
+        marginLeft: 12,
+    },
+    assigningStatus: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f0fdf4',
+        padding: 12,
+        borderRadius: 12,
+        marginBottom: 16,
+        gap: 8,
+        borderWidth: 1,
+        borderColor: '#dcfce7',
+    },
+    assigningStatusText: {
+        fontSize: 14,
+        color: '#166534',
+    },
+    confirmAssignBtn: {
+        backgroundColor: '#800000',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        padding: 18,
+        borderRadius: 18,
+    },
+    confirmAssignBtnText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '800',
+    },
+    btnDisabled: {
+        opacity: 0.5,
+    },
+
+    // Modern Modal Input Styles (Match Image 1)
+    modernInput: {
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        borderRadius: 14,
+        padding: 16,
+        fontSize: 16,
+        color: '#1e293b',
+    },
+    modernDropdown: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        borderRadius: 14,
+        padding: 16,
+    },
+    modernDropdownText: {
+        fontSize: 16,
+        color: '#1e293b',
+        fontWeight: '500',
+    },
+    modernSubmitBtn: {
+        backgroundColor: '#800000',
+        padding: 18,
+        borderRadius: 18,
+        alignItems: 'center',
+        marginTop: 20,
+    },
+    modernSubmitBtnText: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: '800',
+    },
+
     emptyContainer: {
         alignItems: 'center',
         marginTop: 50,
@@ -782,18 +1103,17 @@ const styles = StyleSheet.create({
         color: '#94a3b8',
         fontSize: 16,
     },
-    // Modal
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(0,0,0,0.6)',
         justifyContent: 'flex-end',
     },
     modalContent: {
         backgroundColor: '#fff',
-        borderTopLeftRadius: 30,
-        borderTopRightRadius: 30,
+        borderTopLeftRadius: 36,
+        borderTopRightRadius: 36,
         padding: 24,
-        maxHeight: '90%',
+        maxHeight: '92%',
     },
     modalHeader: {
         flexDirection: 'row',
@@ -802,14 +1122,9 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: '800',
         color: '#1e293b',
-    },
-    modalSubtitle: {
-        fontSize: 14,
-        color: '#64748b',
-        marginTop: 2,
     },
     closeButton: {
         padding: 8,
@@ -818,109 +1133,6 @@ const styles = StyleSheet.create({
     },
     inputGroup: { marginBottom: 20 },
     label: { fontSize: 14, fontWeight: '700', color: '#475569', marginBottom: 8 },
-    input: {
-        backgroundColor: '#f8fafc',
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-        borderRadius: 12,
-        padding: 14,
-        fontSize: 16,
-        color: '#1e293b',
-    },
-    advisorScroll: {
-        flexDirection: 'row',
-        marginTop: 5
-    },
-    advisorOption: {
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 12,
-        backgroundColor: '#f1f5f9',
-        marginRight: 10,
-        borderWidth: 1,
-        borderColor: 'transparent'
-    },
-    advisorOptionActive: {
-        backgroundColor: '#ffe4e6',
-        borderColor: '#800000'
-    },
-    advisorText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#64748b'
-    },
-    advisorTextActive: {
-        color: '#800000'
-    },
-    submitButton: {
-        backgroundColor: '#800000',
-        padding: 16,
-        borderRadius: 16,
-        alignItems: 'center',
-        marginTop: 10,
-    },
-    submitButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '700',
-    },
-    dropdownButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        backgroundColor: '#f8fafc',
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-        borderRadius: 12,
-        padding: 14,
-    },
-    dropdownText: {
-        fontSize: 16,
-        color: '#1e293b',
-        fontWeight: '500'
-    },
-    dropdownList: {
-        position: 'absolute',
-        top: '100%',
-        left: 0,
-        right: 0,
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-        marginTop: 4,
-        maxHeight: 200,
-        zIndex: 5000,
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-    },
-    dropdownItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f1f5f9'
-    },
-    dropdownItemActive: {
-        backgroundColor: '#ffe4e6'
-    },
-    dropdownItemText: {
-        fontSize: 14,
-        color: '#64748b'
-    },
-    dropdownItemTextActive: {
-        color: '#800000',
-        fontWeight: '600'
-    },
-    emptyDropdownText: {
-        padding: 20,
-        textAlign: 'center',
-        color: '#94a3b8'
-    },
     searchBox: {
         flexDirection: 'row',
         alignItems: 'center',
