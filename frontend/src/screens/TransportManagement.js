@@ -35,7 +35,7 @@ import {
     Menu,
     AlertCircle
 } from 'lucide-react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, UrlTile } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/api';
@@ -748,7 +748,6 @@ const TransportManagement = ({ navigation }) => {
                         <View style={{ flex: 1, position: 'relative' }}>
                             <MapView
                                 ref={mapRef}
-                                provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
                                 style={styles.map}
                                 initialRegion={busLocation}
                                 region={!busLocation.isPlaceholder ? busLocation : undefined}
@@ -757,7 +756,13 @@ const TransportManagement = ({ navigation }) => {
                                 showsCompass={true}
                                 loadingEnabled={true}
                                 onMapReady={() => setMapReady(true)}
+                                mapType={Platform.OS === 'android' ? "none" : "standard"}
                             >
+                                <UrlTile
+                                    urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                    maximumZ={19}
+                                    flipY={false}
+                                />
                                 {!busLocation.isPlaceholder && (
                                     <Marker
                                         coordinate={{

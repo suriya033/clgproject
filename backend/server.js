@@ -84,6 +84,7 @@ app.use('/api/bulk-leave', require('./routes/bulkLeave'));
 app.use('/api/notes', require('./routes/notes'));
 app.use('/api/faculty-lounge', require('./routes/facultyLounge'));
 app.use('/api/assignments', require('./routes/assignments'));
+app.use('/api/question-papers', require('./routes/questionPapers'));
 
 const PORT = process.env.PORT || 5002;
 const HOST = '0.0.0.0';

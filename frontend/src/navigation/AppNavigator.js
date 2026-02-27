@@ -57,6 +57,8 @@ import ClassSelectionScreen from '../screens/ClassSelectionScreen';
 import StudentLibrary from '../screens/StudentLibrary';
 import StudentFees from '../screens/StudentFees';
 import SmartRequestDashboard from '../screens/SmartRequestDashboard';
+import ChangePassword from '../screens/ChangePassword';
+import QuestionPapersScreen from '../screens/QuestionPapersScreen';
 
 const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -87,7 +89,6 @@ const MainStack = () => {
                     <Stack.Screen name="ExamCell" component={ExamCell} />
                     <Stack.Screen name="Placements" component={GenericDashboard} />
                     <Stack.Screen name="ClassManagement" component={ClassManagement} />
-                    <Stack.Screen name="Announcements" component={NoticeManagement} />
                     <Stack.Screen name="TimeTableGenerator" component={TimeTableGenerator} />
                     <Stack.Screen name="TimetableViewer" component={TimetableViewer} />
                     <Stack.Screen name="ComplaintViewer" component={ComplaintViewer} />
@@ -115,7 +116,6 @@ const MainStack = () => {
                         <Stack.Screen name="Complaints" component={StudentComplaint} />
                         <Stack.Screen name="Fees" component={StudentFees} />
                         <Stack.Screen name="ViewNotes" component={ViewNotes} />
-                        <Stack.Screen name="Announcements" component={NoticeManagement} />
                     </>
                 )
             }
@@ -148,7 +148,6 @@ const MainStack = () => {
                         <Stack.Screen name="StaffManagement" component={StaffManagement} />
                         <Stack.Screen name="StudentManagement" component={StudentManagement} />
                         <Stack.Screen name="SubjectManagement" component={SubjectManagement} />
-                        <Stack.Screen name="Announcements" component={NoticeManagement} />
                         <Stack.Screen name="StaffCIAMarks" component={StaffCIAMarks} />
                         <Stack.Screen name="StaffTimetable" component={StaffTimetable} />
                         <Stack.Screen name="TimetableViewer" component={TimetableViewer} />
@@ -185,7 +184,6 @@ const MainStack = () => {
                         <Stack.Screen name="OfficeDashboard" component={OfficeDashboard} />
                         <Stack.Screen name="CollegeManagement" component={CollegeManagement} />
                         <Stack.Screen name="Fees" component={FeeManagement} />
-                        <Stack.Screen name="Announcements" component={NoticeManagement} />
                         <Stack.Screen name="StudentManagement" component={StudentManagement} />
                         <Stack.Screen name="StaffManagement" component={StaffManagement} />
                         <Stack.Screen name="LibraryManagement" component={LibraryManagement} />
@@ -212,6 +210,9 @@ const MainStack = () => {
             <Stack.Screen name="Transport" component={TransportManagement} />
             <Stack.Screen name="GenericDashboard" component={GenericDashboard} />
             <Stack.Screen name="DefaultDashboard" component={GenericDashboard} />
+            <Stack.Screen name="ChangePassword" component={ChangePassword} />
+            <Stack.Screen name="QuestionPapers" component={QuestionPapersScreen} />
+            <Stack.Screen name="Announcements" component={NoticeManagement} />
         </Stack.Navigator >
     );
 };

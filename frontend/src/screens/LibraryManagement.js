@@ -376,6 +376,14 @@ const LibraryManagement = ({ navigation }) => {
                         <Text style={styles.headerTitle}>Library Portal</Text>
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {currentUser?.role === 'Library' && (
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('QuestionPapers')}
+                                style={[styles.backButton, { marginRight: 10 }]}
+                            >
+                                <FileText size={22} color="#fff" />
+                            </TouchableOpacity>
+                        )}
                         {currentUser?.role === 'Admin' && (
                             <TouchableOpacity
                                 onPress={() => navigation.navigate('UserManagement', { roleFilter: 'Library' })}

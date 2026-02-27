@@ -13,7 +13,7 @@ import {
     Platform
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Check, X, UserMinus } from 'lucide-react-native';
+import { ChevronLeft, Check, X, UserMinus, Clock, Calendar } from 'lucide-react-native';
 import api from '../api/api';
 
 const MarkAttendance = ({ navigation, route }) => {

@@ -90,7 +90,6 @@ const StaffDashboard = ({ navigation }) => {
 
     const stats = [
         { id: '1', title: 'Classes Today', value: classesCount, icon: <Calendar size={24} color="#800000" />, bg: '#fee2e2', sub: nextClassInfo },
-        { id: '2', title: 'Students', value: '120+', icon: <Users size={24} color="#0891b2" />, bg: '#cffafe', sub: 'Total Active' },
     ];
 
     const managementLinks = [
@@ -141,7 +140,7 @@ const StaffDashboard = ({ navigation }) => {
                             </TouchableOpacity>
                             <View style={{ flex: 1, marginLeft: 15 }}>
                                 <Text style={styles.dateText}>{getDateString()}</Text>
-                                <Text style={styles.userName}>{user?.name?.split(' ')[0] || 'Staff'}</Text>
+                                <Text style={styles.userName}>{user?.name || 'Staff'}</Text>
                             </View>
                             <TouchableOpacity
                                 onPress={() => navigation.navigate('Announcements')}

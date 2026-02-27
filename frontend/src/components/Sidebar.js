@@ -20,7 +20,8 @@ import {
     ChevronRight,
     User,
     Heart,
-    Home
+    Home,
+    ShieldCheck
 } from 'lucide-react-native';
 import { AuthContext } from '../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -47,9 +48,10 @@ const Sidebar = ({ navigation }) => {
         { id: '1', title: 'Bus Track', icon: <Bus size={22} color="#800000" />, route: 'Transport' },
         { id: '2', title: 'Food Availability', icon: <Utensils size={22} color="#800000" />, route: 'GenericDashboard', params: { title: 'Cafeteria' } },
         { id: '3', title: 'Notes', icon: <FileText size={22} color="#800000" />, route: 'GenericDashboard', params: { title: 'Notes' } },
-        { id: '4', title: 'Question Papers', icon: <BookOpen size={22} color="#800000" />, route: 'GenericDashboard', params: { title: 'Exam Papers' } },
+        { id: '4', title: 'Question Papers', icon: <BookOpen size={22} color="#800000" />, route: 'QuestionPapers' },
         { id: '5', title: 'App Feedback', icon: <MessageSquare size={22} color="#800000" />, route: 'GenericDashboard', params: { title: 'Feedback' } },
         { id: '6', title: 'Settings', icon: <Settings size={22} color="#800000" />, route: 'GenericDashboard', params: { title: 'Settings' } },
+        { id: '7', title: 'Change Password', icon: <ShieldCheck size={22} color="#800000" />, route: 'ChangePassword' },
     ];
 
     return (

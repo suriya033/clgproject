@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 
 // Determine base URL depending on platform
 // For Android emulator use 10.0.2.2, otherwise use local IP or localhost as appropriate.
-const DEV_MACHINE_IP = '192.168.43.191'; // Updated to current machine IP
+const DEV_MACHINE_IP = '10.59.74.154'; // Updated to current machine IP
 
 const API_URL = Platform.select({
   web: 'http://localhost:5002/api',
@@ -86,6 +86,10 @@ api.interceptors.response.use(
   }
 );
 
+export const auth = {
+  changePassword: (data) => api.put('/auth/change-password', data),
+};
+
 export const college = {
   createAnnouncement: (formData) => api.post('/college/announcements', formData, {
     headers: {
@@ -100,6 +104,10 @@ export const college = {
   getCourses: () => api.get('/college/courses'),
   createCourse: (data) => api.post('/college/courses', data),
   deleteCourse: (id) => api.delete(`/college/courses/${id}`),
+  getQuestionPapers: () => api.get('/question-papers'),
+  uploadQuestionPaper: (formData) => api.post('/question-papers', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
 };
 
 export default api;
