@@ -16,9 +16,45 @@ import {
     ScrollView
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
-import { ArrowLeft, Search, Plus, Trash2, X, ChevronRight, UserPlus, Camera, Image as ImageIcon, Edit2, Save, ChevronDown, Check, TrendingUp } from 'lucide-react-native';
+import { ArrowLeft, Search, Plus, Trash2, X, ChevronRight, UserPlus, Camera, Image as ImageIcon, Edit2, Save, ChevronDown, Check, TrendingUp, FileUp } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import api from '../api/api';
+
+const parseCSV = (text) => {
+    const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+    if (lines.length < 2) return [];
+
+    // Simple parser that handles basic CSV strings
+    const headers = lines[0].split(',').map(h => h.trim());
+    return lines.slice(1).map(line => {
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+                inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+                values.push(current.trim());
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        values.push(current.trim());
+
+        return headers.reduce((obj, header, i) => {
+            const val = values[i];
+            // Format some fields
+            if (val === 'undefined' || val === null) obj[header] = '';
+            else obj[header] = val;
+            return obj;
+        }, {});
+    });
+};
 
 const EditItem = ({ label, value, onChange }) => (
     <View style={styles.detailItem}>
@@ -229,6 +265,68 @@ const UserManagement = ({ navigation, route }) => {
             Alert.alert('Error', 'Failed to fetch users');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleImportCSV = async () => {
+        try {
+            const result = await DocumentPicker.getDocumentAsync({
+                type: 'text/comma-separated-values',
+                copyToCacheDirectory: true
+            });
+
+            if (result.canceled) return;
+
+            const fileUri = result.assets[0].uri;
+            const content = await FileSystem.readAsStringAsync(fileUri);
+            const data = parseCSV(content);
+
+            if (data.length === 0) {
+                Alert.alert('Error', 'No data found in CSV file');
+                return;
+            }
+
+            // Basic validation and formatting
+            const formattedData = data.map(u => ({
+                ...u,
+                role: u.role || (Array.isArray(roleFilter) ? roleFilter[0] : (roleFilter || 'Student')),
+                department: u.department || departmentFilter || '',
+                password: u.password || 'college123' // Default password if missing
+            }));
+
+            Alert.alert(
+                'Import Users',
+                `Found ${formattedData.length} users. Import them now?`,
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Import',
+                        onPress: async () => {
+                            setLoading(true);
+                            try {
+                                const response = await api.post('/admin/users/bulk', formattedData);
+                                const { created, errors } = response.data.stats;
+
+                                let msg = `Successfully created ${created} users.`;
+                                if (errors.length > 0) {
+                                    msg += `\n\nFailed to import ${errors.length} users.`;
+                                    console.log('Import errors:', errors);
+                                }
+                                Alert.alert('Import Result', msg);
+                                fetchUsers();
+                            } catch (err) {
+                                console.error('Bulk import error:', err);
+                                Alert.alert('Error', err.response?.data?.message || 'Failed to import users');
+                            } finally {
+                                setLoading(false);
+                            }
+                        }
+                    }
+                ]
+            );
+        } catch (error) {
+            console.error('Document picker error:', error);
+            Alert.alert('Error', 'Failed to pick or read document');
         }
     };
 
@@ -540,8 +638,19 @@ const UserManagement = ({ navigation, route }) => {
                                                             { label: '3rd Year', value: '3' },
                                                             { label: '4th Year', value: '4' },
                                                         ]}
-                                                        onSelect={(val) => setEditFormData({ ...editFormData, year: val })}
+                                                        onSelect={(val) => setEditFormData({ ...editFormData, year: val, semester: '' })}
                                                         placeholder="Select Academic Year"
+                                                    />
+                                                    <CustomDropdown
+                                                        label="Semester"
+                                                        value={editFormData.semester}
+                                                        options={editFormData.year ? [
+                                                            { label: `Semester ${parseInt(editFormData.year) * 2 - 1}`, value: (parseInt(editFormData.year) * 2 - 1).toString() },
+                                                            { label: `Semester ${parseInt(editFormData.year) * 2}`, value: (parseInt(editFormData.year) * 2).toString() }
+                                                        ] : []}
+                                                        onSelect={(val) => setEditFormData({ ...editFormData, semester: val })}
+                                                        placeholder="Select Semester"
+                                                        disabled={!editFormData.year}
                                                     />
                                                     <EditItem label="Section" value={editFormData.section} onChange={(text) => setEditFormData({ ...editFormData, section: text })} />
                                                 </>
@@ -566,8 +675,9 @@ const UserManagement = ({ navigation, route }) => {
                                             <DetailItem label="DOB" value={selectedUser.dob || 'Not specified'} />
                                             {selectedUser.role === 'Student' && (
                                                 <>
-                                                    <DetailItem label="Branch" value={selectedUser.branch || 'Not specified'} />
-                                                    <DetailItem label="Year" value={selectedUser.year || 'Not specified'} />
+        
+                                                    <DetailItem label="Year" value={selectedUser.year ? `${selectedUser.year} Year` : 'Not specified'} />
+                                                    <DetailItem label="Semester" value={selectedUser.semester ? `Semester ${selectedUser.semester}` : 'Not specified'} />
                                                     <DetailItem label="Section" value={selectedUser.section || 'Not specified'} />
                                                 </>
                                             )}
@@ -604,9 +714,14 @@ const UserManagement = ({ navigation, route }) => {
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Add New {Array.isArray(roleFilter) ? roleFilter[0] : (roleFilter || 'User')}</Text>
-                            <TouchableOpacity onPress={() => setModalVisible(false)}>
-                                <X size={24} color="#64748b" />
-                            </TouchableOpacity>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
+                                <TouchableOpacity onPress={handleImportCSV} style={{ backgroundColor: '#f1f5f9', padding: 8, borderRadius: 10 }}>
+                                    <FileUp size={20} color="#800000" />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => setModalVisible(false)}>
+                                    <X size={24} color="#64748b" />
+                                </TouchableOpacity>
+                            </View>
                         </View>
 
                         <ScrollView style={styles.formScrollView} showsVerticalScrollIndicator={false}>
@@ -768,8 +883,20 @@ const UserManagement = ({ navigation, route }) => {
                                             { label: '3rd Year', value: '3' },
                                             { label: '4th Year', value: '4' },
                                         ]}
-                                        onSelect={(val) => setNewUser({ ...newUser, year: val })}
+                                        onSelect={(val) => setNewUser({ ...newUser, year: val, semester: '' })}
                                         placeholder="Select Academic Year"
+                                    />
+
+                                    <CustomDropdown
+                                        label="Semester"
+                                        value={newUser.semester}
+                                        options={newUser.year ? [
+                                            { label: `Semester ${parseInt(newUser.year) * 2 - 1}`, value: (parseInt(newUser.year) * 2 - 1).toString() },
+                                            { label: `Semester ${parseInt(newUser.year) * 2}`, value: (parseInt(newUser.year) * 2).toString() }
+                                        ] : []}
+                                        onSelect={(val) => setNewUser({ ...newUser, semester: val })}
+                                        placeholder="Select Semester"
+                                        disabled={!newUser.year}
                                     />
 
                                     <View style={styles.inputGroup}>
@@ -783,16 +910,7 @@ const UserManagement = ({ navigation, route }) => {
                                         />
                                     </View>
 
-                                    <View style={styles.inputGroup}>
-                                        <Text style={styles.label}>Semester</Text>
-                                        <TextInput
-                                            style={styles.input}
-                                            value={newUser.semester}
-                                            onChangeText={(text) => setNewUser({ ...newUser, semester: text })}
-                                            placeholder="Enter Semester (e.g., 1, 2)"
-                                            keyboardType="numeric"
-                                        />
-                                    </View>
+
 
                                     <View style={styles.inputGroup}>
                                         <Text style={styles.label}>Residency Type</Text>

@@ -42,7 +42,8 @@ import {
     FileText,
     AlertCircle,
     CreditCard,
-    Menu
+    Menu,
+    Bus
 } from 'lucide-react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -146,6 +147,7 @@ const StudentDashboard = ({ navigation }) => {
         { id: '7', title: 'Complaint', icon: <AlertCircle size={24} color="#fff" />, start: '#dc2626', end: '#ef4444', route: 'Complaints' },
         { id: '8', title: 'Fees', icon: <CreditCard size={24} color="#fff" />, start: '#16a34a', end: '#22c55e', route: 'Fees' },
         { id: '9', title: 'Assignments', icon: <FileText size={24} color="#fff" />, start: '#0891b2', end: '#06b6d4', route: 'Assignments' },
+        { id: '10', title: 'Track Bus', icon: <Bus size={24} color="#fff" />, start: '#f97316', end: '#fb923c', route: 'Transport' },
     ];
 
     const formatYear = (year) => {

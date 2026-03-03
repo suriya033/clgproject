@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect } from 'react';
 import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, ScrollView, ActivityIndicator, StatusBar, Platform, Image, Dimensions, RefreshControl } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/api';
-import { LogOut, Users, FileText, CheckSquare, Bell, Calendar, Megaphone, GraduationCap, Eye, X, ImageIcon, Award, BookOpen, Clock, ChevronRight, ClipboardList, Menu } from 'lucide-react-native';
+import { LogOut, Users, FileText, CheckSquare, Bell, Calendar, Megaphone, GraduationCap, Eye, X, ImageIcon, Award, BookOpen, Clock, ChevronRight, ClipboardList, Menu, Bus } from 'lucide-react-native';
 import { Modal } from 'react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -107,6 +107,7 @@ const StaffDashboard = ({ navigation }) => {
         { id: '2', title: 'Upload Notes', icon: <FileText size={24} color="#fff" />, startColor: '#2563eb', endColor: '#3b82f6', route: 'UploadNotes' },
         { id: '4', title: 'Faculty Lounge', icon: <Users size={24} color="#fff" />, startColor: '#7c3aed', endColor: '#8b5cf6', route: 'FacultyLounge' },
         { id: '5', title: 'Assignments', icon: <FileText size={24} color="#fff" />, startColor: '#0891b2', endColor: '#06b6d4', route: 'ClassSelection' },
+        { id: '6', title: 'Track Bus', icon: <Bus size={24} color="#fff" />, startColor: '#f97316', endColor: '#fb923c', route: 'Transport' },
     ];
 
     const getDateString = () => {

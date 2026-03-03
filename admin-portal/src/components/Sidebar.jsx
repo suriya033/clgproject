@@ -8,7 +8,8 @@ import {
     LogOut,
     ShieldCheck,
     Building,
-    GraduationCap
+    GraduationCap,
+    Bus
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -19,7 +20,8 @@ const Sidebar = () => {
         { name: 'User Management', path: '/users', icon: Users },
         { name: 'Question Papers', path: '/papers', icon: BookOpen },
         { name: 'Announcements', path: '/announcements', icon: Bell },
-        { name: 'Colleges', path: '/colleges', icon: Building },
+        { name: 'Subjects', path: '/colleges', icon: Building },
+        { name: 'Transport', path: '/transport', icon: Bus },
     ];
 
     const handleLogout = () => {

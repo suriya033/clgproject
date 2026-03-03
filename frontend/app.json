@@ -11,10 +11,8 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "ios": {
-      "supportsTablet": true
-    },
     "android": {
+      "package": "com.suriya033.clgproject",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -22,7 +20,21 @@
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
-      ]
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "dl2b4ikTisngkEATOb0rVcvnd56PUKds9GtDNQxh3aSEDzif"
+        }
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.suriya033.clgproject",
+      "supportsTablet": true,
+      "config": {
+        "googleMaps": {
+          "apiKey": "dl2b4ikTisngkEATOb0rVcvnd56PUKds9GtDNQxh3aSEDzif"
+        }
+      }
     },
     "plugins": [
       [

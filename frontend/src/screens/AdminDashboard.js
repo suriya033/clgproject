@@ -195,7 +195,7 @@ const AdminDashboard = ({ navigation }) => {
                             <TouchableOpacity><Text style={styles.seeAll}>See All</Text></TouchableOpacity>
                         </View>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-                            <TouchableOpacity style={[styles.actionCard]} activeOpacity={0.9}>
+                            <TouchableOpacity style={[styles.actionCard]} activeOpacity={0.9} onPress={() => navigation.navigate('Transport')}>
                                 <LinearGradient colors={['#800000', '#a52a2a']} style={styles.actionGradient}>
                                     <Bus size={28} color="#fff" />
                                     <Text style={styles.actionLabel}>Track Bus</Text>

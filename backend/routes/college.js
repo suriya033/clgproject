@@ -158,6 +158,61 @@ router.put('/subjects/:id', auth(['Admin', 'Office']), async (req, res) => {
     }
 });
 
+// @route   POST api/college/subjects/bulk
+// @desc    Bulk create subjects
+// @access  Private (Admin/Office/HOD)
+router.post('/subjects/bulk', auth(['Admin', 'Office', 'HOD']), async (req, res) => {
+    try {
+        const subjects = req.body;
+        if (!Array.isArray(subjects)) {
+            return res.status(400).json({ message: 'Invalid data format' });
+        }
+
+        const stats = { created: 0, errors: [] };
+
+        // Cache departments for performance
+        const allDepts = await Department.find({});
+        const deptMap = {};
+        allDepts.forEach(d => {
+            deptMap[d.name.toLowerCase()] = d._id;
+        });
+
+        for (const subData of subjects) {
+            try {
+                // Resolve department if string
+                if (typeof subData.department === 'string') {
+                    const deptId = deptMap[subData.department.toLowerCase()];
+                    if (!deptId) {
+                        stats.errors.push({ id: subData.code || subData.name, error: `Department '${subData.department}' not found` });
+                        continue;
+                    }
+                    subData.department = deptId;
+                }
+
+                // Check if subject exists
+                if (subData.code) {
+                    const existing = await Subject.findOne({ code: subData.code });
+                    if (existing) {
+                        stats.errors.push({ id: subData.code, error: 'Subject code already exists' });
+                        continue;
+                    }
+                }
+
+                const subject = new Subject(subData);
+                await subject.save();
+                stats.created++;
+            } catch (err) {
+                stats.errors.push({ id: subData.code || subData.name, error: err.message });
+            }
+        }
+
+        res.json({ message: 'Bulk import completed', stats });
+    } catch (err) {
+        console.error('Bulk Subject Error:', err);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 // --- Announcement Routes ---
 router.post('/announcements', auth(['Admin', 'HOD', 'Office']), upload.single('attachment'), async (req, res) => {
     try {

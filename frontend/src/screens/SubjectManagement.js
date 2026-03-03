@@ -30,10 +30,43 @@ import {
     Clock,
     Check,
     Calendar,
-    ChevronDown
+    ChevronDown,
+    FileUp
 } from 'lucide-react-native';
 import api from '../api/api';
 import { AuthContext } from '../context/AuthContext';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
+
+const parseCSV = (text) => {
+    const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+    if (lines.length < 2) return [];
+
+    const headers = lines[0].split(',').map(h => h.trim());
+    return lines.slice(1).map(line => {
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+                inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+                values.push(current.trim());
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        values.push(current.trim());
+
+        return headers.reduce((obj, header, i) => {
+            obj[header] = values[i];
+            return obj;
+        }, {});
+    });
+};
 
 const { width } = Dimensions.get('window');
 
@@ -259,6 +292,60 @@ const SubjectManagement = ({ navigation, route }) => {
         }
     }, [searchQuery, subjects]);
 
+    const handleImportCSV = async () => {
+        try {
+            const result = await DocumentPicker.getDocumentAsync({
+                type: 'text/comma-separated-values',
+                copyToCacheDirectory: true
+            });
+
+            if (result.canceled) return;
+
+            const fileUri = result.assets[0].uri;
+            const content = await FileSystem.readAsStringAsync(fileUri);
+            const data = parseCSV(content);
+
+            if (data.length === 0) {
+                Alert.alert('Error', 'No data found in CSV file');
+                return;
+            }
+
+            Alert.alert(
+                'Import Subjects',
+                `Found ${data.length} subjects. Import them now?`,
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Import',
+                        onPress: async () => {
+                            setLoading(true);
+                            try {
+                                const response = await api.post('/college/subjects/bulk', data);
+                                const { created, errors } = response.data.stats;
+
+                                let msg = `Successfully created ${created} subjects.`;
+                                if (errors.length > 0) {
+                                    msg += `\n\nFailed to import ${errors.length} subjects.`;
+                                    console.log('Import errors:', errors);
+                                }
+                                Alert.alert('Import Result', msg);
+                                fetchData();
+                            } catch (err) {
+                                console.error('Bulk import error:', err);
+                                Alert.alert('Error', err.response?.data?.message || 'Failed to import subjects');
+                            } finally {
+                                setLoading(false);
+                            }
+                        }
+                    }
+                ]
+            );
+        } catch (error) {
+            console.error('Document picker error:', error);
+            Alert.alert('Error', 'Failed to pick or read document');
+        }
+    };
+
     const handleCreateOrUpdate = async () => {
         if (!name || !shortName || !code || !credits || !department || !year || !semester) {
             Alert.alert('Error', 'Please fill all fields');
@@ -474,9 +561,14 @@ const SubjectManagement = ({ navigation, route }) => {
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>{editId ? 'Edit Subject' : 'Add Subject'}</Text>
-                            <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
-                                <X size={20} color="#64748b" />
-                            </TouchableOpacity>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
+                                <TouchableOpacity onPress={handleImportCSV} style={{ backgroundColor: '#f1f5f9', padding: 8, borderRadius: 10 }}>
+                                    <FileUp size={20} color="#800000" />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+                                    <X size={20} color="#64748b" />
+                                </TouchableOpacity>
+                            </View>
                         </View>
 
                         <ScrollView showsVerticalScrollIndicator={false}>

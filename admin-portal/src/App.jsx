@@ -7,6 +7,9 @@ import QuestionPapers from './pages/QuestionPapers';
 import LoginPage from './pages/LoginPage';
 import './index.css';
 
+import Subjects from './pages/Subjects';
+import Transport from './pages/Transport';
+
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
   return token ? children : <Navigate to="/login" />;
@@ -29,6 +32,8 @@ function App() {
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/users" element={<UserManagement />} />
                   <Route path="/papers" element={<QuestionPapers />} />
+                  <Route path="/colleges" element={<Subjects />} />
+                  <Route path="/transport" element={<Transport />} />
                   <Route path="*" element={<Navigate to="/" />} />
                 </Routes>
               </main>

@@ -35,7 +35,7 @@ import {
     Menu,
     AlertCircle
 } from 'lucide-react-native';
-import MapView, { Marker, UrlTile } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE, UrlTile } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/api';
@@ -118,7 +118,10 @@ const TransportManagement = ({ navigation }) => {
                     longitudeDelta: 0.01,
                 };
 
-                setBusLocation(newCoords);
+                setBusLocation({
+                    ...newCoords,
+                    lastUpdated: response.data.location.lastUpdated
+                });
 
                 // Animate to new position if map is ready
                 if (mapRef.current && mapReady) {
@@ -754,12 +757,17 @@ const TransportManagement = ({ navigation }) => {
                                 showsUserLocation={true}
                                 showsMyLocationButton={true}
                                 showsCompass={true}
-                                loadingEnabled={true}
-                                onMapReady={() => setMapReady(true)}
+                                loadingEnabled={Platform.OS === 'ios'}
+                                provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
                                 mapType={Platform.OS === 'android' ? "none" : "standard"}
+                                onMapReady={() => {
+                                    console.log('🗺️ Map component ready');
+                                    setMapReady(true);
+                                }}
+                                onMapLoaded={() => console.log('✅ Map tiles loaded')}
                             >
                                 <UrlTile
-                                    urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                    urlTemplate="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                     maximumZ={19}
                                     flipY={false}
                                 />
@@ -784,13 +792,14 @@ const TransportManagement = ({ navigation }) => {
                                         <AlertCircle size={20} color="#ef4444" />
                                         <Text style={styles.noLocationText}>Waiting for Driver to start Trip...</Text>
                                     </View>
+                                    <Text style={styles.debugText}>If map tiles don't load, check if 'Maps SDK for Android' is enabled in Google Console.</Text>
                                 </View>
                             )}
                         </View>
                     ) : (
                         <View style={styles.mapLoading}>
                             <ActivityIndicator size="large" color="#800000" />
-                            <Text style={styles.mapLoadingText}>Initializing Map...</Text>
+                            <Text style={styles.mapLoadingText}>Checking GPS Connection...</Text>
                         </View>
                     )}
 
@@ -804,7 +813,9 @@ const TransportManagement = ({ navigation }) => {
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.driverNameMap}>{trackingBus?.driverName || 'No Driver'}</Text>
                                 <Text style={styles.driverStatus}>
-                                    {busLocation ? '● Live Updates' : '○ Connecting...'}
+                                    {busLocation && !busLocation.isPlaceholder ?
+                                        `● Last seen: ${new Date(busLocation.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` :
+                                        '○ Waiting for location...'}
                                 </Text>
                             </View>
                             <TouchableOpacity onPress={fetchBusLocation} style={styles.refreshBtn}>
@@ -1123,6 +1134,13 @@ const styles = StyleSheet.create({
         marginTop: 10,
         color: '#64748b',
         fontWeight: '600',
+    },
+    debugText: {
+        fontSize: 10,
+        color: '#94a3b8',
+        marginTop: 8,
+        textAlign: 'center',
+        paddingHorizontal: 20
     },
     busMarker: {
         backgroundColor: '#800000',

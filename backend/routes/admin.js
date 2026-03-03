@@ -685,6 +685,50 @@ router.get('/student-full-details/:id', auth(['Admin', 'HOD', 'Staff']), async (
     }
 });
 
+// @route   POST api/admin/users/bulk
+// @desc    Bulk create users
+// @access  Private (Admin/Office/HOD)
+router.post('/users/bulk', auth(['Admin', 'Office', 'HOD']), async (req, res) => {
+    try {
+        const users = req.body;
+        if (!Array.isArray(users)) {
+            return res.status(400).json({ message: 'Invalid data format. Expected an array.' });
+        }
+
+        const stats = { created: 0, errors: [] };
+
+        for (const userData of users) {
+            try {
+                // Basic validation
+                if (!userData.userId || !userData.email || !userData.name || !userData.role) {
+                    stats.errors.push({ id: userData.userId || 'Unknown', error: 'Missing required fields' });
+                    continue;
+                }
+
+                // Check if user already exists
+                const existing = await User.findOne({
+                    $or: [{ userId: userData.userId }, { email: userData.email }]
+                });
+                if (existing) {
+                    stats.errors.push({ id: userData.userId, error: 'User ID or Email already exists' });
+                    continue;
+                }
+
+                const user = new User(userData);
+                await user.save();
+                stats.created++;
+            } catch (err) {
+                stats.errors.push({ id: userData.userId, error: err.message });
+            }
+        }
+
+        res.json({ message: 'Bulk import completed', stats });
+    } catch (err) {
+        console.error('Bulk User Error:', err);
+        res.status(500).send('Server error');
+    }
+});
+
 module.exports = router;
 
 // @route   POST api/admin/complaints
