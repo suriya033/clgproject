@@ -4,7 +4,7 @@ import {
     ScrollView, Alert, ActivityIndicator, Modal, FlatList, Switch
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Plus, Cpu, Users, LayoutDashboard, Calendar, School } from 'lucide-react-native';
+import { ChevronLeft, Plus, Cpu, Users, LayoutDashboard, Calendar, School, Edit2, Trash2 } from 'lucide-react-native';
 import api from '../api/api';
 
 const ExamSeatArrangement = ({ navigation }) => {
@@ -14,10 +14,16 @@ const ExamSeatArrangement = ({ navigation }) => {
     // Halls State
     const [halls, setHalls] = useState([]);
     const [newHall, setNewHall] = useState({ hallName: '', benches: '', seatsPerBench: '2', building: '', floor: '' });
+    const [isEditingHall, setIsEditingHall] = useState(false);
+    const [editHallId, setEditHallId] = useState(null);
 
     // Exams State
     const [exams, setExams] = useState([]);
-    const [newExam, setNewExam] = useState({ examName: '', subjectCode: '', date: '', participatingDepartments: '' });
+    const [subjects, setSubjects] = useState([]);
+    const [subjectSearch, setSubjectSearch] = useState('');
+    const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
+    const [studentCount, setStudentCount] = useState(null);
+    const [newExam, setNewExam] = useState({ examName: '', subjectName: '', subjectCode: '', date: '', session: 'Forenoon', year: '', semester: '', section: '', participatingDepartments: '' });
 
     // Generation State
     const [selectedExamId, setSelectedExamId] = useState(null);
@@ -28,7 +34,45 @@ const ExamSeatArrangement = ({ navigation }) => {
     useEffect(() => {
         fetchHalls();
         fetchExams();
+        fetchSubjects();
     }, []);
+
+    useEffect(() => {
+        const fetchStudentCount = async () => {
+            if (newExam.participatingDepartments || newExam.year || newExam.semester || newExam.section) {
+                try {
+                    const res = await api.post('/exam-room/student-count', {
+                        department: newExam.participatingDepartments,
+                        year: newExam.year,
+                        semester: newExam.semester,
+                        section: newExam.section
+                    });
+                    if (res.data.success) {
+                        setStudentCount(res.data.count);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch student count:", error);
+                }
+            } else {
+                setStudentCount(null);
+            }
+        };
+
+        const timeoutId = setTimeout(() => {
+            fetchStudentCount();
+        }, 500);
+
+        return () => clearTimeout(timeoutId);
+    }, [newExam.participatingDepartments, newExam.year, newExam.semester, newExam.section]);
+
+    const fetchSubjects = async () => {
+        try {
+            const res = await api.get('/college/subjects');
+            setSubjects(res.data);
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
     const fetchHalls = async () => {
         try {
@@ -48,19 +92,61 @@ const ExamSeatArrangement = ({ navigation }) => {
         }
     };
 
-    const handleCreateHall = async () => {
+    const handleCreateOrUpdateHall = async () => {
         if (!newHall.hallName || !newHall.benches || !newHall.seatsPerBench) return Alert.alert('Error', 'Fill required hall fields');
         try {
             setLoading(true);
-            await api.post('/exam-room/hall', newHall);
+            if (isEditingHall) {
+                await api.put(`/exam-room/hall/${editHallId}`, newHall);
+                Alert.alert('Success', 'Hall updated successfully');
+            } else {
+                await api.post('/exam-room/hall', newHall);
+                Alert.alert('Success', 'Hall created successfully');
+            }
             setNewHall({ hallName: '', benches: '', seatsPerBench: '2', building: '', floor: '' });
+            setIsEditingHall(false);
+            setEditHallId(null);
             fetchHalls();
-            Alert.alert('Success', 'Hall created successfully');
         } catch (error) {
-            Alert.alert('Error', error.response?.data?.message || 'Failed to create hall');
+            Alert.alert('Error', error.response?.data?.message || 'Failed to save hall');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleEditClick = (hall) => {
+        setNewHall({
+            hallName: hall.hallName,
+            benches: hall.benches.toString(),
+            seatsPerBench: hall.seatsPerBench.toString(),
+            building: hall.building || '',
+            floor: hall.floor || ''
+        });
+        setIsEditingHall(true);
+        setEditHallId(hall._id);
+        setActiveTab('Halls');
+    };
+
+    const handleDeleteHall = async (id) => {
+        Alert.alert('Confirm Delete', 'Are you sure you want to delete this hall?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        setLoading(true);
+                        await api.delete(`/exam-room/hall/${id}`);
+                        Alert.alert('Success', 'Hall deleted successfully');
+                        fetchHalls();
+                    } catch (error) {
+                        Alert.alert('Error', error.response?.data?.message || 'Failed to delete hall');
+                    } finally {
+                        setLoading(false);
+                    }
+                }
+            }
+        ]);
     };
 
     const handleCreateExam = async () => {
@@ -71,7 +157,8 @@ const ExamSeatArrangement = ({ navigation }) => {
             setLoading(true);
             const deptArray = newExam.participatingDepartments.split(',').map(d => d.trim());
             await api.post('/exam-room/exam', { ...newExam, participatingDepartments: deptArray });
-            setNewExam({ examName: '', subjectCode: '', date: '', participatingDepartments: '' });
+            setNewExam({ examName: '', subjectName: '', subjectCode: '', date: '', session: 'Forenoon', year: '', semester: '', section: '', participatingDepartments: '' });
+            setSubjectSearch('');
             fetchExams();
             Alert.alert('Success', 'Exam created successfully');
         } catch (error) {
@@ -141,20 +228,43 @@ const ExamSeatArrangement = ({ navigation }) => {
             <ScrollView contentContainerStyle={styles.content}>
                 {activeTab === 'Halls' && (
                     <View style={styles.card}>
-                        <Text style={styles.cardTitle}>Add New Exam Hall</Text>
+                        <Text style={styles.cardTitle}>{isEditingHall ? 'Edit Exam Hall' : 'Add New Exam Hall'}</Text>
                         <TextInput style={styles.input} placeholder="Hall Name (e.g. A-101)" value={newHall.hallName} onChangeText={t => setNewHall({ ...newHall, hallName: t })} />
                         <TextInput style={styles.input} placeholder="Number of Benches" keyboardType="numeric" value={newHall.benches} onChangeText={t => setNewHall({ ...newHall, benches: t })} />
                         <TextInput style={styles.input} placeholder="Seats per Bench" keyboardType="numeric" value={newHall.seatsPerBench} onChangeText={t => setNewHall({ ...newHall, seatsPerBench: t })} />
+                        <TextInput style={styles.input} placeholder="Block (Optional)" value={newHall.building} onChangeText={t => setNewHall({ ...newHall, building: t })} />
+                        <TextInput style={styles.input} placeholder="Floor (Optional)" value={newHall.floor} onChangeText={t => setNewHall({ ...newHall, floor: t })} />
 
-                        <TouchableOpacity style={styles.primaryBtn} onPress={handleCreateHall} disabled={loading}>
-                            <Text style={styles.primaryBtnText}>Create Hall</Text>
+                        <TouchableOpacity style={styles.primaryBtn} onPress={handleCreateOrUpdateHall} disabled={loading}>
+                            <Text style={styles.primaryBtnText}>{isEditingHall ? 'Update Hall' : 'Create Hall'}</Text>
                         </TouchableOpacity>
+
+                        {isEditingHall && (
+                            <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#64748b', marginTop: 10 }]} onPress={() => { setIsEditingHall(false); setNewHall({ hallName: '', benches: '', seatsPerBench: '2', building: '', floor: '' }); setEditHallId(null); }}>
+                                <Text style={styles.primaryBtnText}>Cancel</Text>
+                            </TouchableOpacity>
+                        )}
 
                         <Text style={[styles.cardTitle, { marginTop: 30 }]}>Registered Halls</Text>
                         {halls.map(h => (
                             <View key={h._id} style={styles.listItem}>
-                                <Text style={styles.listItemTitle}>{h.hallName}</Text>
-                                <Text style={styles.listItemSub}>Capacity: {h.totalSeats} ({h.benches} benches x {h.seatsPerBench})</Text>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.listItemTitle}>{h.hallName}</Text>
+                                    <Text style={styles.listItemSub}>Capacity: {h.totalSeats} ({h.benches} benches x {h.seatsPerBench})</Text>
+                                    {(h.building || h.floor) && (
+                                        <Text style={styles.listItemSub}>
+                                            {h.building ? `Block: ${h.building}` : ''} {h.floor ? `| Floor: ${h.floor}` : ''}
+                                        </Text>
+                                    )}
+                                </View>
+                                <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                                    <TouchableOpacity onPress={() => handleEditClick(h)} style={{ padding: 5 }}>
+                                        <Edit2 size={18} color="#3b82f6" />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={() => handleDeleteHall(h._id)} style={{ padding: 5 }}>
+                                        <Trash2 size={18} color="#ef4444" />
+                                    </TouchableOpacity>
+                                </View>
                             </View>
                         ))}
                     </View>
@@ -163,10 +273,78 @@ const ExamSeatArrangement = ({ navigation }) => {
                 {activeTab === 'Exams' && (
                     <View style={styles.card}>
                         <Text style={styles.cardTitle}>Add New Exam</Text>
-                        <TextInput style={styles.input} placeholder="Exam Name" value={newExam.examName} onChangeText={t => setNewExam({ ...newExam, examName: t })} />
-                        <TextInput style={styles.input} placeholder="Subject Code (e.g. CS101)" value={newExam.subjectCode} onChangeText={t => setNewExam({ ...newExam, subjectCode: t })} />
-                        <TextInput style={styles.input} placeholder="Date (YYYY-MM-DD)" value={newExam.date} onChangeText={t => setNewExam({ ...newExam, date: t })} />
-                        <TextInput style={styles.input} placeholder="Departments (e.g. CSE,IT,ECE)" value={newExam.participatingDepartments} onChangeText={t => setNewExam({ ...newExam, participatingDepartments: t })} />
+
+                        {/* 1) Exam Name */}
+                        <TextInput style={styles.input} placeholder="1. Exam Name" value={newExam.examName} onChangeText={t => setNewExam({ ...newExam, examName: t })} />
+
+                        <View style={{ zIndex: 10 }}>
+                            <TextInput
+                                style={[styles.input, { marginBottom: showSubjectDropdown && subjectSearch.length > 0 ? 0 : 12 }]}
+                                placeholder="🔍 Search Subject to Auto-fill..."
+                                value={subjectSearch}
+                                onChangeText={t => {
+                                    setSubjectSearch(t);
+                                    setShowSubjectDropdown(true);
+                                }}
+                                onFocus={() => setShowSubjectDropdown(true)}
+                            />
+                            {showSubjectDropdown && subjectSearch.length > 0 && (
+                                <View style={styles.dropdownContainer}>
+                                    {subjects.filter(s => s.name.toLowerCase().includes(subjectSearch.toLowerCase()) || s.code.toLowerCase().includes(subjectSearch.toLowerCase())).slice(0, 5).map(s => (
+                                        <TouchableOpacity key={s._id} style={styles.dropdownItem} onPress={() => {
+                                            setSubjectSearch('');
+                                            setNewExam({ ...newExam, subjectName: s.name, subjectCode: s.code });
+                                            setShowSubjectDropdown(false);
+                                        }}>
+                                            <Text style={styles.dropdownText}>{s.name} ({s.code})</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+
+                        {/* 2) Subject Name */}
+                        <TextInput style={styles.input} placeholder="2. Subject Name" value={newExam.subjectName} onChangeText={t => setNewExam({ ...newExam, subjectName: t })} />
+
+                        {/* 3) Subject Code */}
+                        <TextInput style={styles.input} placeholder="3. Subject Code (e.g. CS101)" value={newExam.subjectCode} onChangeText={t => setNewExam({ ...newExam, subjectCode: t })} />
+
+                        {/* 4) Date */}
+                        <TextInput style={styles.input} placeholder="4. Date (YYYY-MM-DD)" value={newExam.date} onChangeText={t => setNewExam({ ...newExam, date: t })} />
+
+                        {/* 5) Session */}
+                        <View style={styles.sessionToggleContainer}>
+                            <Text style={styles.sessionToggleLabel}>5. Session:</Text>
+                            <View style={styles.sessionToggleOptions}>
+                                <TouchableOpacity style={[styles.sessionOption, newExam.session === 'Forenoon' && styles.sessionOptionActive]} onPress={() => setNewExam({ ...newExam, session: 'Forenoon' })}>
+                                    <Text style={[styles.sessionOptionText, newExam.session === 'Forenoon' && styles.sessionOptionTextActive]}>Forenoon</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={[styles.sessionOption, newExam.session === 'Afternoon' && styles.sessionOptionActive]} onPress={() => setNewExam({ ...newExam, session: 'Afternoon' })}>
+                                    <Text style={[styles.sessionOptionText, newExam.session === 'Afternoon' && styles.sessionOptionTextActive]}>Afternoon</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        {/* 6) Department */}
+                        <TextInput style={styles.input} placeholder="6. Departments (e.g. CSE,IT)" value={newExam.participatingDepartments} onChangeText={t => setNewExam({ ...newExam, participatingDepartments: t })} />
+
+                        {/* 7, 8, 9) Year, Semester, Section */}
+                        <View style={{ flexDirection: 'row', gap: 10 }}>
+                            <TextInput style={[styles.input, { flex: 1.2 }]} placeholder="7. Year (e.g. 2)" value={newExam.year} onChangeText={t => setNewExam({ ...newExam, year: t })} />
+                            <TextInput style={[styles.input, { flex: 1.2 }]} placeholder="8. Sem (e.g. 4)" value={newExam.semester} onChangeText={t => setNewExam({ ...newExam, semester: t })} />
+                            <TextInput style={[styles.input, { flex: 1 }]} placeholder="9. Sec (e.g. A)" value={newExam.section} onChangeText={t => setNewExam({ ...newExam, section: t })} />
+                        </View>
+
+                        {/* Student Count Display */}
+                        {studentCount !== null && (
+                            <View style={{ backgroundColor: '#e0f2fe', padding: 15, borderRadius: 12, marginBottom: 15, flexDirection: 'row', alignItems: 'center' }}>
+                                <Users size={20} color="#0284c7" style={{ marginRight: 10 }} />
+                                <View>
+                                    <Text style={{ color: '#0369a1', fontWeight: '800', fontSize: 16 }}>Expected Headcount</Text>
+                                    <Text style={{ color: '#0284c7', fontSize: 14 }}>{studentCount} {studentCount === 1 ? 'student' : 'students'} match this criteria</Text>
+                                </View>
+                            </View>
+                        )}
 
                         <TouchableOpacity style={styles.primaryBtn} onPress={handleCreateExam} disabled={loading}>
                             <Text style={styles.primaryBtnText}>Create Exam</Text>
@@ -300,7 +478,7 @@ const styles = StyleSheet.create({
     primaryBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
     listItem: {
         backgroundColor: '#f8fafc', padding: 15, borderRadius: 12, marginBottom: 10,
-        borderWidth: 1, borderColor: '#e2e8f0'
+        borderWidth: 1, borderColor: '#e2e8f0', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'
     },
     listItemTitle: { fontSize: 16, fontWeight: '700', color: '#334155' },
     listItemSub: { fontSize: 13, color: '#64748b', marginTop: 4 },
@@ -330,7 +508,17 @@ const styles = StyleSheet.create({
     seatsContainer: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
     seatBox: { backgroundColor: '#fff', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#cbd5e1', flex: 1, minWidth: '40%' },
     seatDept: { fontWeight: '800', color: '#1d4ed8', fontSize: 12, marginBottom: 2 },
-    seatRegNo: { color: '#475569', fontSize: 12 }
+    seatRegNo: { color: '#475569', fontSize: 12 },
+    dropdownContainer: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderBottomLeftRadius: 12, borderBottomRightRadius: 12, marginBottom: 12 },
+    dropdownItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+    dropdownText: { color: '#334155', fontWeight: '600' },
+    sessionToggleContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 10 },
+    sessionToggleLabel: { fontSize: 15, fontWeight: '600', color: '#1e293b' },
+    sessionToggleOptions: { flexDirection: 'row', backgroundColor: '#f1f5f9', borderRadius: 8, overflow: 'hidden' },
+    sessionOption: { paddingVertical: 8, paddingHorizontal: 15 },
+    sessionOptionActive: { backgroundColor: '#1d4ed8' },
+    sessionOptionText: { color: '#64748b', fontWeight: '600' },
+    sessionOptionTextActive: { color: '#fff' }
 });
 
 export default ExamSeatArrangement;

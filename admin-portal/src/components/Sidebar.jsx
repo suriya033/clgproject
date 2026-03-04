@@ -21,6 +21,7 @@ const Sidebar = () => {
         { name: 'Question Papers', path: '/papers', icon: BookOpen },
         { name: 'Announcements', path: '/announcements', icon: Bell },
         { name: 'Subjects', path: '/colleges', icon: Building },
+        { name: 'Exam Hall allocation', path: '/exam-halls', icon: ShieldCheck },
         { name: 'Transport', path: '/transport', icon: Bus },
     ];
 

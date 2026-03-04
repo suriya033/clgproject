@@ -11,9 +11,25 @@ const ExamSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
+    subjectName: {
+        type: String,
+        trim: true
+    },
     date: {
         type: Date,
         required: true
+    },
+    year: {
+        type: String,
+        trim: true
+    },
+    semester: {
+        type: String,
+        trim: true
+    },
+    section: {
+        type: String,
+        trim: true
     },
     participatingDepartments: [{
         type: String,
@@ -22,6 +38,10 @@ const ExamSchema = new mongoose.Schema({
     totalStudents: {
         type: Number,
         default: 0
+    },
+    session: {
+        type: String,
+        enum: ['Forenoon', 'Afternoon']
     }
 }, { timestamps: true });
 

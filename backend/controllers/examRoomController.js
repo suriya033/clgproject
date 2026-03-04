@@ -1,6 +1,7 @@
 const Exam = require('../models/Exam');
 const ExamHall = require('../models/ExamHall');
 const User = require('../models/User'); // Where Students are stored with role='Student'
+const SeatingPlan = require('../models/SeatingPlan');
 
 // @desc    Generate Seating Arrangement using CSP AI Algorithm
 // @route   POST /api/exam-room/generate
@@ -23,11 +24,21 @@ exports.generateSeating = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Halls not found.' });
         }
 
-        // Fetch students belonging to the participating departments for this exam
-        const students = await User.find({
-            role: 'Student',
-            department: { $in: exam.participatingDepartments }
-        }).select('_id userId name department year section');
+        let studentQuery = { role: 'Student' };
+        if (exam.participatingDepartments && exam.participatingDepartments.length > 0) {
+            studentQuery.department = { $in: exam.participatingDepartments };
+        }
+        if (exam.year) {
+            studentQuery.year = { $in: exam.year.split(',').map(y => y.trim()).filter(y => !!y) };
+        }
+        if (exam.semester) {
+            studentQuery.semester = { $in: exam.semester.split(',').map(s => s.trim()).filter(s => !!s) };
+        }
+        if (exam.section) {
+            studentQuery.section = { $in: exam.section.split(',').map(s => s.trim()).filter(s => !!s) };
+        }
+
+        const students = await User.find(studentQuery).select('_id userId name department year section');
 
         if (students.length === 0) {
             return res.status(400).json({ success: false, message: 'No students found for the participating departments.' });
@@ -206,6 +217,95 @@ exports.getHalls = async (req, res) => {
     try {
         const halls = await ExamHall.find().sort({ hallName: 1 });
         res.status(200).json({ success: true, data: halls });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Update an Exam Hall
+// @route   PUT /api/exam-room/hall/:id
+exports.updateHall = async (req, res) => {
+    try {
+        const payload = { ...req.body };
+        if (payload.benches && payload.seatsPerBench) {
+            payload.totalSeats = Number(payload.benches) * Number(payload.seatsPerBench);
+        } else if (payload.benches) {
+            const existingHall = await ExamHall.findById(req.params.id);
+            payload.totalSeats = Number(payload.benches) * (existingHall ? existingHall.seatsPerBench : 2);
+        } else if (payload.seatsPerBench) {
+            const existingHall = await ExamHall.findById(req.params.id);
+            payload.totalSeats = (existingHall ? existingHall.benches : 0) * Number(payload.seatsPerBench);
+        }
+
+        const hall = await ExamHall.findByIdAndUpdate(req.params.id, payload, { new: true, runValidators: true });
+        if (!hall) {
+            return res.status(404).json({ success: false, message: 'Hall not found' });
+        }
+        res.status(200).json({ success: true, data: hall });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Delete an Exam Hall
+// @route   DELETE /api/exam-room/hall/:id
+exports.deleteHall = async (req, res) => {
+    try {
+        const hall = await ExamHall.findByIdAndDelete(req.params.id);
+        if (!hall) {
+            return res.status(404).json({ success: false, message: 'Hall not found' });
+        }
+        res.status(200).json({ success: true, message: 'Hall deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Save the tweaked seating plan
+// @route   POST /api/exam-room/save-plan
+exports.savePlan = async (req, res) => {
+    try {
+        const { examId, arrangement, totalStudentsAssigned } = req.body;
+
+        let plan = await SeatingPlan.findOne({ examId });
+        if (plan) {
+            plan.arrangement = arrangement;
+            plan.totalStudentsAssigned = totalStudentsAssigned;
+            await plan.save();
+        } else {
+            plan = new SeatingPlan({ examId, arrangement, totalStudentsAssigned });
+            await plan.save();
+        }
+
+        res.status(200).json({ success: true, message: 'Seating plan saved successfully', plan });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Get count of students based on criteria
+// @route   POST /api/exam-room/student-count
+exports.getStudentCount = async (req, res) => {
+    try {
+        const { department, year, semester, section } = req.body;
+
+        let query = { role: 'Student' };
+
+        if (department) {
+            query.department = { $in: department.split(',').map(d => d.trim()).filter(d => !!d) };
+        }
+        if (year) {
+            query.year = { $in: year.split(',').map(y => y.trim()).filter(y => !!y) };
+        }
+        if (semester) {
+            query.semester = { $in: semester.split(',').map(s => s.trim()).filter(s => !!s) };
+        }
+        if (section) {
+            query.section = { $in: section.split(',').map(s => s.trim()).filter(s => !!s) };
+        }
+
+        const count = await User.countDocuments(query);
+        res.status(200).json({ success: true, count });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

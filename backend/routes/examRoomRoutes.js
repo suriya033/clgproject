@@ -5,7 +5,11 @@ const {
     createExam,
     getExams,
     createHall,
-    getHalls
+    getHalls,
+    updateHall,
+    deleteHall,
+    savePlan,
+    getStudentCount
 } = require('../controllers/examRoomController');
 
 // You might want to import your auth middleware here to protect these routes
@@ -18,5 +22,9 @@ router.post('/exam', createExam);
 router.get('/exams', getExams);
 router.post('/hall', createHall);
 router.get('/halls', getHalls);
+router.put('/hall/:id', updateHall);
+router.delete('/hall/:id', deleteHall);
+router.post('/save-plan', savePlan);
+router.post('/student-count', getStudentCount);
 
 module.exports = router;
