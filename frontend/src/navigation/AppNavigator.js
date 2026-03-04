@@ -22,6 +22,7 @@ import OfficeManagement from '../screens/OfficeManagement';
 import SportsManagement from '../screens/SportsManagement';
 import HostelManagement from '../screens/HostelManagement';
 import ExamCell from '../screens/ExamCell';
+import ExamSeatArrangement from '../screens/ExamSeatArrangement';
 import GenericDashboard from '../screens/GenericDashboard';
 import OfficeDashboard from '../screens/OfficeDashboard';
 import DriverDashboard from '../screens/DriverDashboard';
@@ -87,6 +88,7 @@ const MainStack = () => {
                     <Stack.Screen name="Sports" component={SportsManagement} />
                     <Stack.Screen name="Hostel" component={HostelManagement} />
                     <Stack.Screen name="ExamCell" component={ExamCell} />
+                    <Stack.Screen name="ExamSeatArrangement" component={ExamSeatArrangement} />
                     <Stack.Screen name="Placements" component={GenericDashboard} />
                     <Stack.Screen name="ClassManagement" component={ClassManagement} />
                     <Stack.Screen name="TimeTableGenerator" component={TimeTableGenerator} />

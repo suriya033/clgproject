@@ -86,6 +86,7 @@ const AdminDashboard = ({ navigation }) => {
         { id: '9', title: 'Hostel', icon: <Bed size={24} color="#06b6d4" />, route: 'Hostel', bg: '#ecfeff' },
         { id: '10', title: 'Transport', icon: <Bus size={24} color="#f97316" />, route: 'Transport', bg: '#fff7ed' },
         { id: '11', title: 'Exam Cell', icon: <ClipboardList size={24} color="#14b8a6" />, route: 'ExamCell', bg: '#f0fdfa' },
+        { id: '11b', title: 'Seat Arrange', icon: <ClipboardList size={24} color="#0f766e" />, route: 'ExamSeatArrangement', bg: '#ccfbf1' },
         { id: '12', title: 'Placements', icon: <Briefcase size={24} color="#64748b" />, route: 'Placements', bg: '#f8fafc' },
         { id: '13', title: 'Department', icon: <Building size={24} color="#8b5cf6" />, route: 'DepartmentManagement', bg: '#f5f3ff' },
         { id: '14', title: 'Subjects', icon: <BookOpen size={24} color="#f97316" />, route: 'SubjectManagement', bg: '#fff7ed' },
