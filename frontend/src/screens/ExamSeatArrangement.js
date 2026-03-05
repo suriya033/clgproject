@@ -4,7 +4,7 @@ import {
     ScrollView, Alert, ActivityIndicator, Modal, FlatList, Switch
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Plus, Cpu, Users, LayoutDashboard, Calendar, School, Edit2, Trash2 } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Plus, Cpu, Users, LayoutDashboard, Calendar, School, Edit2, Trash2 } from 'lucide-react-native';
 import api from '../api/api';
 
 const ExamSeatArrangement = ({ navigation }) => {
@@ -24,6 +24,10 @@ const ExamSeatArrangement = ({ navigation }) => {
     const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
     const [studentCount, setStudentCount] = useState(null);
     const [newExam, setNewExam] = useState({ examName: '', subjectName: '', subjectCode: '', date: '', session: 'Forenoon', year: '', semester: '', section: '', participatingDepartments: '' });
+    const [isEditingExam, setIsEditingExam] = useState(false);
+    const [editExamId, setEditExamId] = useState(null);
+    const [examDetailsModalVisible, setExamDetailsModalVisible] = useState(false);
+    const [selectedExamDetails, setSelectedExamDetails] = useState(null);
 
     // Generation State
     const [selectedExamId, setSelectedExamId] = useState(null);
@@ -149,23 +153,74 @@ const ExamSeatArrangement = ({ navigation }) => {
         ]);
     };
 
-    const handleCreateExam = async () => {
+    const handleCreateOrUpdateExam = async () => {
         if (!newExam.examName || !newExam.subjectCode || !newExam.date || !newExam.participatingDepartments) {
             return Alert.alert('Error', 'Fill required exam fields');
         }
         try {
             setLoading(true);
             const deptArray = newExam.participatingDepartments.split(',').map(d => d.trim());
-            await api.post('/exam-room/exam', { ...newExam, participatingDepartments: deptArray });
+            const examPayload = { ...newExam, participatingDepartments: deptArray };
+
+            if (isEditingExam) {
+                await api.put(`/exam-room/exam/${editExamId}`, examPayload);
+                Alert.alert('Success', 'Exam updated successfully');
+            } else {
+                await api.post('/exam-room/exam', examPayload);
+                Alert.alert('Success', 'Exam created successfully');
+            }
+
             setNewExam({ examName: '', subjectName: '', subjectCode: '', date: '', session: 'Forenoon', year: '', semester: '', section: '', participatingDepartments: '' });
             setSubjectSearch('');
+            setIsEditingExam(false);
+            setEditExamId(null);
             fetchExams();
-            Alert.alert('Success', 'Exam created successfully');
         } catch (error) {
-            Alert.alert('Error', error.response?.data?.message || 'Failed to create exam');
+            Alert.alert('Error', error.response?.data?.message || 'Failed to save exam');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleEditExamClick = (exam) => {
+        setNewExam({
+            examName: exam.examName || '',
+            subjectName: exam.subjectName || '',
+            subjectCode: exam.subjectCode || '',
+            date: exam.date || '',
+            session: exam.session || 'Forenoon',
+            year: exam.year || '',
+            semester: exam.semester || '',
+            section: exam.section || '',
+            participatingDepartments: exam.participatingDepartments?.join(',') || ''
+        });
+        setIsEditingExam(true);
+        setEditExamId(exam._id);
+        setExamDetailsModalVisible(false); // Close details modal if open
+        setActiveTab('Exams');
+    };
+
+    const handleDeleteExam = async (id) => {
+        Alert.alert('Confirm Delete', 'Are you sure you want to delete this exam?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        setLoading(true);
+                        await api.delete(`/exam-room/exam/${id}`);
+                        Alert.alert('Success', 'Exam deleted successfully');
+                        setExamDetailsModalVisible(false);
+                        fetchExams();
+                    } catch (error) {
+                        Alert.alert('Error', error.response?.data?.message || 'Failed to delete exam');
+                    } finally {
+                        setLoading(false);
+                    }
+                }
+            }
+        ]);
     };
 
     const toggleHallSelection = (id) => {
@@ -187,8 +242,8 @@ const ExamSeatArrangement = ({ navigation }) => {
                 selectedHallIds: selectedHallIds
             });
             if (res.data.success) {
-                setGeneratedSeating(res.data.arrangement);
                 setSeatingStats({ exam: res.data.exam, totalAssigned: res.data.totalStudentsAssigned });
+                setGeneratedSeating(res.data.arrangement);
                 Alert.alert('Success', 'Seating Arrangement Generated Successfully');
             }
         } catch (error) {
@@ -272,7 +327,7 @@ const ExamSeatArrangement = ({ navigation }) => {
 
                 {activeTab === 'Exams' && (
                     <View style={styles.card}>
-                        <Text style={styles.cardTitle}>Add New Exam</Text>
+                        <Text style={styles.cardTitle}>{isEditingExam ? 'Edit Exam' : 'Add New Exam'}</Text>
 
                         {/* 1) Exam Name */}
                         <TextInput style={styles.input} placeholder="1. Exam Name" value={newExam.examName} onChangeText={t => setNewExam({ ...newExam, examName: t })} />
@@ -346,16 +401,29 @@ const ExamSeatArrangement = ({ navigation }) => {
                             </View>
                         )}
 
-                        <TouchableOpacity style={styles.primaryBtn} onPress={handleCreateExam} disabled={loading}>
-                            <Text style={styles.primaryBtnText}>Create Exam</Text>
+                        <TouchableOpacity style={styles.primaryBtn} onPress={handleCreateOrUpdateExam} disabled={loading}>
+                            <Text style={styles.primaryBtnText}>{isEditingExam ? 'Update Exam' : 'Create Exam'}</Text>
                         </TouchableOpacity>
+
+                        {isEditingExam && (
+                            <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: '#64748b', marginTop: 10 }]} onPress={() => { setIsEditingExam(false); setNewExam({ examName: '', subjectName: '', subjectCode: '', date: '', session: 'Forenoon', year: '', semester: '', section: '', participatingDepartments: '' }); setEditExamId(null); }}>
+                                <Text style={styles.primaryBtnText}>Cancel</Text>
+                            </TouchableOpacity>
+                        )}
 
                         <Text style={[styles.cardTitle, { marginTop: 30 }]}>Generated Exams</Text>
                         {exams.map(e => (
-                            <View key={e._id} style={styles.listItem}>
-                                <Text style={styles.listItemTitle}>{e.examName} | {e.subjectCode}</Text>
-                                <Text style={styles.listItemSub}>Depts: {e.participatingDepartments.join(', ')}</Text>
-                            </View>
+                            <TouchableOpacity
+                                key={e._id}
+                                style={styles.listItem}
+                                onPress={() => { setSelectedExamDetails(e); setExamDetailsModalVisible(true); }}
+                            >
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.listItemTitle}>{e.examName} | {e.subjectCode}</Text>
+                                    <Text style={styles.listItemSub}>Depts: {e.participatingDepartments.join(', ')}</Text>
+                                </View>
+                                <ChevronRight size={20} color="#cbd5e1" />
+                            </TouchableOpacity>
                         ))}
                     </View>
                 )}
@@ -399,9 +467,9 @@ const ExamSeatArrangement = ({ navigation }) => {
                         ) : (
                             <View style={styles.resultsContainer}>
                                 <View style={styles.resHeader}>
-                                    <Text style={styles.resTitle}>Success: {seatingStats.exam.name}</Text>
-                                    <Text style={styles.resSub}>Allocated Students: {seatingStats.totalAssigned}</Text>
-                                    <TouchableOpacity style={styles.resetBtn} onPress={() => setGeneratedSeating(null)}>
+                                    <Text style={styles.resTitle}>Success: {seatingStats?.exam?.name || 'Exam Seating'}</Text>
+                                    <Text style={styles.resSub}>Allocated Students: {seatingStats?.totalAssigned || 0}</Text>
+                                    <TouchableOpacity style={styles.resetBtn} onPress={() => { setGeneratedSeating(null); setSeatingStats(null); }}>
                                         <Text style={styles.resetBtnText}>Start Over</Text>
                                     </TouchableOpacity>
                                 </View>
@@ -436,6 +504,70 @@ const ExamSeatArrangement = ({ navigation }) => {
                     </View>
                 )}
             </ScrollView>
+
+            {/* Exam Details Modal */}
+            <Modal
+                visible={examDetailsModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setExamDetailsModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        {selectedExamDetails && (
+                            <>
+                                <View style={styles.modalHeader}>
+                                    <View>
+                                        <Text style={styles.modalTitle}>{selectedExamDetails.examName}</Text>
+                                        <Text style={{ color: '#64748b', marginTop: 2 }}>{selectedExamDetails.subjectCode} - {selectedExamDetails.subjectName}</Text>
+                                    </View>
+                                </View>
+
+                                <ScrollView showsVerticalScrollIndicator={false} style={{ marginVertical: 15 }}>
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.detailLabel}>Date:</Text>
+                                        <Text style={styles.detailValue}>{selectedExamDetails.date}</Text>
+                                    </View>
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.detailLabel}>Session:</Text>
+                                        <Text style={styles.detailValue}>{selectedExamDetails.session}</Text>
+                                    </View>
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.detailLabel}>Departments:</Text>
+                                        <Text style={styles.detailValue}>{selectedExamDetails.participatingDepartments?.join(', ') || 'N/A'}</Text>
+                                    </View>
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.detailLabel}>Year / Sem:</Text>
+                                        <Text style={styles.detailValue}>Year {selectedExamDetails.year || 'All'}, Sem {selectedExamDetails.semester || 'All'}</Text>
+                                    </View>
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.detailLabel}>Section:</Text>
+                                        <Text style={styles.detailValue}>{selectedExamDetails.section || 'All'}</Text>
+                                    </View>
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.detailLabel}>Students Assigned:</Text>
+                                        <Text style={styles.detailValue}>{selectedExamDetails.totalStudents || 'Pending AI Generation'}</Text>
+                                    </View>
+                                </ScrollView>
+
+                                <View style={styles.modalActions}>
+                                    <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#3b82f6' }]} onPress={() => handleEditExamClick(selectedExamDetails)}>
+                                        <Edit2 size={18} color="#fff" style={{ marginRight: 6 }} />
+                                        <Text style={styles.modalBtnText}>Edit</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#ef4444' }]} onPress={() => handleDeleteExam(selectedExamDetails._id)}>
+                                        <Trash2 size={18} color="#fff" style={{ marginRight: 6 }} />
+                                        <Text style={styles.modalBtnText}>Delete</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#64748b' }]} onPress={() => setExamDetailsModalVisible(false)}>
+                                        <Text style={styles.modalBtnText}>Close</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </>
+                        )}
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };
@@ -518,7 +650,17 @@ const styles = StyleSheet.create({
     sessionOption: { paddingVertical: 8, paddingHorizontal: 15 },
     sessionOptionActive: { backgroundColor: '#1d4ed8' },
     sessionOptionText: { color: '#64748b', fontWeight: '600' },
-    sessionOptionTextActive: { color: '#fff' }
+    sessionOptionTextActive: { color: '#fff' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+    modalContent: { backgroundColor: '#fff', borderRadius: 20, padding: 20, maxHeight: '80%' },
+    modalHeader: { paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: '#e2e8f0', marginBottom: 10 },
+    modalTitle: { fontSize: 20, fontWeight: '800', color: '#1e293b' },
+    detailRow: { flexDirection: 'row', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+    detailLabel: { flex: 1, fontSize: 15, fontWeight: '700', color: '#64748b' },
+    detailValue: { flex: 2, fontSize: 15, color: '#334155', fontWeight: '500' },
+    modalActions: { flexDirection: 'row', gap: 10, marginTop: 10 },
+    modalBtn: { flex: 1, flexDirection: 'row', backgroundColor: '#e2e8f0', padding: 12, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+    modalBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 }
 });
 
 export default ExamSeatArrangement;

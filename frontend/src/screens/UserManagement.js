@@ -259,6 +259,13 @@ const UserManagement = ({ navigation, route }) => {
                 filteredUsers = filteredUsers.filter(user => user.year === yearFilter);
             }
 
+            // Sort users by their User ID
+            filteredUsers.sort((a, b) => {
+                if (!a.userId) return 1;
+                if (!b.userId) return -1;
+                return a.userId.toString().localeCompare(b.userId.toString(), undefined, { numeric: true, sensitivity: 'base' });
+            });
+
             setUsers(filteredUsers);
         } catch (error) {
             console.error('Error fetching users:', error);
@@ -675,7 +682,7 @@ const UserManagement = ({ navigation, route }) => {
                                             <DetailItem label="DOB" value={selectedUser.dob || 'Not specified'} />
                                             {selectedUser.role === 'Student' && (
                                                 <>
-        
+
                                                     <DetailItem label="Year" value={selectedUser.year ? `${selectedUser.year} Year` : 'Not specified'} />
                                                     <DetailItem label="Semester" value={selectedUser.semester ? `Semester ${selectedUser.semester}` : 'Not specified'} />
                                                     <DetailItem label="Section" value={selectedUser.section || 'Not specified'} />

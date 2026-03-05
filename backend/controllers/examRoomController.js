@@ -26,16 +26,20 @@ exports.generateSeating = async (req, res) => {
 
         let studentQuery = { role: 'Student' };
         if (exam.participatingDepartments && exam.participatingDepartments.length > 0) {
-            studentQuery.department = { $in: exam.participatingDepartments };
+            const depts = exam.participatingDepartments.map(d => d.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(d => !!d);
+            studentQuery.department = { $in: depts.map(d => new RegExp(`^\\s*${d}\\s*$`, 'i')) };
         }
         if (exam.year) {
-            studentQuery.year = { $in: exam.year.split(',').map(y => y.trim()).filter(y => !!y) };
+            const years = exam.year.split(',').map(y => y.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(y => !!y);
+            studentQuery.year = { $in: years.map(y => new RegExp(`^\\s*${y}\\s*$`, 'i')) };
         }
         if (exam.semester) {
-            studentQuery.semester = { $in: exam.semester.split(',').map(s => s.trim()).filter(s => !!s) };
+            const sems = exam.semester.split(',').map(s => s.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(s => !!s);
+            studentQuery.semester = { $in: sems.map(s => new RegExp(`^\\s*${s}\\s*$`, 'i')) };
         }
         if (exam.section) {
-            studentQuery.section = { $in: exam.section.split(',').map(s => s.trim()).filter(s => !!s) };
+            const secs = exam.section.split(',').map(s => s.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(s => !!s);
+            studentQuery.section = { $in: secs.map(s => new RegExp(`^\\s*${s}\\s*$`, 'i')) };
         }
 
         const students = await User.find(studentQuery).select('_id userId name department year section');
@@ -193,6 +197,30 @@ exports.getExams = async (req, res) => {
     }
 };
 
+// @desc    Update Exam
+// @route   PUT /api/exam-room/exam/:id
+exports.updateExam = async (req, res) => {
+    try {
+        const exam = await Exam.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!exam) return res.status(404).json({ success: false, message: 'Exam not found' });
+        res.status(200).json({ success: true, data: exam });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Delete Exam
+// @route   DELETE /api/exam-room/exam/:id
+exports.deleteExam = async (req, res) => {
+    try {
+        const exam = await Exam.findByIdAndDelete(req.params.id);
+        if (!exam) return res.status(404).json({ success: false, message: 'Exam not found' });
+        res.status(200).json({ success: true, message: 'Exam deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 // @desc    Create new Exam Hall
 // @route   POST /api/exam-room/hall
 exports.createHall = async (req, res) => {
@@ -292,16 +320,20 @@ exports.getStudentCount = async (req, res) => {
         let query = { role: 'Student' };
 
         if (department) {
-            query.department = { $in: department.split(',').map(d => d.trim()).filter(d => !!d) };
+            const depts = department.split(',').map(d => d.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(d => !!d);
+            query.department = { $in: depts.map(d => new RegExp(`^\\s*${d}\\s*$`, 'i')) };
         }
         if (year) {
-            query.year = { $in: year.split(',').map(y => y.trim()).filter(y => !!y) };
+            const years = year.split(',').map(y => y.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(y => !!y);
+            query.year = { $in: years.map(y => new RegExp(`^\\s*${y}\\s*$`, 'i')) };
         }
         if (semester) {
-            query.semester = { $in: semester.split(',').map(s => s.trim()).filter(s => !!s) };
+            const sems = semester.split(',').map(s => s.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(s => !!s);
+            query.semester = { $in: sems.map(s => new RegExp(`^\\s*${s}\\s*$`, 'i')) };
         }
         if (section) {
-            query.section = { $in: section.split(',').map(s => s.trim()).filter(s => !!s) };
+            const secs = section.split(',').map(s => s.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(s => !!s);
+            query.section = { $in: secs.map(s => new RegExp(`^\\s*${s}\\s*$`, 'i')) };
         }
 
         const count = await User.countDocuments(query);

@@ -4,6 +4,8 @@ const {
     generateSeating,
     createExam,
     getExams,
+    updateExam,
+    deleteExam,
     createHall,
     getHalls,
     updateHall,
@@ -20,6 +22,8 @@ const {
 router.post('/generate', generateSeating);
 router.post('/exam', createExam);
 router.get('/exams', getExams);
+router.put('/exam/:id', updateExam);
+router.delete('/exam/:id', deleteExam);
 router.post('/hall', createHall);
 router.get('/halls', getHalls);
 router.put('/hall/:id', updateHall);
