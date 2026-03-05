@@ -35,7 +35,7 @@ import {
     Menu,
     AlertCircle
 } from 'lucide-react-native';
-import MapView, { Marker, PROVIDER_GOOGLE, UrlTile } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api/api';
@@ -52,12 +52,13 @@ const TransportManagement = ({ navigation }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [editId, setEditId] = useState(null);
 
-    // Tracking State
+    // Map / Tracking State
     const [trackingBus, setTrackingBus] = useState(null);
     const [mapModalVisible, setMapModalVisible] = useState(false);
     const [busLocation, setBusLocation] = useState(null);
     const [mapReady, setMapReady] = useState(false);
     const mapRef = useRef(null);
+    const webViewRef = useRef(null);
 
     // Form State
     const [busNumber, setBusNumber] = useState('');
@@ -108,36 +109,44 @@ const TransportManagement = ({ navigation }) => {
 
     const fetchBusLocation = async () => {
         if (!trackingBus) return;
+
+        const defaultCoords = {
+            latitude: 12.9716, // Default fallback (e.g. Bangalore)
+            longitude: 77.5946,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+            isPlaceholder: true
+        };
+
         try {
             const response = await api.get(`/transport/bus/${trackingBus._id}/location`);
-            if (response.data.location && response.data.location.lat) {
+            // Robust check for valid latitude/longitude numbers
+            if (response.data.location &&
+                typeof response.data.location.lat === 'number' &&
+                typeof response.data.location.lng === 'number') {
+
                 const newCoords = {
-                    latitude: parseFloat(response.data.location.lat),
-                    longitude: parseFloat(response.data.location.lng),
+                    latitude: response.data.location.lat,
+                    longitude: response.data.location.lng,
                     latitudeDelta: 0.01,
                     longitudeDelta: 0.01,
                 };
 
                 setBusLocation({
                     ...newCoords,
-                    lastUpdated: response.data.location.lastUpdated
+                    lastUpdated: response.data.location.lastUpdated,
+                    isPlaceholder: false
                 });
 
-                // Animate to new position if map is ready
-                if (mapRef.current && mapReady) {
-                    mapRef.current.animateToRegion(newCoords, 1000);
+                // Inject JS into WebView for smooth live marker update (no full reload)
+                if (webViewRef.current) {
+                    webViewRef.current.injectJavaScript(
+                        `window.updateBusLocation(${newCoords.latitude}, ${newCoords.longitude}); true;`
+                    );
                 }
             } else {
-                // If no location, set a default center (e.g., college main building)
-                // but keep marker hidden or show "not started"
+                // If no location from server, use placeholder
                 if (!busLocation) {
-                    const defaultCoords = {
-                        latitude: 12.9716, // Default fallback (e.g. Bangalore)
-                        longitude: 77.5946,
-                        latitudeDelta: 0.05,
-                        longitudeDelta: 0.05,
-                        isPlaceholder: true
-                    };
                     setBusLocation(defaultCoords);
                     if (mapRef.current && mapReady) {
                         mapRef.current.animateToRegion(defaultCoords, 1000);
@@ -146,15 +155,74 @@ const TransportManagement = ({ navigation }) => {
             }
         } catch (error) {
             console.error('Error fetching bus location', error);
+            // On error, set placeholder if not already set to stop loading screen
+            if (!busLocation) {
+                setBusLocation(defaultCoords);
+            }
         }
     };
 
+    // Generates a full Leaflet.js HTML page with OpenStreetMap tiles (no Google API key needed)
+    const getLeafletHTML = (lat, lng, showMarker, busNumber) => `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+            <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+            <style>
+                * { margin:0; padding:0; box-sizing:border-box; }
+                html, body, #map { height:100%; width:100%; }
+                .bus-pin { width:40px; height:40px; border-radius:50%;
+                    background:#800000; border:3px solid #fff;
+                    display:flex; align-items:center; justify-content:center;
+                    font-size:20px; box-shadow:0 3px 10px rgba(0,0,0,0.4); }
+            </style>
+        </head>
+        <body>
+            <div id="map"></div>
+            <script>
+                var map = L.map('map', { zoomControl:true }).setView([${lat}, ${lng}], ${showMarker ? 16 : 13});
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap'
+                }).addTo(map);
+                var busMarker = null;
+                ${showMarker ? `
+                var busIcon = L.divIcon({ html:'<div class="bus-pin">🚌</div>', className:'', iconSize:[40,40], iconAnchor:[20,20] });
+                busMarker = L.marker([${lat},${lng}], { icon: busIcon }).addTo(map)
+                    .bindPopup('<b>${busNumber || 'Bus'}</b><br>Live Location').openPopup();
+                ` : ''}
+                window.updateBusLocation = function(lat, lng) {
+                    if (!busMarker) {
+                        var busIcon = L.divIcon({ html:'<div class="bus-pin">🚌</div>', className:'', iconSize:[40,40], iconAnchor:[20,20] });
+                        busMarker = L.marker([lat, lng], { icon: busIcon }).addTo(map).bindPopup('<b>Bus<\/b>').openPopup();
+                    } else {
+                        busMarker.setLatLng([lat, lng]);
+                    }
+                    map.panTo([lat, lng]);
+                };
+            <\/script>
+        </body>
+        </html>
+    `;
+
     const handleTrack = (bus) => {
         setTrackingBus(bus);
-        setBusLocation(null);
+        // Set an immediate default location so the map shows instantly
+        // while the background fetch for real location happens.
+        setBusLocation({
+            latitude: 12.9716,
+            longitude: 77.5946,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+            isPlaceholder: true
+        });
         setMapReady(false); // Reset map ready state for new bus
         setMapModalVisible(true);
     };
+
 
     useEffect(() => {
         if (searchQuery.trim() === '') {
@@ -490,7 +558,7 @@ const TransportManagement = ({ navigation }) => {
                     </View>
                 ) : (
                     <FlatList
-                        data={activeTab === 'buses' ? filteredBuses : drivers.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()) || d.userId.toLowerCase().includes(searchQuery.toLowerCase()))}
+                        data={activeTab === 'buses' ? filteredBuses : drivers.filter(d => (d.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) || (d.userId?.toLowerCase() || '').includes(searchQuery.toLowerCase()))}
                         renderItem={activeTab === 'buses' ? renderBusCard : renderDriverCard}
                         keyExtractor={item => item._id}
                         contentContainerStyle={styles.listContent}
@@ -749,50 +817,28 @@ const TransportManagement = ({ navigation }) => {
 
                     {busLocation ? (
                         <View style={{ flex: 1, position: 'relative' }}>
-                            <MapView
-                                ref={mapRef}
+                            <WebView
+                                ref={webViewRef}
                                 style={styles.map}
-                                initialRegion={busLocation}
-                                region={!busLocation.isPlaceholder ? busLocation : undefined}
-                                showsUserLocation={true}
-                                showsMyLocationButton={true}
-                                showsCompass={true}
-                                loadingEnabled={Platform.OS === 'ios'}
-                                provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-                                mapType={Platform.OS === 'android' ? "none" : "standard"}
-                                onMapReady={() => {
-                                    console.log('🗺️ Map component ready');
-                                    setMapReady(true);
+                                source={{
+                                    html: getLeafletHTML(
+                                        busLocation.latitude,
+                                        busLocation.longitude,
+                                        !busLocation.isPlaceholder,
+                                        trackingBus?.busNumber
+                                    )
                                 }}
-                                onMapLoaded={() => console.log('✅ Map tiles loaded')}
-                            >
-                                <UrlTile
-                                    urlTemplate="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                    maximumZ={19}
-                                    flipY={false}
-                                />
-                                {!busLocation.isPlaceholder && (
-                                    <Marker
-                                        coordinate={{
-                                            latitude: busLocation.latitude,
-                                            longitude: busLocation.longitude
-                                        }}
-                                        title={trackingBus?.busNumber}
-                                        description={`Driver: ${trackingBus?.driverName || 'Unknown'}`}
-                                    >
-                                        <View style={styles.busMarker}>
-                                            <Bus size={20} color="#fff" />
-                                        </View>
-                                    </Marker>
-                                )}
-                            </MapView>
+                                javaScriptEnabled={true}
+                                domStorageEnabled={true}
+                                originWhitelist={['*']}
+                                onLoad={() => setMapReady(true)}
+                            />
                             {busLocation.isPlaceholder && (
                                 <View style={styles.noLocationOverlay}>
                                     <View style={styles.noLocationBadge}>
                                         <AlertCircle size={20} color="#ef4444" />
                                         <Text style={styles.noLocationText}>Waiting for Driver to start Trip...</Text>
                                     </View>
-                                    <Text style={styles.debugText}>If map tiles don't load, check if 'Maps SDK for Android' is enabled in Google Console.</Text>
                                 </View>
                             )}
                         </View>
@@ -813,8 +859,8 @@ const TransportManagement = ({ navigation }) => {
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.driverNameMap}>{trackingBus?.driverName || 'No Driver'}</Text>
                                 <Text style={styles.driverStatus}>
-                                    {busLocation && !busLocation.isPlaceholder ?
-                                        `● Last seen: ${new Date(busLocation.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` :
+                                    {busLocation && !busLocation.isPlaceholder && busLocation.lastUpdated ?
+                                        `● Live Tracking: ${new Date(busLocation.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` :
                                         '○ Waiting for location...'}
                                 </Text>
                             </View>
