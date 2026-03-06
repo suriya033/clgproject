@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useRef } from 'react';
 import {
     StyleSheet,
     Text,
@@ -11,29 +11,35 @@ import {
     Image,
     Alert,
     StatusBar,
-    ScrollView
+    ScrollView,
+    Linking,
+    Animated
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
-import { User, Lock, ArrowRight, Wifi } from 'lucide-react-native';
-import { testAPIConnection } from '../utils/testAPI';
+import { User, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react-native';
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 const LoginScreen = () => {
+    const scaleAnim = useRef(new Animated.Value(1)).current;
     const [userId, setUserId] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [testing, setTesting] = useState(false);
     const { login } = useContext(AuthContext);
 
-    const handleTestConnection = async () => {
-        setTesting(true);
-        const result = await testAPIConnection();
-        setTesting(false);
+    const handlePressIn = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 0.95,
+            useNativeDriver: true,
+        }).start();
+    };
 
-        if (result.success) {
-            Alert.alert('✅ Connection Test', 'Server is reachable! You can now login.');
-        } else {
-            Alert.alert('❌ Connection Failed', 'Cannot reach server. Check console for details.');
-        }
+    const handlePressOut = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 1,
+            useNativeDriver: true,
+        }).start();
     };
 
     const handleLogin = async () => {
@@ -53,11 +59,15 @@ const LoginScreen = () => {
 
     return (
         <KeyboardAvoidingView
-            behavior={Platform?.OS === 'ios' ? 'padding' : 'height'}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={styles.container}
         >
             <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+            >
                 <View style={styles.inner}>
                     <View style={styles.header}>
                         <View style={styles.logoContainer}>
@@ -72,7 +82,6 @@ const LoginScreen = () => {
 
                     <View style={styles.formCard}>
                         <Text style={styles.formTitle}>Sign In</Text>
-                        <Text style={styles.formSubtitle}>Enter your credentials to access your portal</Text>
 
                         <View style={styles.inputWrapper}>
                             <Text style={styles.inputLabel}>User ID</Text>
@@ -99,16 +108,28 @@ const LoginScreen = () => {
                                     placeholderTextColor="#94a3b8"
                                     value={password}
                                     onChangeText={setPassword}
-                                    secureTextEntry={true}
+                                    secureTextEntry={!showPassword}
                                 />
+                                <TouchableOpacity
+                                    onPress={() => setShowPassword(!showPassword)}
+                                    style={styles.eyeIcon}
+                                >
+                                    {showPassword ? (
+                                        <EyeOff size={20} color="#94a3b8" />
+                                    ) : (
+                                        <Eye size={20} color="#94a3b8" />
+                                    )}
+                                </TouchableOpacity>
                             </View>
                         </View>
 
-                        <TouchableOpacity
-                            style={styles.loginButton}
+                        <AnimatedTouchable
+                            style={[styles.loginButton, { transform: [{ scale: scaleAnim }] }]}
                             onPress={handleLogin}
+                            onPressIn={handlePressIn}
+                            onPressOut={handlePressOut}
                             disabled={loading}
-                            activeOpacity={0.8}
+                            activeOpacity={0.9}
                         >
                             {loading ? (
                                 <ActivityIndicator color="#fff" />
@@ -118,28 +139,12 @@ const LoginScreen = () => {
                                     <ArrowRight size={20} color="#fff" />
                                 </>
                             )}
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={styles.testButton}
-                            onPress={handleTestConnection}
-                            disabled={testing}
-                            activeOpacity={0.8}
-                        >
-                            {testing ? (
-                                <ActivityIndicator color="#800000" size="small" />
-                            ) : (
-                                <>
-                                    <Wifi size={18} color="#800000" />
-                                    <Text style={styles.testButtonText}>Test Connection</Text>
-                                </>
-                            )}
-                        </TouchableOpacity>
+                        </AnimatedTouchable>
                     </View>
 
                     <View style={styles.footer}>
                         <Text style={styles.footerText}>Having trouble signing in?</Text>
-                        <TouchableOpacity>
+                        <TouchableOpacity onPress={() => Linking.openURL('tel:9688641444')}>
                             <Text style={styles.contactAdmin}>Contact Administrator</Text>
                         </TouchableOpacity>
                     </View>
@@ -214,11 +219,6 @@ const styles = StyleSheet.create({
         fontSize: 22,
         fontWeight: 'bold',
         color: '#1e293b',
-        marginBottom: 8,
-    },
-    formSubtitle: {
-        fontSize: 14,
-        color: '#64748b',
         marginBottom: 24,
     },
     inputWrapper: {
@@ -250,6 +250,10 @@ const styles = StyleSheet.create({
         color: '#1e293b',
         fontWeight: '500',
     },
+    eyeIcon: {
+        padding: 5,
+        marginLeft: 8,
+    },
     loginButton: {
         backgroundColor: '#800000',
         borderRadius: 16,
@@ -269,23 +273,6 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: '700',
         marginRight: 8,
-    },
-    testButton: {
-        backgroundColor: '#f8fafc',
-        borderRadius: 16,
-        height: 48,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 12,
-        borderWidth: 1.5,
-        borderColor: '#800000',
-    },
-    testButtonText: {
-        color: '#800000',
-        fontSize: 14,
-        fontWeight: '700',
-        marginLeft: 8,
     },
     footer: {
         marginTop: 32,

@@ -64,12 +64,22 @@ router.get('/students', auth(['Staff', 'HOD']), async (req, res) => {
         const queryDate = date ? new Date(date) : new Date();
         queryDate.setHours(0, 0, 0, 0);
 
-        // 1. Find Students
+        // Normalize semester (e.g., from "4 Year - Sem 7" to "7") for matching in the User collection
+        let normalizedSemester = semester.trim();
+        const semMatch = normalizedSemester.match(/Sem\s*(\d+)/i);
+        if (semMatch) {
+            normalizedSemester = semMatch[1];
+        } else {
+            const numMatch = normalizedSemester.match(/\d+/);
+            if (numMatch) normalizedSemester = numMatch[0];
+        }
+
+        // 1. Find Students (Case-insensitive matching for department, semester, section with whitespace tolerance)
         const students = await User.find({
             role: 'Student',
-            department: department,
-            semester: semester,
-            section: section
+            department: new RegExp(`^\\s*${department.trim()}\\s*$`, 'i'),
+            semester: new RegExp(`^\\s*${normalizedSemester}\\s*$`, 'i'),
+            section: new RegExp(`^\\s*${section.trim()}\\s*$`, 'i')
         }).select('name userId _id photo').sort({ name: 1 });
 
         // 2. Find Existing Attendance for these students on this date/period

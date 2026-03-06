@@ -66,14 +66,23 @@ router.get('/students', auth(['Staff', 'HOD']), async (req, res) => {
     }
 
     try {
-        // 1. Find Students
-        // Note: User schema stores 'department' as String usually, but check if it matches TimeTable's department name
+        // Normalize semester (e.g., from "4 Year - Sem 7" to "7") for matching in the User collection
+        let normalizedSemester = semester.trim();
+        const semMatch = normalizedSemester.match(/Sem\s*(\d+)/i);
+        if (semMatch) {
+            normalizedSemester = semMatch[1];
+        } else {
+            const numMatch = normalizedSemester.match(/\d+/);
+            if (numMatch) normalizedSemester = numMatch[0];
+        }
+
+        // 1. Find Students (Case-insensitive matching for department, semester, section)
         const students = await User.find({
             role: 'Student',
-            department: department, // Assuming User.department stores the Name string, or we need to match appropriately
-            semester: semester,
-            section: section
-        }).select('name userId _id photo');
+            department: new RegExp(`^\\s*${department.trim()}\\s*$`, 'i'),
+            semester: new RegExp(`^\\s*${normalizedSemester}\\s*$`, 'i'),
+            section: new RegExp(`^\\s*${section.trim()}\\s*$`, 'i')
+        }).select('name userId _id photo').sort({ name: 1 });
 
         if (students.length === 0) {
             // Fallback: If no students found with specific semester/section (due to missing data), 

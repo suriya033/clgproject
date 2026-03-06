@@ -255,7 +255,7 @@ const ExamSeatArrangement = ({ navigation }) => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <LinearGradient colors={['#1e3a8a', '#1d4ed8']} style={styles.headerGradient}>
+            <LinearGradient colors={['#800000', '#5a0000']} style={styles.headerGradient}>
                 <View style={styles.headerTop}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
                         <ChevronLeft size={24} color="#fff" />
@@ -267,15 +267,15 @@ const ExamSeatArrangement = ({ navigation }) => {
 
             <View style={styles.tabContainer}>
                 <TouchableOpacity style={[styles.tab, activeTab === 'Generate' && styles.activeTab]} onPress={() => setActiveTab('Generate')}>
-                    <Cpu size={18} color={activeTab === 'Generate' ? '#1d4ed8' : '#64748b'} />
+                    <Cpu size={18} color={activeTab === 'Generate' ? '#800000' : '#64748b'} />
                     <Text style={[styles.tabText, activeTab === 'Generate' && styles.activeTabText]}>Generate</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.tab, activeTab === 'Halls' && styles.activeTab]} onPress={() => setActiveTab('Halls')}>
-                    <LayoutDashboard size={18} color={activeTab === 'Halls' ? '#1d4ed8' : '#64748b'} />
+                    <LayoutDashboard size={18} color={activeTab === 'Halls' ? '#800000' : '#64748b'} />
                     <Text style={[styles.tabText, activeTab === 'Halls' && styles.activeTabText]}>Halls</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.tab, activeTab === 'Exams' && styles.activeTab]} onPress={() => setActiveTab('Exams')}>
-                    <Calendar size={18} color={activeTab === 'Exams' ? '#1d4ed8' : '#64748b'} />
+                    <Calendar size={18} color={activeTab === 'Exams' ? '#800000' : '#64748b'} />
                     <Text style={[styles.tabText, activeTab === 'Exams' && styles.activeTabText]}>Exams</Text>
                 </TouchableOpacity>
             </View>
@@ -314,7 +314,7 @@ const ExamSeatArrangement = ({ navigation }) => {
                                 </View>
                                 <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
                                     <TouchableOpacity onPress={() => handleEditClick(h)} style={{ padding: 5 }}>
-                                        <Edit2 size={18} color="#3b82f6" />
+                                        <Edit2 size={18} color="#800000" />
                                     </TouchableOpacity>
                                     <TouchableOpacity onPress={() => handleDeleteHall(h._id)} style={{ padding: 5 }}>
                                         <Trash2 size={18} color="#ef4444" />
@@ -392,11 +392,11 @@ const ExamSeatArrangement = ({ navigation }) => {
 
                         {/* Student Count Display */}
                         {studentCount !== null && (
-                            <View style={{ backgroundColor: '#e0f2fe', padding: 15, borderRadius: 12, marginBottom: 15, flexDirection: 'row', alignItems: 'center' }}>
-                                <Users size={20} color="#0284c7" style={{ marginRight: 10 }} />
+                            <View style={{ backgroundColor: '#ffe4e6', padding: 15, borderRadius: 12, marginBottom: 15, flexDirection: 'row', alignItems: 'center' }}>
+                                <Users size={20} color="#800000" style={{ marginRight: 10 }} />
                                 <View>
-                                    <Text style={{ color: '#0369a1', fontWeight: '800', fontSize: 16 }}>Expected Headcount</Text>
-                                    <Text style={{ color: '#0284c7', fontSize: 14 }}>{studentCount} {studentCount === 1 ? 'student' : 'students'} match this criteria</Text>
+                                    <Text style={{ color: '#5a0000', fontWeight: '800', fontSize: 16 }}>Expected Headcount</Text>
+                                    <Text style={{ color: '#800000', fontSize: 14 }}>{studentCount} {studentCount === 1 ? 'student' : 'students'} match this criteria</Text>
                                 </View>
                             </View>
                         )}
@@ -439,7 +439,7 @@ const ExamSeatArrangement = ({ navigation }) => {
                                         style={[styles.selectableItem, selectedExamId === e._id && styles.selectedItem]}
                                         onPress={() => setSelectedExamId(e._id)}
                                     >
-                                        <Text style={[styles.selectableTitle, selectedExamId === e._id && { color: '#1d4ed8' }]}>{e.examName} ({e.subjectCode})</Text>
+                                        <Text style={[styles.selectableTitle, selectedExamId === e._id && { color: '#800000' }]}>{e.examName} ({e.subjectCode})</Text>
                                         <Text style={styles.listItemSub}>Depts: {e.participatingDepartments.join(', ')}</Text>
                                     </TouchableOpacity>
                                 ))}
@@ -450,8 +450,8 @@ const ExamSeatArrangement = ({ navigation }) => {
                                         <Switch
                                             value={selectedHallIds.includes(h._id)}
                                             onValueChange={() => toggleHallSelection(h._id)}
-                                            trackColor={{ false: "#cbd5e1", true: "#bfdbfe" }}
-                                            thumbColor={selectedHallIds.includes(h._id) ? "#1d4ed8" : "#f1f5f9"}
+                                            trackColor={{ false: "#cbd5e1", true: "#fda4af" }}
+                                            thumbColor={selectedHallIds.includes(h._id) ? "#800000" : "#f1f5f9"}
                                         />
                                         <View style={{ marginLeft: 10 }}>
                                             <Text style={styles.selectableTitle}>{h.hallName}</Text>
@@ -477,7 +477,7 @@ const ExamSeatArrangement = ({ navigation }) => {
                                 {generatedSeating.map((hall, hIdx) => (
                                     <View key={hIdx} style={styles.hallCard}>
                                         <View style={styles.hallCardHeader}>
-                                            <School size={20} color="#1d4ed8" />
+                                            <School size={20} color="#800000" />
                                             <Text style={styles.hallTitle}>{hall.hallName}</Text>
                                         </View>
                                         <Text style={styles.hallSub}>Filled: {hall.filledSeats} / {hall.totalCapacity} Seats</Text>
@@ -551,7 +551,7 @@ const ExamSeatArrangement = ({ navigation }) => {
                                 </ScrollView>
 
                                 <View style={styles.modalActions}>
-                                    <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#3b82f6' }]} onPress={() => handleEditExamClick(selectedExamDetails)}>
+                                    <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#800000' }]} onPress={() => handleEditExamClick(selectedExamDetails)}>
                                         <Edit2 size={18} color="#fff" style={{ marginRight: 6 }} />
                                         <Text style={styles.modalBtnText}>Edit</Text>
                                     </TouchableOpacity>
@@ -594,9 +594,9 @@ const styles = StyleSheet.create({
         flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
         paddingVertical: 12, borderRadius: 12, gap: 8
     },
-    activeTab: { backgroundColor: '#dbeafe' },
+    activeTab: { backgroundColor: '#ffe4e6' },
     tabText: { fontWeight: '600', color: '#64748b', fontSize: 13 },
-    activeTabText: { color: '#1d4ed8', fontWeight: '800' },
+    activeTabText: { color: '#800000', fontWeight: '800' },
     content: { padding: 20, paddingBottom: 60 },
     card: { backgroundColor: '#fff', borderRadius: 20, padding: 20, elevation: 2, marginBottom: 20 },
     cardTitle: { fontSize: 18, fontWeight: '800', color: '#1e293b', marginBottom: 15 },
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
         color: '#1e293b', marginBottom: 12, borderWidth: 1, borderColor: '#e2e8f0'
     },
     primaryBtn: {
-        backgroundColor: '#1d4ed8', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 10
+        backgroundColor: '#800000', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 10
     },
     primaryBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
     listItem: {
@@ -618,15 +618,15 @@ const styles = StyleSheet.create({
         backgroundColor: '#f8fafc', padding: 15, borderRadius: 12, marginBottom: 10,
         borderWidth: 2, borderColor: '#e2e8f0'
     },
-    selectedItem: { backgroundColor: '#eff6ff', borderColor: '#3b82f6' },
+    selectedItem: { backgroundColor: '#fff1f2', borderColor: '#800000' },
     selectableTitle: { fontSize: 16, fontWeight: '700', color: '#334155' },
     checkboxRow: {
         flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9'
     },
     resultsContainer: { paddingBottom: 40 },
-    resHeader: { backgroundColor: '#1d4ed8', padding: 20, borderRadius: 20, marginBottom: 20, alignItems: 'center' },
+    resHeader: { backgroundColor: '#800000', padding: 20, borderRadius: 20, marginBottom: 20, alignItems: 'center' },
     resTitle: { fontSize: 20, fontWeight: '800', color: '#fff', marginBottom: 5 },
-    resSub: { fontSize: 14, color: '#bfdbfe', marginBottom: 15 },
+    resSub: { fontSize: 14, color: '#fda4af', marginBottom: 15 },
     resetBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20 },
     resetBtnText: { color: '#fff', fontWeight: '600' },
     hallCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20, marginBottom: 20, elevation: 3 },
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
     benchNoText: { fontWeight: '700', color: '#475569' },
     seatsContainer: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
     seatBox: { backgroundColor: '#fff', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#cbd5e1', flex: 1, minWidth: '40%' },
-    seatDept: { fontWeight: '800', color: '#1d4ed8', fontSize: 12, marginBottom: 2 },
+    seatDept: { fontWeight: '800', color: '#800000', fontSize: 12, marginBottom: 2 },
     seatRegNo: { color: '#475569', fontSize: 12 },
     dropdownContainer: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderBottomLeftRadius: 12, borderBottomRightRadius: 12, marginBottom: 12 },
     dropdownItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
@@ -648,7 +648,7 @@ const styles = StyleSheet.create({
     sessionToggleLabel: { fontSize: 15, fontWeight: '600', color: '#1e293b' },
     sessionToggleOptions: { flexDirection: 'row', backgroundColor: '#f1f5f9', borderRadius: 8, overflow: 'hidden' },
     sessionOption: { paddingVertical: 8, paddingHorizontal: 15 },
-    sessionOptionActive: { backgroundColor: '#1d4ed8' },
+    sessionOptionActive: { backgroundColor: '#800000' },
     sessionOptionText: { color: '#64748b', fontWeight: '600' },
     sessionOptionTextActive: { color: '#fff' },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },

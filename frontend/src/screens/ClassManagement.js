@@ -617,7 +617,7 @@ const ClassManagement = ({ navigation, route }) => {
                                 />
                             </View>
 
-                            {user?.role === 'HOD' ? (
+                            {user?.role === 'HOD' && (
                                 <View style={styles.inputGroup}>
                                     <Text style={[styles.label, { color: '#334155' }]}>Assign Class Advisor</Text>
                                     <TouchableOpacity
@@ -647,21 +647,6 @@ const ClassManagement = ({ navigation, route }) => {
                                         </View>
                                         <ChevronDown size={20} color="#64748b" />
                                     </TouchableOpacity>
-                                </View>
-                            ) : (
-                                <View style={styles.inputGroup}>
-                                    <Text style={[styles.label, { color: '#334155' }]}>Class Advisor</Text>
-                                    <View style={[styles.modernDropdown, { backgroundColor: '#f1f5f9' }]}>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                            <UserCog size={20} color="#94a3b8" style={{ marginRight: 12 }} />
-                                            <Text style={[styles.modernDropdownText, { color: '#64748b' }]}>
-                                                {advisor ? advisor.name : 'Not Assigned'}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                    <Text style={{ fontSize: 11, color: '#f59e0b', marginTop: 4 }}>
-                                        * Only HOD can assign or change advisors
-                                    </Text>
                                 </View>
                             )}
 
