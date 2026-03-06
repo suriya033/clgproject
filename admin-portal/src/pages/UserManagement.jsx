@@ -1,18 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import api, { admin as adminApi } from '../api';
 import {
-    Users,
-    Search,
-    Filter,
-    Plus,
-    Edit2,
-    Trash2,
-    User as UserIcon,
-    Loader2,
-    RefreshCw,
-    FileUp
+    Users, Search, Filter, Plus, Edit2, Trash2, User as UserIcon, Loader2, RefreshCw, FileUp, MoreVertical, CheckCircle2, AlertCircle, X, Download
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
+import Button from '../components/Button';
+import Input from '../components/Input';
+import PremiumTable from '../components/PremiumTable';
+import Modal from '../components/Modal';
 
 const UserManagement = () => {
     const [users, setUsers] = useState([]);
@@ -20,16 +16,10 @@ const UserManagement = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [modalOpen, setModalOpen] = useState(false);
     const [departments, setDepartments] = useState([]);
+    const [selectedRole, setSelectedRole] = useState('All');
+
     const [newUser, setNewUser] = useState({
-        userId: '',
-        name: '',
-        email: '',
-        password: '',
-        role: 'Student',
-        department: '',
-        year: '',
-        semester: '',
-        mobileNo: ''
+        userId: '', name: '', email: '', password: '', role: 'Student', department: '', year: '', semester: '', mobileNo: ''
     });
 
     useEffect(() => {
@@ -52,7 +42,7 @@ const UserManagement = () => {
             const res = await adminApi.getUsers();
             setUsers(Array.isArray(res.data) ? res.data.reverse() : []);
         } catch (err) {
-            console.error('Fetch users error:', err);
+            toast.error('Failed to retrieve user library');
         } finally {
             setLoading(false);
         }
@@ -63,22 +53,14 @@ const UserManagement = () => {
         try {
             setLoading(true);
             await adminApi.createUser(newUser);
-            alert('User created successfully!');
+            toast.success(`User Account Created: ${newUser.name}`);
             setModalOpen(false);
             setNewUser({
-                userId: '',
-                name: '',
-                email: '',
-                password: '',
-                role: 'Student',
-                department: '',
-                year: '',
-                semester: '',
-                mobileNo: ''
+                userId: '', name: '', email: '', password: '', role: 'Student', department: '', year: '', semester: '', mobileNo: ''
             });
             fetchUsers();
         } catch (err) {
-            alert('Error creating user: ' + (err.response?.data?.message || err.message));
+            toast.error(err.response?.data?.message || 'Unauthorized: Contact Grid Admin');
         } finally {
             setLoading(false);
         }
@@ -104,19 +86,24 @@ const UserManagement = () => {
             });
 
             if (data.length === 0) {
-                alert('No data found in CSV');
+                toast.error('Manifest empty: Check CSV format');
                 return;
             }
 
-            if (window.confirm(`Found ${data.length} users. Import them now?`)) {
+            const confirmImport = window.confirm(`Found ${data.length} user records. Proceed with bulk onboarding?`);
+            if (confirmImport) {
+                const loadingToast = toast.loading('Synchronizing bulk records...');
                 try {
                     setLoading(true);
                     const response = await api.post('/admin/users/bulk', data);
                     const { created, errors } = response.data.stats;
-                    alert(`Imported ${created} users successfully.${errors.length > 0 ? `\nFailed to import ${errors.length} users.` : ''}`);
+                    toast.dismiss(loadingToast);
+                    toast.success(`Successfully Onboarded ${created} users.`);
+                    if (errors.length > 0) toast.error(`${errors.length} records rejected by gateway.`);
                     fetchUsers();
                 } catch (err) {
-                    alert('Error importing users: ' + (err.response?.data?.message || err.message));
+                    toast.dismiss(loadingToast);
+                    toast.error('Gateway Error: Upload failed.');
                 } finally {
                     setLoading(false);
                 }
@@ -125,286 +112,239 @@ const UserManagement = () => {
         reader.readAsText(file);
     };
 
-    const filteredUsers = users.filter(user =>
-        user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.userId?.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredUsers = users.filter(user => {
+        const matchesSearch = user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            user.userId?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesRole = selectedRole === 'All' || user.role === selectedRole;
+        return matchesSearch && matchesRole;
+    });
+
+    const headers = [
+        { label: 'Personnel', style: { paddingLeft: '2rem' } },
+        { label: 'Identification' },
+        { label: 'Classification' },
+        { label: 'Department' },
+        { label: 'Security Status', style: { textAlign: 'center' } },
+        { label: 'Actions', style: { textAlign: 'right', paddingRight: '2rem' } }
+    ];
+
+    const renderUser = (user) => (
+        <>
+            <td style={{ paddingLeft: '2rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                    <div style={{
+                        width: '44px', height: '44px', borderRadius: '14px', background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: '0.875rem'
+                    }}>
+                        {user.name?.charAt(0)}
+                    </div>
+                    <div>
+                        <p style={{ fontWeight: 800, fontSize: '0.9375rem', letterSpacing: '-0.025em' }}>{user.name}</p>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{user.email}</p>
+                    </div>
+                </div>
+            </td>
+            <td style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.875rem' }}>{user.userId}</td>
+            <td>
+                <span className="badge" style={{
+                    background: user.role === 'Admin' ? 'rgba(var(--primary-rgb), 0.1)' : 'rgba(100, 116, 139, 0.1)',
+                    color: user.role === 'Admin' ? 'var(--primary)' : 'var(--text-muted)'
+                }}>
+                    {user.role}
+                </span>
+            </td>
+            <td style={{ color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 600 }}>{user.department}</td>
+            <td style={{ textAlign: 'center' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.75rem', background: '#f0fdf4', borderRadius: '2rem', color: '#10b981' }}>
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase' }}>Verified</span>
+                </div>
+            </td>
+            <td style={{ textAlign: 'right', paddingRight: '2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                    <button className="btn" style={{ padding: '0.5rem', borderRadius: '0.75rem', background: 'white', border: '1px solid var(--border)' }} title="Edit Profile">
+                        <Edit2 size={16} />
+                    </button>
+                    <button className="btn" style={{ padding: '0.5rem', borderRadius: '0.75rem', background: 'white', border: '1px solid var(--border)', color: '#ef4444' }} title="Revoke Permissions">
+                        <Trash2 size={16} />
+                    </button>
+                </div>
+            </td>
+        </>
     );
 
     return (
-        <div className="user-management" style={{ position: 'relative' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
-                <div>
-                    <h1 style={{ fontSize: '2.25rem', fontWeight: 800 }}>User Management</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>Create, manage and audit university accounts</p>
+        <div className="user-hub animate-fade-in">
+            {/* Action Bar */}
+            <div className="premium-card" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 2rem' }}>
+                <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flex: 1 }}>
+                    <div style={{ position: 'relative', width: '320px' }}>
+                        <Search size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+                        <input
+                            type="text"
+                            placeholder="Find identification or name..."
+                            className="form-input"
+                            style={{ paddingLeft: '3rem', backgroundColor: '#f8fafc', borderStyle: 'dashed' }}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        {['All', 'Student', 'Staff', 'HOD', 'Admin'].map(role => (
+                            <button
+                                key={role}
+                                onClick={() => setSelectedRole(role)}
+                                style={{
+                                    padding: '0.5rem 1rem', borderRadius: '0.75rem', fontSize: '0.75rem', fontWeight: 700,
+                                    background: selectedRole === role ? 'var(--primary)' : '#f8fafc',
+                                    color: selectedRole === role ? 'white' : 'var(--text-muted)',
+                                    border: selectedRole === role ? 'none' : '1px solid var(--border)',
+                                    transition: 'var(--transition-fast)'
+                                }}
+                            >
+                                {role}
+                            </button>
+                        ))}
+                    </div>
                 </div>
+
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button
-                        onClick={fetchUsers}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1px solid var(--border)', background: 'white' }}
-                    >
-                        <RefreshCw size={20} className={loading ? 'spin' : ''} />
-                        Refresh
-                    </button>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1px solid var(--border)', background: 'white', cursor: 'pointer' }}>
-                        <FileUp size={20} />
-                        Import CSV
+                    <label style={{
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.75rem 1.25rem',
+                        borderRadius: '1rem', background: 'white', border: '1px solid var(--border)', fontWeight: 700, fontSize: '0.875rem'
+                    }}>
+                        <FileUp size={18} />
+                        Bulk Import
                         <input type="file" accept=".csv" onChange={handleImportCSV} style={{ display: 'none' }} />
                     </label>
-                    <button className="btn-primary" onClick={() => setModalOpen(true)}>
-                        <Plus size={20} />
-                        Create New User
-                    </button>
+                    <Button onClick={() => setModalOpen(true)} icon={Plus}>Create Account</Button>
                 </div>
             </div>
 
-            <div className="card" style={{ marginBottom: '2rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                <div style={{ position: 'relative', flex: 1 }}>
-                    <Search size={18} color="var(--text-muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-                    <input
-                        type="text"
-                        placeholder="Search by name or ID..."
-                        style={{
-                            width: '100%',
-                            padding: '0.75rem 1rem 0.75rem 2.8rem',
-                            borderRadius: '0.75rem',
-                            border: '1px solid var(--border)',
-                            background: '#f8fafc'
-                        }}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-            </div>
+            {/* Main Table */}
+            <PremiumTable
+                headers={headers}
+                rows={filteredUsers}
+                renderRow={renderUser}
+                loading={loading}
+                emptyMessage="No personnel records found in current scan."
+            />
 
-            {loading && !modalOpen ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem' }}>
-                    <Loader2 className="spin" size={40} color="var(--primary)" />
-                </div>
-            ) : (
-                <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead style={{ background: '#f8fafc', borderBottom: '1px solid var(--border)' }}>
-                            <tr>
-                                <th style={{ padding: '1.25rem', textAlign: 'left', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.875rem' }}>Full Name</th>
-                                <th style={{ padding: '1.25rem', textAlign: 'left', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.875rem' }}>User ID</th>
-                                <th style={{ padding: '1.25rem', textAlign: 'left', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.875rem' }}>Role</th>
-                                <th style={{ padding: '1.25rem', textAlign: 'left', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.875rem' }}>Department</th>
-                                <th style={{ padding: '1.25rem', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.875rem' }}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredUsers.length > 0 ? filteredUsers.map((user, idx) => (
-                                <motion.tr
-                                    key={user._id}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ delay: idx * 0.05 }}
-                                    style={{ borderBottom: '1px solid var(--border)' }}
-                                >
-                                    <td style={{ padding: '1.25rem' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                            <div style={{
-                                                width: '40px',
-                                                height: '40px',
-                                                borderRadius: '12px',
-                                                background: 'var(--primary)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                color: 'white'
-                                            }}>
-                                                <UserIcon size={20} />
-                                            </div>
-                                            <span style={{ fontWeight: 600 }}>{user.name}</span>
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: '1.25rem', fontWeight: 500 }}>{user.userId}</td>
-                                    <td style={{ padding: '1.25rem' }}>
-                                        <span style={{
-                                            padding: '0.4rem 0.8rem',
-                                            borderRadius: '2rem',
-                                            fontSize: '0.75rem',
-                                            fontWeight: 700,
-                                            textTransform: 'uppercase',
-                                            background: user.role === 'Admin' ? '#fee2e2' : '#f1f5f9',
-                                            color: user.role === 'Admin' ? 'var(--primary)' : 'var(--text-muted)'
-                                        }}>
-                                            {user.role}
-                                        </span>
-                                    </td>
-                                    <td style={{ padding: '1.25rem', color: 'var(--text-muted)' }}>{user.department}</td>
-                                    <td style={{ padding: '1.25rem', textAlign: 'right' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                                            <button style={{ padding: '0.5rem', borderRadius: '0.5rem', border: '1px solid var(--border)', background: 'white' }}><Edit2 size={16} /></button>
-                                            <button style={{ padding: '0.5rem', borderRadius: '0.5rem', border: '1px solid var(--border)', background: 'white', color: '#ef4444' }}><Trash2 size={16} /></button>
-                                        </div>
-                                    </td>
-                                </motion.tr>
-                            )) : (
-                                <tr>
-                                    <td colSpan="5" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                                        No users found matching your search.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+            {/* User Account Modal */}
+            <Modal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                title="Establish New Personnel Record"
+                size="lg"
+                footer={(
+                    <div style={{ display: 'flex', gap: '1rem', width: '100%' }}>
+                        <Button variant="secondary" onClick={() => setModalOpen(false)} style={{ flex: 1 }}>Abort Process</Button>
+                        <Button onClick={handleCreateUser} style={{ flex: 1 }} loading={loading}>Finalize Enrollment</Button>
+                    </div>
+                )}
+            >
+                <form onSubmit={handleCreateUser}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                        <Input
+                            label="Identification ID"
+                            required
+                            placeholder="e.g. CORE-STU-001"
+                            value={newUser.userId}
+                            onChange={(e) => setNewUser({ ...newUser, userId: e.target.value })}
+                        />
+                        <Input
+                            label="Legal Full Name"
+                            required
+                            placeholder="Enter personnel name"
+                            value={newUser.name}
+                            onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                        />
+                    </div>
 
-            {/* Add User Modal */}
-            {modalOpen && (
-                <div style={{
-                    position: 'fixed',
-                    inset: 0,
-                    background: 'rgba(0,0,0,0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000,
-                    backdropFilter: 'blur(4px)'
-                }}>
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="card"
-                        style={{ width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto' }}
-                    >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                            <h2 style={{ fontSize: '1.5rem' }}>Create New User</h2>
-                            <button onClick={() => setModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)' }}>
-                                <RefreshCw size={24} style={{ transform: 'rotate(45deg)' }} />
-                            </button>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                        <Input
+                            label="Gateway Email"
+                            type="email"
+                            required
+                            placeholder="university@node.com"
+                            value={newUser.email}
+                            onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                        />
+                        <Input
+                            label="Internal Access Code"
+                            type="password"
+                            required
+                            placeholder="••••••••"
+                            value={newUser.password}
+                            onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                        />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                        <div className="form-group">
+                            <label className="form-label">Classification <span style={{ color: 'var(--error)' }}>*</span></label>
+                            <select
+                                className="form-input"
+                                value={newUser.role}
+                                onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                            >
+                                <option value="Student">Student Operative</option>
+                                <option value="Staff">Faculty / Staff</option>
+                                <option value="HOD">Director / HOD</option>
+                                <option value="Office">Office Admin</option>
+                                <option value="Admin">System Administrator</option>
+                            </select>
                         </div>
+                        <div className="form-group">
+                            <label className="form-label">Sector / Department <span style={{ color: 'var(--error)' }}>*</span></label>
+                            <select
+                                className="form-input"
+                                value={newUser.department}
+                                onChange={(e) => setNewUser({ ...newUser, department: e.target.value })}
+                            >
+                                <option value="">Select Sector</option>
+                                {departments.map(dept => <option key={dept._id} value={dept.name}>{dept.name}</option>)}
+                            </select>
+                        </div>
+                    </div>
 
-                        <form onSubmit={handleCreateUser}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div className="input-group">
-                                    <label>User ID</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={newUser.userId}
-                                        onChange={(e) => setNewUser({ ...newUser, userId: e.target.value })}
-                                        placeholder="e.g. STU001"
-                                    />
-                                </div>
-                                <div className="input-group">
-                                    <label>Full Name</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={newUser.name}
-                                        onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                                        placeholder="Enter full name"
-                                    />
-                                </div>
+                    {newUser.role === 'Student' && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            style={{ padding: '1.5rem', background: '#f8fafc', borderRadius: '1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '0.5rem' }}
+                        >
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Cycle / Year</label>
+                                <select
+                                    className="form-input"
+                                    style={{ background: 'white' }}
+                                    value={newUser.year}
+                                    onChange={(e) => setNewUser({ ...newUser, year: e.target.value, semester: '' })}
+                                >
+                                    <option value="">Choose Cycle</option>
+                                    {[1, 2, 3, 4].map(y => <option key={y} value={y}>Year {y}</option>)}
+                                </select>
                             </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div className="input-group">
-                                    <label>Email Address</label>
-                                    <input
-                                        type="email"
-                                        required
-                                        value={newUser.email}
-                                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                                        placeholder="college@email.com"
-                                    />
-                                </div>
-                                <div className="input-group">
-                                    <label>Password</label>
-                                    <input
-                                        type="password"
-                                        required
-                                        value={newUser.password}
-                                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                                        placeholder="••••••••"
-                                    />
-                                </div>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Active Phase (Sem)</label>
+                                <select
+                                    className="form-input"
+                                    disabled={!newUser.year}
+                                    style={{ background: 'white' }}
+                                    value={newUser.semester}
+                                    onChange={(e) => setNewUser({ ...newUser, semester: e.target.value })}
+                                >
+                                    <option value="">Choose Phase</option>
+                                    {newUser.year && [parseInt(newUser.year) * 2 - 1, parseInt(newUser.year) * 2].map(s => <option key={s} value={s}>Semester {s}</option>)}
+                                </select>
                             </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div className="input-group">
-                                    <label>Role</label>
-                                    <select
-                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', border: '1px solid var(--border)', background: '#f1f5f9' }}
-                                        value={newUser.role}
-                                        onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-                                    >
-                                        <option value="Student">Student</option>
-                                        <option value="Staff">Staff</option>
-                                        <option value="HOD">HOD</option>
-                                        <option value="Office">Office</option>
-                                        <option value="Admin">Admin</option>
-                                    </select>
-                                </div>
-                                <div className="input-group">
-                                    <label>Department</label>
-                                    <select
-                                        style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', border: '1px solid var(--border)', background: '#f1f5f9' }}
-                                        value={newUser.department}
-                                        onChange={(e) => setNewUser({ ...newUser, department: e.target.value })}
-                                    >
-                                        <option value="">Select Department</option>
-                                        {departments.map(dept => (
-                                            <option key={dept._id} value={dept.name}>{dept.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            {newUser.role === 'Student' && (
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '1rem', background: '#f8fafc', borderRadius: '1rem', marginBottom: '1.5rem' }}>
-                                    <div className="input-group" style={{ marginBottom: 0 }}>
-                                        <label>Academic Year</label>
-                                        <select
-                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', border: '1px solid var(--border)', background: 'white' }}
-                                            value={newUser.year}
-                                            onChange={(e) => setNewUser({ ...newUser, year: e.target.value, semester: '' })}
-                                        >
-                                            <option value="">Select Year</option>
-                                            <option value="1">1st Year</option>
-                                            <option value="2">2nd Year</option>
-                                            <option value="3">3rd Year</option>
-                                            <option value="4">4th Year</option>
-                                        </select>
-                                    </div>
-                                    <div className="input-group" style={{ marginBottom: 0 }}>
-                                        <label>Semester</label>
-                                        <select
-                                            style={{ width: '100%', padding: '0.75rem', borderRadius: '0.75rem', border: '1px solid var(--border)', background: 'white' }}
-                                            value={newUser.semester}
-                                            disabled={!newUser.year}
-                                            onChange={(e) => setNewUser({ ...newUser, semester: e.target.value })}
-                                        >
-                                            <option value="">Select Semester</option>
-                                            {newUser.year && (
-                                                <>
-                                                    <option value={parseInt(newUser.year) * 2 - 1}>Semester {parseInt(newUser.year) * 2 - 1}</option>
-                                                    <option value={parseInt(newUser.year) * 2}>Semester {parseInt(newUser.year) * 2}</option>
-                                                </>
-                                            )}
-                                        </select>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                                <button type="button" onClick={() => setModalOpen(false)} style={{ flex: 1, padding: '0.75rem', borderRadius: '0.75rem', border: '1px solid var(--border)', background: 'white' }}>
-                                    Cancel
-                                </button>
-                                <button type="submit" className="btn-primary" style={{ flex: 1, justifyContent: 'center' }} disabled={loading}>
-                                    {loading ? 'Creating...' : 'Create User'}
-                                </button>
-                            </div>
-                        </form>
-                    </motion.div>
-                </div>
-            )}
+                        </motion.div>
+                    )}
+                </form>
+            </Modal>
         </div>
     );
 };
 
 export default UserManagement;
-
