@@ -86,6 +86,7 @@ app.use('/api/faculty-lounge', require('./routes/facultyLounge'));
 app.use('/api/assignments', require('./routes/assignments'));
 app.use('/api/question-papers', require('./routes/questionPapers'));
 app.use('/api/exam-room', require('./routes/examRoomRoutes'));
+app.use('/api/payments', require('./routes/paymentRoutes'));
 
 const PORT = process.env.PORT || 5002;
 const HOST = '0.0.0.0';

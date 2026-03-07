@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
-import { ShieldCheck, Mail, Lock, Loader2, ArrowRight, Hash } from 'lucide-react';
+import { ShieldCheck, Lock, Hash, Activity, Command } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Button from '../components/Button';
 import Input from '../components/Input';
@@ -17,7 +17,7 @@ const LoginPage = () => {
         setLoading(true);
         try {
             const res = await api.post('/auth/login', credentials);
-            if (res.data.user.role !== 'Admin') {
+            if (res.data.user.role === 'Student' || res.data.user.role === 'Driver') {
                 toast.error('Access Denied: Administrative Credentials Required');
                 return;
             }
@@ -35,96 +35,120 @@ const LoginPage = () => {
         <div style={{
             minHeight: '100vh',
             display: 'flex',
-            background: '#0f172a', /* Dark Navy Base */
+            backgroundColor: '#020617', // Slate 950
+            backgroundImage: 'radial-gradient(circle at top right, #1e1b4b 0%, #020617 60%), radial-gradient(circle at bottom left, #3b0764 0%, transparent 50%)',
             position: 'relative',
             overflow: 'hidden'
         }}>
-            {/* Design Elements */}
-            <div style={{ position: 'absolute', top: '-10%', left: '-5%', width: '40vw', height: '40vw', background: 'radial-gradient(circle, rgba(128,0,0,0.15) 0%, transparent 70%)', filter: 'blur(60px)' }} />
-            <div style={{ position: 'absolute', bottom: '-10%', right: '-5%', width: '30vw', height: '30vw', background: 'radial-gradient(circle, rgba(251,191,36,0.05) 0%, transparent 70%)', filter: 'blur(40px)' }} />
-
-            {/* Left Side: Branding/Visual */}
+            {/* Grid Pattern Background */}
             <div style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                padding: '5rem',
-                color: 'white',
-                position: 'relative',
-                zIndex: 1,
-                borderRight: '1px solid rgba(255,255,255,0.05)'
-            }}>
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '3rem' }}
-                >
-                    <div style={{ padding: '0.75rem', background: 'var(--primary)', borderRadius: '1.25rem' }}><ShieldCheck size={32} /></div>
-                    <h1 style={{ fontSize: '2rem', fontWeight: 800 }}>ADMIN<span style={{ color: 'var(--secondary)' }}>HUB</span></h1>
-                </motion.div>
+                position: 'absolute', inset: 0,
+                backgroundImage: 'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
+                backgroundSize: '40px 40px',
+                pointerEvents: 'none',
+                opacity: 0.5
+            }} />
 
-                <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.2 }}
-                >
-                    <h2 style={{ fontSize: '3.5rem', lineHeight: 1.1, fontWeight: 800, marginBottom: '1.5rem', letterSpacing: '-0.04em' }}>
-                        University <br />
-                        <span style={{ color: 'var(--secondary)' }}>Command Center</span>
-                    </h2>
-                    <p style={{ fontSize: '1.125rem', color: 'rgba(255,255,255,0.6)', maxWidth: '480px', lineHeight: 1.6 }}>
-                        Monitor campus logistics, manage academic records, and orchestrate student services from one unified administrative terminal.
-                    </p>
-                </motion.div>
-
-                <div style={{ marginTop: '5rem', display: 'flex', gap: '3rem' }}>
-                    <div>
-                        <p style={{ fontSize: '2rem', fontWeight: 800 }}>99.9%</p>
-                        <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', fontWeight: 700 }}>Uptime</p>
-                    </div>
-                    <div>
-                        <p style={{ fontSize: '2rem', fontWeight: 800 }}>Encryption</p>
-                        <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', fontWeight: 700 }}>256-bit AES</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Right Side: Login Form */}
+            {/* Left Section - Presentation */}
             <div style={{
-                width: '600px',
+                flex: 1.2,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: 'rgba(15, 23, 42, 0.8)',
-                backdropFilter: 'blur(20px)',
+                padding: '4rem',
                 position: 'relative',
-                zIndex: 1
+                zIndex: 10
             }}>
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.3 }}
-                    className="premium-card"
-                    style={{ width: '420px', padding: '3rem' }}
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    style={{ maxWidth: '600px' }}
                 >
-                    <div style={{ marginBottom: '2.5rem' }}>
-                        <h3 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>Secure Login</h3>
-                        <p style={{ fontSize: '0.9375rem', color: 'var(--text-muted)' }}>Authenticate to access the administrative grid.</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
+                        <div style={{ padding: '0.75rem', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <Command size={28} color="#a855f7" />
+                        </div>
+                        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'white', letterSpacing: '2px' }}>
+                            ADMIN<span style={{ color: '#a855f7' }}>NEXUS</span>
+                        </h1>
                     </div>
 
-                    <form onSubmit={handleLogin}>
+                    <h2 style={{ fontSize: '4rem', fontWeight: 800, color: 'white', lineHeight: 1.1, marginBottom: '1.5rem', letterSpacing: '-0.02em' }}>
+                        University <br />
+                        <span style={{ background: 'linear-gradient(to right, #c084fc, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                            Command Center
+                        </span>
+                    </h2>
+
+                    <p style={{ fontSize: '1.25rem', color: '#94a3b8', lineHeight: 1.6, marginBottom: '4rem' }}>
+                        A centralized, highly secure portal for tracking logistics, managing academics, and orchestrating comprehensive administrative protocols.
+                    </p>
+
+                    <div style={{ display: 'flex', gap: '3rem' }}>
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                <Activity size={20} color="#10b981" />
+                                <span style={{ fontSize: '1.5rem', fontWeight: 700, color: 'white' }}>99.9%</span>
+                            </div>
+                            <span style={{ fontSize: '0.875rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Network Uptime</span>
+                        </div>
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                <ShieldCheck size={20} color="#3b82f6" />
+                                <span style={{ fontSize: '1.5rem', fontWeight: 700, color: 'white' }}>AES-256</span>
+                            </div>
+                            <span style={{ fontSize: '0.875rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>End-to-End Encryption</span>
+                        </div>
+                    </div>
+                </motion.div>
+            </div>
+
+            {/* Right Section - Login Form */}
+            <div style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '2rem',
+                position: 'relative',
+                zIndex: 10
+            }}>
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95, x: 20 }}
+                    animate={{ opacity: 1, scale: 1, x: 0 }}
+                    transition={{ duration: 0.6, delay: 0.2 }}
+                    style={{
+                        width: '100%',
+                        maxWidth: '440px',
+                        background: 'rgba(15, 23, 42, 0.6)',
+                        backdropFilter: 'blur(16px)',
+                        borderRadius: '24px',
+                        padding: '3rem',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                    }}
+                >
+                    <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+                        <div style={{ display: 'inline-flex', padding: '1rem', background: 'rgba(168, 85, 247, 0.1)', borderRadius: '50%', marginBottom: '1rem' }}>
+                            <ShieldCheck size={32} color="#a855f7" />
+                        </div>
+                        <h3 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'white', marginBottom: '0.5rem' }}>Admin Authorization</h3>
+                        <p style={{ color: '#94a3b8', fontSize: '0.95rem' }}>Enter your credentials to access the grid.</p>
+                    </div>
+
+                    <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <Input
-                            label="Operator Identity (User ID)"
+                            label="Operator ID"
                             type="text"
                             required
                             icon={Hash}
-                            placeholder="admin"
+                            placeholder="admin01"
                             value={credentials.userId}
                             onChange={(e) => setCredentials({ ...credentials, userId: e.target.value })}
                         />
                         <Input
-                            label="Security Key (Password)"
+                            label="Security Key"
                             type="password"
                             required
                             icon={Lock}
@@ -133,27 +157,36 @@ const LoginPage = () => {
                             onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
                         />
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8125rem', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                                <input type="checkbox" style={{ accentColor: 'var(--primary)' }} />
-                                Stay Synchronized
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#94a3b8', fontSize: '0.875rem', cursor: 'pointer' }}>
+                                <input type="checkbox" style={{ accentColor: '#a855f7', width: '16px', height: '16px', borderRadius: '4px' }} />
+                                Remember Device
                             </label>
-                            <a href="#" style={{ fontSize: '0.8125rem', color: 'var(--primary)', fontWeight: 700 }}>Key Recovery?</a>
+                            <a href="#" style={{ color: '#a855f7', fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none' }}>Forgot Key?</a>
                         </div>
 
                         <Button
                             loading={loading}
-                            style={{ width: '100%', height: '54px', fontSize: '1rem' }}
                             type="submit"
+                            style={{
+                                marginTop: '1rem',
+                                background: 'linear-gradient(to right, #9333ea, #a855f7)',
+                                border: 'none',
+                                height: '54px',
+                                fontSize: '1.1rem',
+                                fontWeight: 600,
+                                borderRadius: '12px',
+                                boxShadow: '0 4px 14px 0 rgba(168, 85, 247, 0.39)'
+                            }}
                         >
                             Authorize Entry
                         </Button>
                     </form>
 
-                    <div style={{ marginTop: '2.5rem', textAlign: 'center' }}>
-                        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                            Internal System: Authorized Personnel Only. <br />
-                            All interactions are logged for security audits.
+                    <div style={{ marginTop: '2.5rem', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1.5rem' }}>
+                        <p style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.6 }}>
+                            RESTRICTED SYSTEM<br />
+                            Unauthorized access is prohibited and logged.
                         </p>
                     </div>
                 </motion.div>

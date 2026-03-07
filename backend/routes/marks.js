@@ -127,6 +127,24 @@ router.get('/students', auth(['Staff', 'HOD']), async (req, res) => {
 router.post('/update', auth(['Staff', 'HOD']), async (req, res) => {
     const { studentId, department, semester, section, subject, examType, marks } = req.body;
 
+    // --- Validation ---
+    if (!studentId || !department || !semester || !section || !subject || !examType) {
+        return res.status(400).json({ message: 'Missing required fields' });
+    }
+    if (marks === undefined || marks === null || marks === '' || isNaN(Number(marks))) {
+        return res.status(400).json({ message: 'Invalid marks value' });
+    }
+    const marksNum = Number(marks);
+    if (marksNum < 0 || marksNum > 100) {
+        return res.status(400).json({ message: 'Marks must be between 0 and 100' });
+    }
+
+    // Use .id (string from JWT) — req.user._id may be undefined
+    const staffId = req.user.id || req.user._id;
+    if (!staffId) {
+        return res.status(401).json({ message: 'Staff ID not found in token' });
+    }
+
     try {
         let markEntry = await Mark.findOne({
             student: studentId,
@@ -135,27 +153,40 @@ router.post('/update', auth(['Staff', 'HOD']), async (req, res) => {
         });
 
         if (markEntry) {
-            markEntry.marks = marks;
-            markEntry.staff = req.user._id; // Update who edited last
+            markEntry.marks = marksNum;
+            markEntry.staff = staffId;
             await markEntry.save();
         } else {
             markEntry = await Mark.create({
                 student: studentId,
-                staff: req.user._id,
+                staff: staffId,
                 department,
                 semester,
                 section,
                 subject,
                 examType,
-                marks
+                marks: marksNum
             });
         }
 
         res.json({ success: true, data: markEntry });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error' });
+        console.error('Mark update error:', error.message, error.errors);
+        if (error.code === 11000) {
+            // Duplicate key - try to update directly
+            try {
+                const updated = await Mark.findOneAndUpdate(
+                    { student: studentId, subject, examType },
+                    { marks: marksNum, staff: staffId },
+                    { new: true }
+                );
+                return res.json({ success: true, data: updated });
+            } catch (e) {
+                return res.status(500).json({ message: 'Failed to update marks', detail: e.message });
+            }
+        }
+        res.status(500).json({ message: 'Server Error', detail: error.message });
     }
 });
 

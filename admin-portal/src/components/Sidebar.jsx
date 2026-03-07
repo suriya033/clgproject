@@ -10,7 +10,9 @@ import {
     Building,
     Bus,
     Settings,
-    ChevronRight
+    ChevronRight,
+    CreditCard,
+    Receipt
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -24,6 +26,8 @@ const Sidebar = () => {
         { name: 'Subject Hub', path: '/colleges', icon: Building },
         { name: 'Seat Allocation', path: '/exam-halls', icon: ShieldCheck },
         { name: 'Transport', path: '/transport', icon: Bus },
+        { name: 'Fee Management', path: '/fees', icon: Receipt },
+        { name: 'Payments', path: '/payments', icon: CreditCard },
     ];
 
     const handleLogout = () => {

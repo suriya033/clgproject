@@ -5,18 +5,14 @@ import { Platform } from 'react-native';
 
 // Determine base URL depending on platform
 // For Android emulator use 10.0.2.2, otherwise use local IP or localhost as appropriate.
-const DEV_MACHINE_IP = '172.20.10.2'; // Updated to current machine IP
+const DEV_MACHINE_IP = '10.179.83.154'; // Updated to current machine IP
 
-const API_URL = Platform.select({
+export const API_URL = Platform.select({
   web: 'http://localhost:5002/api',
   android: `http://${DEV_MACHINE_IP}:5002/api`,
   ios: `http://${DEV_MACHINE_IP}:5002/api`,
 });
 
-// Fallback for Android emulator if the above IP doesn't work
-// const FINAL_API_URL = (__DEV__ && Platform.OS === 'android' && API_URL.includes(DEV_MACHINE_IP))
-//   ? 'http://10.0.2.2:5001/api'
-//   : API_URL;
 const FINAL_API_URL = API_URL;
 
 console.log('🌐 API Configuration:', {

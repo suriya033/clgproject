@@ -60,6 +60,7 @@ import StudentFees from '../screens/StudentFees';
 import SmartRequestDashboard from '../screens/SmartRequestDashboard';
 import ChangePassword from '../screens/ChangePassword';
 import QuestionPapersScreen from '../screens/QuestionPapersScreen';
+import RazorpayCheckoutScreen from '../screens/RazorpayCheckoutScreen';
 
 const Stack = createStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -100,6 +101,7 @@ const MainStack = () => {
                     <Stack.Screen name="Assignments" component={AssignmentsScreen} />
                     <Stack.Screen name="SubmissionList" component={SubmissionList} />
                     <Stack.Screen name="ClassSelection" component={ClassSelectionScreen} />
+                    <Stack.Screen name="FeeManagement" component={FeeManagement} />
                 </>
             )
             }
@@ -117,6 +119,7 @@ const MainStack = () => {
                         <Stack.Screen name="Assignments" component={AssignmentsScreen} />
                         <Stack.Screen name="Complaints" component={StudentComplaint} />
                         <Stack.Screen name="Fees" component={StudentFees} />
+                        <Stack.Screen name="RazorpayCheckout" component={RazorpayCheckoutScreen} />
                         <Stack.Screen name="ViewNotes" component={ViewNotes} />
                     </>
                 )
@@ -199,6 +202,7 @@ const MainStack = () => {
                         <Stack.Screen name="Placements" component={GenericDashboard} />
                         <Stack.Screen name="TimeTableGenerator" component={TimeTableGenerator} />
                         <Stack.Screen name="TimetableViewer" component={TimetableViewer} />
+                        <Stack.Screen name="FeeManagement" component={FeeManagement} />
                     </>
                 )
             }

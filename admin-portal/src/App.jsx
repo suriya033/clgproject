@@ -13,6 +13,8 @@ import Subjects from './pages/Subjects';
 import Transport from './pages/Transport';
 import ExamHallAllocation from './pages/ExamHallAllocation';
 import AdminAssist from './components/AdminAssist';
+import PaymentsHistory from './pages/PaymentsHistory';
+import FeeManagement from './pages/FeeManagement';
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
@@ -42,6 +44,8 @@ function App() {
                     <Route path="/colleges" element={<Subjects />} />
                     <Route path="/exam-halls" element={<ExamHallAllocation />} />
                     <Route path="/transport" element={<Transport />} />
+                    <Route path="/payments" element={<PaymentsHistory />} />
+                    <Route path="/fees" element={<FeeManagement />} />
                     <Route path="*" element={<Navigate to="/" />} />
                   </Routes>
                 </div>

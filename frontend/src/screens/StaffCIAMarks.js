@@ -1,19 +1,10 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import {
-    StyleSheet,
-    Text,
-    View,
-    SafeAreaView,
-    FlatList,
-    ActivityIndicator,
-    TouchableOpacity,
-    StatusBar,
-    Alert,
-    TextInput
+    StyleSheet, Text, View, SafeAreaView, FlatList, ActivityIndicator,
+    TouchableOpacity, StatusBar, Alert, TextInput
 } from 'react-native';
-
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, BookOpen, Layers, Users, Hash } from 'lucide-react-native';
+import { ChevronLeft, BookOpen, Layers, Users, Hash, CheckCircle2, Save } from 'lucide-react-native';
 import api from '../api/api';
 import { AuthContext } from '../context/AuthContext';
 
@@ -66,11 +57,33 @@ const StaffCIAMarks = ({ navigation }) => {
         }
     };
 
-    const handleMarkUpdate = async (studentId, marks) => {
-        try {
-            // Update local state first for immediate feedback
-            setStudents(prev => prev.map(s => s._id === studentId ? { ...s, marks } : s));
+    // Local mark edits: { [studentId]: { value: string, saving: bool, saved: bool } }
+    const [markEdits, setMarkEdits] = useState({});
+    const saveTimers = useRef({});
 
+    const getLocalMark = (studentId, fallback) => {
+        if (markEdits[studentId] !== undefined) return markEdits[studentId].value;
+        return String(fallback ?? '');
+    };
+
+    const handleMarkChange = (studentId, val) => {
+        // Only allow digits, max 3 chars
+        const cleaned = val.replace(/[^0-9]/g, '').slice(0, 3);
+        setMarkEdits(prev => ({ ...prev, [studentId]: { value: cleaned, saving: false, saved: false } }));
+    };
+
+    const handleMarkSave = useCallback(async (studentId, val) => {
+        // Don't save empty string or values > 100
+        if (val === '' || val === undefined) return;
+        const num = parseInt(val, 10);
+        if (isNaN(num) || num < 0 || num > 100) {
+            Alert.alert('Invalid Mark', 'Please enter a number between 0 and 100');
+            return;
+        }
+
+        setMarkEdits(prev => ({ ...prev, [studentId]: { ...prev[studentId], saving: true } }));
+
+        try {
             await api.post('/marks/update', {
                 studentId,
                 department: selectedClass.department,
@@ -78,12 +91,17 @@ const StaffCIAMarks = ({ navigation }) => {
                 section: selectedClass.section,
                 subject: selectedClass.subject,
                 examType,
-                marks: parseInt(marks) || 0
+                marks: num
             });
+            setMarkEdits(prev => ({ ...prev, [studentId]: { value: String(num), saving: false, saved: true } }));
+            // Also sync into students array
+            setStudents(prev => prev.map(s => s._id === studentId ? { ...s, marks: num } : s));
         } catch (error) {
-            console.error(error);
+            const msg = error.response?.data?.message || 'Failed to save marks';
+            Alert.alert('Error', msg);
+            setMarkEdits(prev => ({ ...prev, [studentId]: { ...prev[studentId], saving: false, saved: false } }));
         }
-    };
+    }, [selectedClass, examType]);
 
     const renderClassItem = ({ item }) => (
         <View style={styles.card}>
@@ -178,27 +196,47 @@ const StaffCIAMarks = ({ navigation }) => {
                         </View>
                         <FlatList
                             data={students}
-                            renderItem={({ item }) => (
-                                <View style={styles.studentMarkCard}>
-                                    <View style={styles.studentMarkInfo}>
-                                        <Text style={styles.studentMarkName}>{item.name}</Text>
-                                        <Text style={styles.studentMarkId}>{item.regNo}</Text>
-                                    </View>
-                                    <View style={styles.markInputContainer}>
-                                        <TextInput
-                                            style={styles.markInput}
-                                            value={String(item.marks)}
-                                            onChangeText={(val) => handleMarkUpdate(item._id, val)}
-                                            keyboardType="numeric"
-                                            placeholder="0"
-                                            maxLength={3}
-                                        />
-                                        <Text style={styles.maxMarks}>/ 100</Text>
-                                    </View>
-                                </View>
-                            )}
                             keyExtractor={item => item._id}
                             contentContainerStyle={styles.entryList}
+                            keyboardShouldPersistTaps="handled"
+                            renderItem={({ item }) => {
+                                const edit = markEdits[item._id];
+                                const displayVal = edit !== undefined ? edit.value : String(item.marks ?? '');
+                                const isSaving = edit?.saving || false;
+                                const isSaved = edit?.saved || false;
+                                return (
+                                    <View style={styles.studentMarkCard}>
+                                        <View style={styles.studentMarkInfo}>
+                                            <Text style={styles.studentMarkName}>{item.name}</Text>
+                                            <Text style={styles.studentMarkId}>{item.regNo}</Text>
+                                        </View>
+                                        <View style={styles.markInputContainer}>
+                                            {isSaving ? (
+                                                <ActivityIndicator size="small" color="#800000" style={{ width: 60 }} />
+                                            ) : (
+                                                <TextInput
+                                                    style={[
+                                                        styles.markInput,
+                                                        isSaved && styles.markInputSaved
+                                                    ]}
+                                                    value={displayVal}
+                                                    onChangeText={(val) => handleMarkChange(item._id, val)}
+                                                    onBlur={() => handleMarkSave(item._id, displayVal)}
+                                                    keyboardType="number-pad"
+                                                    placeholder="—"
+                                                    placeholderTextColor="#cbd5e1"
+                                                    maxLength={3}
+                                                    returnKeyType="done"
+                                                />
+                                            )}
+                                            <Text style={styles.maxMarks}>/ 100</Text>
+                                            {isSaved && !isSaving && (
+                                                <CheckCircle2 size={16} color="#22c55e" />
+                                            )}
+                                        </View>
+                                    </View>
+                                );
+                            }}
                         />
                     </View>
                 )}
@@ -386,16 +424,20 @@ const styles = StyleSheet.create({
         gap: 8
     },
     markInput: {
-        width: 60,
-        height: 40,
+        width: 64,
+        height: 44,
         backgroundColor: '#f8fafc',
-        borderWidth: 1,
+        borderWidth: 1.5,
         borderColor: '#e2e8f0',
-        borderRadius: 8,
+        borderRadius: 10,
         textAlign: 'center',
-        fontSize: 16,
-        fontWeight: '700',
+        fontSize: 17,
+        fontWeight: '800',
         color: '#1e293b'
+    },
+    markInputSaved: {
+        borderColor: '#22c55e',
+        backgroundColor: '#f0fdf4'
     },
     maxMarks: {
         fontSize: 13,
