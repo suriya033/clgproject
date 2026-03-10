@@ -8,15 +8,16 @@ const SeatingPlan = require('../models/SeatingPlan');
 // @access  Private (Admin/ExamCell)
 exports.generateSeating = async (req, res) => {
     try {
-        const { examId, selectedHallIds } = req.body;
+        const { examId, examIds, selectedHallIds } = req.body;
 
-        if (!examId || !selectedHallIds || selectedHallIds.length === 0) {
-            return res.status(400).json({ success: false, message: 'Please provide examId and selected halls.' });
+        let ids = examIds || (examId ? [examId] : []);
+        if (ids.length === 0 || !selectedHallIds || selectedHallIds.length === 0) {
+            return res.status(400).json({ success: false, message: 'Please provide exam(s) and selected halls.' });
         }
 
-        const exam = await Exam.findById(examId);
-        if (!exam) {
-            return res.status(404).json({ success: false, message: 'Exam not found.' });
+        const exams = await Exam.find({ _id: { $in: ids } });
+        if (exams.length === 0) {
+            return res.status(404).json({ success: false, message: 'Exam(s) not found.' });
         }
 
         const halls = await ExamHall.find({ _id: { $in: selectedHallIds } });
@@ -24,33 +25,43 @@ exports.generateSeating = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Halls not found.' });
         }
 
-        let studentQuery = { role: 'Student' };
-        if (exam.participatingDepartments && exam.participatingDepartments.length > 0) {
-            const depts = exam.participatingDepartments.map(d => d.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(d => !!d);
-            studentQuery.department = { $in: depts.map(d => new RegExp(`^\\s*${d}\\s*$`, 'i')) };
-        }
-        if (exam.year) {
-            const years = exam.year.split(',').map(y => y.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(y => !!y);
-            studentQuery.year = { $in: years.map(y => new RegExp(`^\\s*${y}\\s*$`, 'i')) };
-        }
-        if (exam.semester) {
-            const sems = exam.semester.split(',').map(s => s.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(s => !!s);
-            studentQuery.semester = { $in: sems.map(s => new RegExp(`^\\s*${s}\\s*$`, 'i')) };
-        }
-        if (exam.section) {
-            const secs = exam.section.split(',').map(s => s.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(s => !!s);
-            studentQuery.section = { $in: secs.map(s => new RegExp(`^\\s*${s}\\s*$`, 'i')) };
+        let orQueries = [];
+        for (let exam of exams) {
+            let singleQuery = { role: 'Student' };
+            if (exam.participatingDepartments && exam.participatingDepartments.length > 0) {
+                const depts = exam.participatingDepartments.map(d => d.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(d => !!d);
+                singleQuery.department = { $in: depts.map(d => new RegExp(`^\\s*${d}\\s*$`, 'i')) };
+            }
+            if (exam.year) {
+                const years = exam.year.split(',').map(y => y.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(y => !!y);
+                singleQuery.year = { $in: years.map(y => new RegExp(`^\\s*${y}\\s*$`, 'i')) };
+            }
+            if (exam.semester) {
+                const sems = exam.semester.split(',').map(s => s.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(s => !!s);
+                singleQuery.semester = { $in: sems.map(s => new RegExp(`^\\s*${s}\\s*$`, 'i')) };
+            }
+            if (exam.section) {
+                const secs = exam.section.split(',').map(s => s.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(s => !!s);
+                singleQuery.section = { $in: secs.map(s => new RegExp(`^\\s*${s}\\s*$`, 'i')) };
+            }
+            orQueries.push(singleQuery);
         }
 
-        const students = await User.find(studentQuery).select('_id userId name department year section');
+        let studentQuery = orQueries.length > 1 ? { $or: orQueries } : orQueries[0];
+        const students = await User.find(studentQuery).select('_id userId name department year semester section');
 
         if (students.length === 0) {
-            return res.status(400).json({ success: false, message: 'No students found for the participating departments.' });
+            return res.status(400).json({ success: false, message: 'No students found for the provided selection.' });
         }
 
-        // Update total students in Exam document for reference
-        exam.totalStudents = students.length;
-        await exam.save();
+        // Update total students in Exam documents for reference
+        for (let exam of exams) {
+            // We'll update the first one to hold length for now or skip it if it's multiple 
+            // Better to skip modifying exams if there are multiple or distribute it if needed. 
+            // For now, let's keep it simple: 
+            exam.totalStudents = students.length;
+            await exam.save();
+        }
 
         // RUN CSP AI ALGORITHM
         let totalSeats = halls.reduce((sum, h) => sum + h.totalSeats, 0);
@@ -61,23 +72,31 @@ exports.generateSeating = async (req, res) => {
             });
         }
 
-        // 1. Group students by department
-        let studentsByDept = {};
-        students.forEach(s => {
-            if (!studentsByDept[s.department]) stdByDept = [];
-            if (!studentsByDept[s.department]) studentsByDept[s.department] = [];
-            studentsByDept[s.department].push(s);
+        // 1. Group students by class (department + year + semester + section)
+        let studentsByClass = {};
+        students.forEach(sDoc => {
+            let s = sDoc.toObject ? sDoc.toObject() : sDoc;
+            let classKey = `${s.department}-${s.year}-${s.semester}-${s.section || ''}`;
+            if (!studentsByClass[classKey]) {
+                studentsByClass[classKey] = {
+                    name: classKey,
+                    department: s.department,
+                    students: []
+                };
+            }
+            studentsByClass[classKey].students.push(s);
         });
 
-        // Mix students randomly within their department array to avoid alphabetic deterministic seating
-        Object.keys(studentsByDept).forEach(dept => {
-            studentsByDept[dept] = studentsByDept[dept].sort(() => 0.5 - Math.random());
+        // Mix students randomly within their class array to avoid alphabetic deterministic seating
+        Object.keys(studentsByClass).forEach(cls => {
+            studentsByClass[cls].students = studentsByClass[cls].students.sort(() => 0.5 - Math.random());
         });
 
-        let depts = Object.keys(studentsByDept).map(d => ({
-            name: d,
-            count: studentsByDept[d].length,
-            students: studentsByDept[d]
+        let classes = Object.keys(studentsByClass).map(c => ({
+            name: c,
+            department: studentsByClass[c].department,
+            count: studentsByClass[c].students.length,
+            students: studentsByClass[c].students
         }));
 
         // 2. Interleave Benches across halls to ensure "Balanced distribution per hall"
@@ -99,37 +118,68 @@ exports.generateSeating = async (req, res) => {
 
         // 3. Iterative Greedy CSP Assignment
         let remainingStudents = students.length;
+        let maxSeatsPerBench = Math.max(...interleavedBenches.map(b => b.seatsPerBench));
 
-        for (let bench of interleavedBenches) {
-            if (remainingStudents === 0) break;
+        let emptySeats = [];
+        for (let s = 1; s <= maxSeatsPerBench; s++) {
+            for (let bench of interleavedBenches) {
+                if (s <= bench.seatsPerBench) {
+                    emptySeats.push({ bench: bench, seatNo: s, filled: false });
+                }
+            }
+        }
 
-            for (let s = 1; s <= bench.seatsPerBench; s++) {
+        let passLevel = 1;
+
+        while (remainingStudents > 0 && passLevel <= 3) {
+            let placedInThisPass = false;
+
+            for (let seatInfo of emptySeats) {
                 if (remainingStudents === 0) break;
+                if (seatInfo.filled) continue;
 
-                // Priority Queue: Sort depts by remaining count descending
-                depts.sort((a, b) => b.count - a.count);
+                let bench = seatInfo.bench;
 
-                // Pass 1: Strict Mode - Find department with students remaining, NOT present on this bench
-                let selectedDeptIndex = depts.findIndex(d =>
-                    d.count > 0 && !bench.seats.some(seat => seat.student.department === d.name)
-                );
+                // Priority Queue: Sort classes by remaining count descending
+                classes.sort((a, b) => b.count - a.count);
 
-                // Pass 2: Relaxed Mode - If impossible (e.g. only 1 dept left), fallback to highest remaining
-                if (selectedDeptIndex === -1) {
-                    selectedDeptIndex = depts.findIndex(d => d.count > 0);
+                let selectedClassIndex = -1;
+
+                if (passLevel === 1) {
+                    // Pass 1: Strict Mode - Find class with students remaining, DIFFERENT department from this bench
+                    selectedClassIndex = classes.findIndex(c =>
+                        c.count > 0 && !bench.seats.some(seat => seat.department === c.department)
+                    );
+                } else if (passLevel === 2) {
+                    // Pass 2: Semi-Strict Mode - Same department allowed, but DIFFERENT class
+                    selectedClassIndex = classes.findIndex(c =>
+                        c.count > 0 && !bench.seats.some(seat => seat.classKey === c.name)
+                    );
+                } else {
+                    // Pass 3: Relaxed Mode - If impossible, fallback to highest remaining
+                    selectedClassIndex = classes.findIndex(c => c.count > 0);
                 }
 
-                if (selectedDeptIndex !== -1) {
-                    let selectedDept = depts[selectedDeptIndex];
-                    let student = selectedDept.students.pop();
-                    selectedDept.count--;
+                if (selectedClassIndex !== -1) {
+                    let selectedClass = classes[selectedClassIndex];
+                    let student = selectedClass.students.pop();
+                    selectedClass.count--;
                     remainingStudents--;
+                    seatInfo.filled = true;
 
                     bench.seats.push({
-                        seatNo: s,
+                        seatNo: seatInfo.seatNo,
+                        classKey: selectedClass.name,
+                        department: selectedClass.department,
                         student: student
                     });
+
+                    placedInThisPass = true;
                 }
+            }
+
+            if (!placedInThisPass && remainingStudents > 0) {
+                passLevel++; // Relax constraint globally for remaining students since no one could be placed
             }
         }
 
@@ -160,9 +210,9 @@ exports.generateSeating = async (req, res) => {
         return res.status(200).json({
             success: true,
             exam: {
-                name: exam.examName,
-                date: exam.date,
-                subjectCode: exam.subjectCode
+                name: exams.map(e => e.examName).join(' + '),
+                date: exams[0].date,
+                subjectCode: exams.map(e => e.subjectCode).join(' + ')
             },
             totalStudentsAssigned: students.length,
             arrangement: finalArrangement // Send to frontend for viewing/export

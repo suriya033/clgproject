@@ -30,7 +30,7 @@ const ExamSeatArrangement = ({ navigation }) => {
     const [selectedExamDetails, setSelectedExamDetails] = useState(null);
 
     // Generation State
-    const [selectedExamId, setSelectedExamId] = useState(null);
+    const [selectedExamIds, setSelectedExamIds] = useState([]);
     const [selectedHallIds, setSelectedHallIds] = useState([]);
     const [generatedSeating, setGeneratedSeating] = useState(null);
     const [seatingStats, setSeatingStats] = useState(null);
@@ -231,14 +231,22 @@ const ExamSeatArrangement = ({ navigation }) => {
         }
     };
 
+    const toggleExamSelection = (id) => {
+        if (selectedExamIds.includes(id)) {
+            setSelectedExamIds(selectedExamIds.filter(eid => eid !== id));
+        } else {
+            setSelectedExamIds([...selectedExamIds, id]);
+        }
+    };
+
     const handleGenerate = async () => {
-        if (!selectedExamId) return Alert.alert('Error', 'Please select an exam');
+        if (selectedExamIds.length === 0) return Alert.alert('Error', 'Please select at least one exam');
         if (selectedHallIds.length === 0) return Alert.alert('Error', 'Please select at least one hall');
 
         try {
             setLoading(true);
             const res = await api.post('/exam-room/generate', {
-                examId: selectedExamId,
+                examIds: selectedExamIds,
                 selectedHallIds: selectedHallIds
             });
             if (res.data.success) {
@@ -436,10 +444,10 @@ const ExamSeatArrangement = ({ navigation }) => {
                                 {exams.map(e => (
                                     <TouchableOpacity
                                         key={e._id}
-                                        style={[styles.selectableItem, selectedExamId === e._id && styles.selectedItem]}
-                                        onPress={() => setSelectedExamId(e._id)}
+                                        style={[styles.selectableItem, selectedExamIds.includes(e._id) && styles.selectedItem]}
+                                        onPress={() => toggleExamSelection(e._id)}
                                     >
-                                        <Text style={[styles.selectableTitle, selectedExamId === e._id && { color: '#800000' }]}>{e.examName} ({e.subjectCode})</Text>
+                                        <Text style={[styles.selectableTitle, selectedExamIds.includes(e._id) && { color: '#800000' }]}>{e.examName} ({e.subjectCode})</Text>
                                         <Text style={styles.listItemSub}>Depts: {e.participatingDepartments.join(', ')}</Text>
                                     </TouchableOpacity>
                                 ))}

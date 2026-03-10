@@ -294,8 +294,34 @@ router.post('/generate', auth(['Admin', 'HOD', 'Office']), async (req, res) => {
                         const isConsecutive = t.name === r.lastSubject;
                         const dailyCount = r.dailyLimits[day][t.name] || 0;
                         const staffBusy = busyInThisSlot.has(t.staff);
+
+                        // Check for 3 continuous theory hours for the same staff
+                        let staffTheoryCount = 0;
+                        for (let p = slotIndex - 1; p >= 0; p--) {
+                            if (results[0].schedule[day][p].isFixed) continue;
+
+                            if (globalStaffBusy[day][p].has(t.staff)) {
+                                let wasTheoryInfo = false;
+                                for (const classObj of results) {
+                                    const slotInfo = classObj.schedule[day][p];
+                                    if (slotInfo && slotInfo.staff && typeof slotInfo.staff === 'string' && slotInfo.staff.includes(t.staff) && slotInfo.room !== 'Lab') {
+                                        wasTheoryInfo = true;
+                                        break;
+                                    }
+                                }
+                                if (wasTheoryInfo) {
+                                    staffTheoryCount++;
+                                } else {
+                                    break; // Was a practical (Lab), chain of theory hours is broken
+                                }
+                            } else {
+                                break; // Was free, chain is broken
+                            }
+                        }
+                        const isContinuousTheoryOverload = staffTheoryCount >= 2;
+
                         // Allow up to 3 periods per day to accommodate 10-15 hour subjects
-                        return !isConsecutive && dailyCount < 3 && !staffBusy;
+                        return !isConsecutive && dailyCount < 3 && !staffBusy && !isContinuousTheoryOverload;
                     });
 
                     if (taskIdx !== -1) {

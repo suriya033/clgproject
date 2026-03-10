@@ -13,6 +13,7 @@ const ExamHallAllocation = () => {
     const [activeTab, setActiveTab] = useState('generator');
     const [halls, setHalls] = useState([]);
     const [subjects, setSubjects] = useState([]);
+    const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -33,7 +34,15 @@ const ExamHallAllocation = () => {
     useEffect(() => {
         fetchHalls();
         fetchSubjects();
+        fetchDepartments();
     }, []);
+
+    const fetchDepartments = async () => {
+        try {
+            const res = await api.get('/college/departments');
+            setDepartments(res.data);
+        } catch (err) { console.error('Department Fetch Error:', err); }
+    };
 
     // Live headcount synchronization
     useEffect(() => {
@@ -192,11 +201,39 @@ const ExamHallAllocation = () => {
                                     </div>
                                 </div>
 
-                                <Input label="Sectors / Participating Departments" required placeholder="CSE, IT, ECE (Comma separated)" value={examForm.participatingDepartments} onChange={e => setExamForm({ ...examForm, participatingDepartments: e.target.value })} />
+                                <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '1.5rem' }}>
+                                    <label className="form-label" style={{ fontWeight: 600 }}>Participating Department</label>
+                                    <select
+                                        className="form-input"
+                                        required
+                                        value={examForm.participatingDepartments}
+                                        onChange={e => setExamForm({ ...examForm, participatingDepartments: e.target.value })}
+                                        style={{ height: '42px', padding: '0 1rem', borderRadius: '0.5rem', border: '1px solid var(--border)', background: 'var(--bg-canvas)' }}
+                                    >
+                                        <option value="">Select Department</option>
+                                        {departments.map(d => (
+                                            <option key={d._id} value={d.name}>{d.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                                     <Input label="Year" placeholder="e.g. 4" value={examForm.year} onChange={e => setExamForm({ ...examForm, year: e.target.value })} />
-                                    <Input label="Sem" placeholder="e.g. 8" value={examForm.semester} onChange={e => setExamForm({ ...examForm, semester: e.target.value })} />
+                                    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                        <label className="form-label" style={{ fontWeight: 600 }}>Semester</label>
+                                        <select
+                                            className="form-input"
+                                            required
+                                            value={examForm.semester}
+                                            onChange={e => setExamForm({ ...examForm, semester: e.target.value })}
+                                            style={{ height: '42px', padding: '0 1rem', borderRadius: '0.5rem', border: '1px solid var(--border)', background: 'var(--bg-canvas)' }}
+                                        >
+                                            <option value="">Select Sem</option>
+                                            {[1, 2, 3, 4, 5, 6, 7, 8].map(s => (
+                                                <option key={s} value={s}>{s}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                     <Input label="Sec" placeholder="e.g. B" value={examForm.section} onChange={e => setExamForm({ ...examForm, section: e.target.value })} />
                                 </div>
 
