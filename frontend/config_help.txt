@@ -1,0 +1,11 @@
+﻿configure the project to support EAS Build
+
+USAGE
+  $ eas build:configure [-p android|ios|all]
+
+FLAGS
+  -p, --platform=(android|ios|all)  Platform to configure
+
+DESCRIPTION
+  configure the project to support EAS Build
+

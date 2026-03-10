@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "REDS",
+    "slug": "REDS",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -31,9 +31,10 @@
       "bundleIdentifier": "com.suriya033.clgproject",
       "supportsTablet": true,
       "config": {
-        "googleMaps": {
-          "apiKey": "dl2b4ikTisngkEATOb0rVcvnd56PUKds9GtDNQxh3aSEDzif"
-        }
+        "googleMapsApiKey": "dl2b4ikTisngkEATOb0rVcvnd56PUKds9GtDNQxh3aSEDzif"
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "plugins": [
@@ -46,6 +47,11 @@
     ],
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "eaf3d844-f6c6-47d3-a705-02efd41afeec"
+      }
     }
   }
 }

@@ -3,17 +3,26 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-// Determine base URL depending on platform
-// For Android emulator use 10.0.2.2, otherwise use local IP or localhost as appropriate.
-const DEV_MACHINE_IP = '10.219.254.25'; // Updated to current machine IP
+// --- CONFIGURATION ---
+// 1. For Local Development (same Wi-Fi): Use your machine's IP
+const DEV_MACHINE_IP = '10.219.254.154';
 
-export const API_URL = Platform.select({
-  web: 'http://localhost:5002/api',
-  android: `http://${DEV_MACHINE_IP}:5002/api`,
-  ios: `http://${DEV_MACHINE_IP}:5002/api`,
-});
+// 2. For APK Distribution (everyone can access): Use a Public URL
+//    Examples: 'https://my-app.onrender.com' or 'https://random-id.ngrok-free.app'
+const PRODUCTION_URL = ''; // 👈 PUT YOUR PUBLIC URL HERE
 
-const FINAL_API_URL = API_URL;
+// Determine base URL depending on platform and environment
+export const API_URL = (() => {
+  // Always use Production URL if it's set
+  if (PRODUCTION_URL) return `${PRODUCTION_URL}/api`;
+
+  return Platform.select({
+    web: 'http://localhost:5002/api',
+    android: `http://${DEV_MACHINE_IP}:5002/api`,
+    ios: `http://${DEV_MACHINE_IP}:5002/api`,
+  });
+})();
+
 
 console.log('🌐 API Configuration:', {
   platform: Platform.OS,
