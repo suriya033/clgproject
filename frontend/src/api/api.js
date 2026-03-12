@@ -9,7 +9,7 @@ const DEV_MACHINE_IP = '10.219.254.154';
 
 // 2. For APK Distribution (everyone can access): Use a Public URL
 //    Examples: 'https://my-app.onrender.com' or 'https://random-id.ngrok-free.app'
-const PRODUCTION_URL = 'https://yellow-cups-swim.loca.lt'; // 👈 PUT YOUR PUBLIC URL HERE
+const PRODUCTION_URL = 'https://clg-backend-lph2.onrender.com'; // 👈 PUT YOUR PUBLIC URL HERE
 
 // Determine base URL depending on platform and environment
 export const API_URL = (() => {
