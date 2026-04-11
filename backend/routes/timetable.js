@@ -448,12 +448,15 @@ router.get('/staff-classes', auth(['Staff', 'HOD']), async (req, res) => {
 router.get('/my-schedule', auth(['Staff', 'HOD']), async (req, res) => {
     try {
         const staffName = req.user.name;
+        const staffId = req.user.id;
         const allTimetables = await TimeTable.find().populate('department', 'name');
+        const ClassSubstitution = require('../models/ClassSubstitution');
 
         const schedule = {
             Monday: [], Tuesday: [], Wednesday: [], Thursday: [], Friday: [], Saturday: []
         };
 
+        // 1. Get regular classes
         allTimetables.forEach(tt => {
             if (!tt.schedule) return;
             Object.keys(tt.schedule).forEach(day => {
@@ -464,12 +467,39 @@ router.get('/my-schedule', auth(['Staff', 'HOD']), async (req, res) => {
                                 ...slot.toObject ? slot.toObject() : slot,
                                 department: tt.department?.name || 'Unknown',
                                 semester: tt.semester,
-                                section: tt.section
+                                section: tt.section,
+                                isOriginal: true
                             });
                         }
                     });
                 }
             });
+        });
+
+        // 2. Get active substitutions (replacement classes assigned to this staff)
+        const activeSubstitutions = await ClassSubstitution.find({
+            replacementStaff: staffId,
+            date: { $gte: new Date().setHours(0,0,0,0), $lte: new Date().setDate(new Date().getDate() + 7) }
+        }).populate('originalStaff', 'name').populate('department', 'name');
+
+        const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        
+        activeSubstitutions.forEach(sub => {
+            const dayName = daysOfWeek[new Date(sub.date).getDay()];
+            if (schedule[dayName]) {
+                schedule[dayName].push({
+                    startTime: sub.startTime,
+                    endTime: sub.endTime,
+                    subject: sub.subject,
+                    staff: staffName,
+                    department: sub.department?.name || 'Unknown',
+                    semester: sub.semester,
+                    section: sub.section,
+                    isSubstitution: true,
+                    originalStaffName: sub.originalStaff?.name,
+                    date: sub.date
+                });
+            }
         });
 
         // Sort each day's slots by startTime
@@ -484,7 +514,7 @@ router.get('/my-schedule', auth(['Staff', 'HOD']), async (req, res) => {
         res.json(schedule);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: 'Server Error' });
+        res.status(500).json({ message: 'Server error' });
     }
 });
 

@@ -75,22 +75,30 @@ const StaffTimetable = ({ navigation }) => {
         return (
             <TouchableOpacity
                 key={index}
-                style={[styles.slotCard, isCurrent && styles.activeSlotCard]}
+                style={[styles.slotCard, isCurrent && styles.activeSlotCard, slot.isSubstitution && styles.substitutionCard]}
                 onPress={() => {
                     setSelectedSlot(slot);
                     setDetailModalVisible(true);
                 }}
                 activeOpacity={0.7}
             >
-                <View style={[styles.timeStrip, isCurrent ? styles.activeTimeStrip : null]}>
-                    <Text style={[styles.startTimeText, isCurrent && styles.activeTimeText]}>{slot.startTime}</Text>
+                <View style={[styles.timeStrip, isCurrent ? styles.activeTimeStrip : null, slot.isSubstitution && styles.subTimeStrip]}>
+                    <Text style={[styles.startTimeText, isCurrent && styles.activeTimeText, slot.isSubstitution && styles.subTimeText]}>{slot.startTime}</Text>
                     <View style={[styles.timeConnectorLine, isCurrent && styles.activeTimeLine]} />
-                    <Text style={[styles.endTimeText, isCurrent && styles.activeTimeText]}>{slot.endTime}</Text>
+                    <Text style={[styles.endTimeText, isCurrent && styles.activeTimeText, slot.isSubstitution && styles.subTimeText]}>{slot.endTime}</Text>
                 </View>
 
                 <View style={styles.cardContent}>
                     <View style={styles.headerRow}>
-                        <Text style={styles.subjectText} numberOfLines={1}>{slot.subject}</Text>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.subjectText} numberOfLines={1}>{slot.subject}</Text>
+                            {slot.isSubstitution && (
+                                <View style={styles.subBadge}>
+                                    <Clock size={10} color="#059669" />
+                                    <Text style={styles.subBadgeText}>SHIFT DUTY</Text>
+                                </View>
+                            )}
+                        </View>
                         {isCurrent && (
                             <View style={styles.liveBadge}>
                                 <View style={styles.liveDot} />
@@ -108,6 +116,12 @@ const StaffTimetable = ({ navigation }) => {
                             <Layers size={12} color="#64748b" />
                             <Text style={styles.tagText}>Sem {slot.semester}</Text>
                         </View>
+                        {slot.originalStaffName && (
+                            <View style={[styles.tag, { backgroundColor: '#f0fdf4' }]}>
+                                <User size={12} color="#059669" />
+                                <Text style={[styles.tagText, { color: '#059669' }]}>For: {slot.originalStaffName}</Text>
+                            </View>
+                        )}
                     </View>
 
                     <View style={styles.footerRow}>
@@ -576,7 +590,13 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#800000',
         marginRight: 4
-    }
+    },
+    // Substitution Specific Styles
+    substitutionCard: { borderColor: '#bbf7d0', backgroundColor: '#f0fdf4' },
+    subTimeStrip: { backgroundColor: '#dcfce7', borderRightColor: '#bbf7d0' },
+    subTimeText: { color: '#065f46' },
+    subBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+    subBadgeText: { fontSize: 10, fontWeight: '800', color: '#059669' }
 });
 
 export default StaffTimetable;

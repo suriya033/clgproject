@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 
 // --- CONFIGURATION ---
 // 1. For Local Development (same Wi-Fi): Use your machine's IP
-const DEV_MACHINE_IP = '10.219.254.154';
+const DEV_MACHINE_IP = '10.117.114.84';
 
 // 2. For APK Distribution (everyone can access): Use a Public URL
 //    Examples: 'https://my-app.onrender.com' or 'https://random-id.ngrok-free.app'

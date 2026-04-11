@@ -42,6 +42,9 @@ import StudentLeaveRequest from '../screens/StudentLeaveRequest';
 import StudentRequestHistory from '../screens/StudentRequestHistory';
 import CoordinatorRequests from '../screens/CoordinatorRequests';
 import HODRequests from '../screens/HODRequests';
+import StaffLeaveRequest from '../screens/StaffLeaveRequest';
+import StaffLeaveApprovals from '../screens/StaffLeaveApprovals';
+import AlternativeClasses from '../screens/AlternativeClasses';
 import ClassManagement from '../screens/ClassManagement';
 import BulkLeaveManagement from '../screens/BulkLeaveManagement';
 import StudentProfileView from '../screens/StudentProfileView';
@@ -141,6 +144,8 @@ const MainStack = () => {
                         <Stack.Screen name="Assignments" component={AssignmentsScreen} />
                         <Stack.Screen name="SubmissionList" component={SubmissionList} />
                         <Stack.Screen name="ClassSelection" component={ClassSelectionScreen} />
+                        <Stack.Screen name="StaffLeaveRequest" component={StaffLeaveRequest} />
+                        <Stack.Screen name="AlternativeClasses" component={AlternativeClasses} />
                     </>
                 )
             }
@@ -170,6 +175,9 @@ const MainStack = () => {
                         <Stack.Screen name="Assignments" component={AssignmentsScreen} />
                         <Stack.Screen name="SubmissionList" component={SubmissionList} />
                         <Stack.Screen name="ClassSelection" component={ClassSelectionScreen} />
+                        <Stack.Screen name="StaffLeaveRequest" component={StaffLeaveRequest} />
+                        <Stack.Screen name="StaffLeaveApprovals" component={StaffLeaveApprovals} />
+                        <Stack.Screen name="AlternativeClasses" component={AlternativeClasses} />
                     </>
                 )
             }

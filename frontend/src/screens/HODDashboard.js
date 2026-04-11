@@ -92,6 +92,7 @@ const HODDashboard = ({ navigation }) => {
 
         { id: '6', title: 'Notice', icon: <Megaphone size={24} color="#06b6d4" />, route: 'Announcements', bg: '#cffafe' },
         { id: 'hod-leave', title: 'Approvals', icon: <ClipboardList size={24} color="#800000" />, route: 'HODRequests', bg: '#fee2e2' },
+        { id: 'staff-leave', title: 'Staff Apps', icon: <ClipboardList size={24} color="#3b82f6" />, route: 'StaffLeaveApprovals', bg: '#dbeafe' },
         { id: 'complaints', title: 'Complaints', icon: <MessageSquare size={24} color="#ef4444" />, route: 'ComplaintViewer', bg: '#fee2e2' },
         { id: 'bulk-leave', title: 'Bulk Leave', icon: <Calendar size={24} color="#db2777" />, route: 'BulkLeaveManagement', bg: '#fdf2f8' },
         { id: 'notes-up', title: 'Upload Notes', icon: <FileText size={24} color="#2563eb" />, route: 'UploadNotes', bg: '#dbeafe' },

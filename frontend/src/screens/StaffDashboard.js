@@ -20,6 +20,9 @@ const StaffDashboard = ({ navigation }) => {
     const [bioModalVisible, setBioModalVisible] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
+    const [notifModalVisible, setNotifModalVisible] = useState(false);
+    const [newSubstitutions, setNewSubstitutions] = useState([]);
+
     useEffect(() => {
         fetchAllData();
     }, []);
@@ -29,13 +32,28 @@ const StaffDashboard = ({ navigation }) => {
         try {
             await Promise.all([
                 fetchAnnouncements(),
-                fetchScheduleStats()
+                fetchScheduleStats(),
+                checkNewSubstitutions()
             ]);
         } catch (error) {
             console.error('Initial fetch failed', error);
         } finally {
             setLoading(false);
             setRefreshing(false);
+        }
+    };
+
+    const checkNewSubstitutions = async () => {
+        try {
+            const res = await api.get('/staff-requests/my-substitutions');
+            // Filter ones where notified is false
+            const unnotified = res.data.filter(s => !s.notified);
+            if (unnotified.length > 0) {
+                setNewSubstitutions(unnotified);
+                setNotifModalVisible(true);
+            }
+        } catch (error) {
+            console.error('Error checking substitutions:', error);
         }
     };
 
@@ -108,6 +126,8 @@ const StaffDashboard = ({ navigation }) => {
         { id: '4', title: 'Faculty Lounge', icon: <Users size={24} color="#fff" />, startColor: '#7c3aed', endColor: '#8b5cf6', route: 'FacultyLounge' },
         { id: '5', title: 'Assignments', icon: <FileText size={24} color="#fff" />, startColor: '#0891b2', endColor: '#06b6d4', route: 'ClassSelection' },
         { id: '6', title: 'Track Bus', icon: <Bus size={24} color="#fff" />, startColor: '#f97316', endColor: '#fb923c', route: 'Transport' },
+        { id: 'shift', title: 'Shift Duty', icon: <Clock size={24} color="#fff" />, startColor: '#059669', endColor: '#0d9488', route: 'AlternativeClasses' },
+        { id: '7', title: 'Leave Request', icon: <FileText size={24} color="#fff" />, startColor: '#991b1b', endColor: '#dc2626', route: 'StaffLeaveRequest' },
     ];
 
     const getDateString = () => {
@@ -303,7 +323,58 @@ const StaffDashboard = ({ navigation }) => {
                     )}
                 </View>
             </Modal>
-            {/* Profile Details Modal */}
+            {/* Shift Duty Notification Modal */}
+            <Modal
+                visible={notifModalVisible}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setNotifModalVisible(false)}
+            >
+                <View style={styles.fullImageOverlay}>
+                    <View style={styles.notifModal}>
+                        <LinearGradient
+                            colors={['#059669', '#0d9488']}
+                            style={styles.notifHeader}
+                        >
+                            <Clock size={32} color="#fff" />
+                            <Text style={styles.notifTitle}>New Shift Duty Assigned!</Text>
+                        </LinearGradient>
+                        
+                        <View style={styles.notifContent}>
+                            <Text style={styles.notifText}>HOD has assigned you as a replacement for {newSubstitutions.length} class(es).</Text>
+                            
+                            {newSubstitutions.slice(0, 2).map((sub, idx) => (
+                                <View key={idx} style={styles.subBrief}>
+                                    <Text style={styles.subBriefText}>{sub.subject} • {sub.startTime}</Text>
+                                    <Text style={styles.subBriefDate}>{new Date(sub.date).toLocaleDateString()}</Text>
+                                </View>
+                            ))}
+                            
+                            {newSubstitutions.length > 2 && (
+                                <Text style={styles.moreText}>+ {newSubstitutions.length - 2} more classes</Text>
+                            )}
+                        </View>
+
+                        <TouchableOpacity
+                            style={styles.notifAction}
+                            onPress={() => {
+                                setNotifModalVisible(false);
+                                navigation.navigate('AlternativeClasses');
+                            }}
+                        >
+                            <Text style={styles.notifActionText}>View Details</Text>
+                            <ChevronRight size={20} color="#fff" />
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity 
+                            style={styles.notifClose}
+                            onPress={() => setNotifModalVisible(false)}
+                        >
+                            <Text style={styles.notifCloseText}>Dismiss</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
             <Modal
                 visible={bioModalVisible}
                 transparent={true}
@@ -648,6 +719,20 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '700',
     },
+    // Notif Modal
+    notifModal: { backgroundColor: '#fff', width: '85%', borderRadius: 28, overflow: 'hidden', elevation: 25 },
+    notifHeader: { padding: 30, alignItems: 'center', gap: 10 },
+    notifTitle: { color: '#fff', fontSize: 20, fontWeight: '900', textAlign: 'center' },
+    notifContent: { padding: 24 },
+    notifText: { fontSize: 15, color: '#475569', textAlign: 'center', marginBottom: 20, lineHeight: 22 },
+    subBrief: { backgroundColor: '#f8fafc', padding: 12, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: '#e2e8f0' },
+    subBriefText: { fontSize: 13, fontWeight: '800', color: '#1e293b' },
+    subBriefDate: { fontSize: 11, color: '#64748b', marginTop: 2 },
+    moreText: { textAlign: 'center', fontSize: 12, color: '#059669', fontWeight: '700', marginTop: 5 },
+    notifAction: { backgroundColor: '#059669', marginHorizontal: 24, paddingVertical: 16, borderRadius: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, elevation: 4 },
+    notifActionText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+    notifClose: { paddingVertical: 15, alignItems: 'center', marginBottom: 10 },
+    notifCloseText: { color: '#94a3b8', fontWeight: '700', fontSize: 14 }
 });
 
 export default StaffDashboard;
