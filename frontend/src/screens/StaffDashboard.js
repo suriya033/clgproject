@@ -53,9 +53,13 @@ const StaffDashboard = ({ navigation }) => {
                 setNotifModalVisible(true);
             }
         } catch (error) {
-            console.error('Error checking substitutions:', error);
+            // Silently ignore 404 — route may not be deployed on server yet
+            if (error?.response?.status !== 404) {
+                console.error('Error checking substitutions:', error);
+            }
         }
     };
+
 
     const fetchScheduleStats = async () => {
         try {

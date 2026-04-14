@@ -29,7 +29,6 @@ const StaffLeaveRequest = ({ navigation }) => {
     const [leaveType, setLeaveType] = useState('Casual Leave');
     const [subject, setSubject] = useState('');
     const [reason, setReason] = useState('');
-    const [alternateArrangement, setAlternateArrangement] = useState('');
     const [startDate, setStartDate] = useState(new Date());
     const [endDate, setEndDate] = useState(new Date());
 
@@ -63,9 +62,6 @@ I am writing to formally request ${leaveType} ${days}.
 Reason for Leave:
 ${reason || '[Please specify the reason for your leave]'}
 
-Alternative Arrangement:
-${alternateArrangement || '[Please specify any alternative class/duty arrangement]'}
-
 I request you to kindly grant me permission for the same. I will ensure that my duties are covered and will resume work on ${new Date(endDate.getTime() + 86400000).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.
 
 Thank you.
@@ -77,8 +73,8 @@ Department: ${user?.department}`;
     };
 
     const handleSubmit = async () => {
-        if (!reason || !alternateArrangement || !subject) {
-            Alert.alert('Missing Information', 'Please fill all mandatory fields including reason and alternative arrangements.');
+        if (!reason || !subject) {
+            Alert.alert('Missing Information', 'Please fill in the subject and reason for your leave.');
             return;
         }
 
@@ -90,7 +86,6 @@ Department: ${user?.department}`;
                 reason,
                 startDate: startDate.toISOString(),
                 endDate: endDate.toISOString(),
-                alternateArrangement
             });
 
             Alert.alert(
@@ -220,23 +215,6 @@ Department: ${user?.department}`;
                                     textAlignVertical="top"
                                     value={reason}
                                     onChangeText={setReason}
-                                />
-                            </View>
-                        </View>
-
-                        {/* Alternate Arrangement */}
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Work/Class Arrangement</Text>
-                            <View style={styles.textAreaContainer}>
-                                <ClipboardCheck size={18} color="#94a3b8" style={styles.textAreaIcon} />
-                                <TextInput
-                                    style={styles.textArea}
-                                    placeholder="Which faculty will handle your classes/duties?"
-                                    multiline
-                                    numberOfLines={3}
-                                    textAlignVertical="top"
-                                    value={alternateArrangement}
-                                    onChangeText={setAlternateArrangement}
                                 />
                             </View>
                         </View>

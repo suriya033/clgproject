@@ -27,9 +27,16 @@ const AlternativeClasses = ({ navigation }) => {
             setSubstitutions(res.data);
             
             // Mark as notified when viewed
-            await api.post('/staff-requests/mark-notified');
+            try {
+                await api.post('/staff-requests/mark-notified');
+            } catch (_) { /* ignore if not deployed */ }
         } catch (error) {
-            console.error('Error fetching substitutions:', error);
+            if (error?.response?.status === 404) {
+                // Route not deployed yet — show empty state
+                setSubstitutions([]);
+            } else {
+                console.error('Error fetching substitutions:', error);
+            }
         } finally {
             setLoading(false);
             setRefreshing(false);

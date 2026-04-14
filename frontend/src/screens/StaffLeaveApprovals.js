@@ -12,11 +12,12 @@ import {
     Alert,
     Modal,
     TextInput,
+    ScrollView,
     Image,
     Platform
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Check, X, User, Calendar, MessageSquare, BookOpen, ClipboardCheck } from 'lucide-react-native';
+import { ChevronLeft, Check, X, User, Calendar, MessageSquare, BookOpen, ClipboardCheck, Info } from 'lucide-react-native';
 import api from '../api/api';
 
 const StaffLeaveApprovals = ({ navigation }) => {
