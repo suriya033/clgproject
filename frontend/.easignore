@@ -1,0 +1,8 @@
+node_modules
+.expo
+.gradle
+android/.gradle
+android/app/build
+android/build
+ios/build
+*.log
