@@ -37,7 +37,8 @@ const StaffLeaveRequestSchema = new mongoose.Schema({
     },
     alternateArrangement: {
         type: String,
-        required: true
+        required: false,
+        default: 'To be arranged by HOD'
     },
     status: {
         type: String,

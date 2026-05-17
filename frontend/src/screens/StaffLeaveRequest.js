@@ -86,6 +86,7 @@ Department: ${user?.department}`;
                 reason,
                 startDate: startDate.toISOString(),
                 endDate: endDate.toISOString(),
+                alternateArrangement: 'Will be organized with HOD'
             });
 
             Alert.alert(

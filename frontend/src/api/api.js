@@ -10,8 +10,7 @@ const DEV_MACHINE_IP = '10.117.114.84';
 // 2. For APK Distribution (everyone can access): Use a Public URL
 //    ⚠️ Comment this out to use local backend during development
 //    Uncomment when production backend has new routes deployed
-// const PRODUCTION_URL = 'https://clg-backend-lph2.onrender.com';
-const PRODUCTION_URL = ''; // Using local backend temporarily
+const PRODUCTION_URL = 'https://clg-backend-lph2.onrender.com';
 
 // Determine base URL depending on platform and environment
 export const API_URL = (() => {
